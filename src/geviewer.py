@@ -4,8 +4,6 @@ import re
 import asyncio
 from tqdm import tqdm
 
-from pathlib import Path
-
 
 class GeViewer:
 
@@ -55,7 +53,7 @@ class GeViewer:
         print('* Press "c" to capture a screenshot of the current view')
         print('* Press "g" to save a higher quality graphic')
         print('* Press "t" to toggle the tracks on or off')
-        print('* Press "d" to toggle energy deposition on or off')
+        print('* Press "h" to toggle the hits on or off')
         print('* Press "b" to toggle the background on or off')
         print('* Press "w" to switch to a wireframe rendering mode')
         print('* Press "s" to switch to a solid rendering mode')
@@ -82,6 +80,7 @@ class GeViewer:
         polyline_blocks = []
         marker_blocks = []
         solid_blocks = []
+        viewpoint_block = None
 
         lines = file_content.split('\n')
         block = []
@@ -167,26 +166,33 @@ class GeViewer:
     
 
     def parse_viewpoint_block(self, block):
+        '''
+        Parse the viewpoint block to get the field of view, position, and orientation.
+        '''
         fov = None
         position = None
         orientation = None
-        
-        fov_match = re.search(r'fieldOfView\s+([\d.]+)', block)
-        if fov_match:
-            fov = float(fov_match.group(1))
-        
-        position_match = re.search(r'position\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)', block)
-        if position_match:
-            position = [float(position_match.group(1)), float(position_match.group(2)), float(position_match.group(3))]
-        
-        orientation_match = re.search(r'orientation\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)', block)
-        if orientation_match:
-            orientation = [float(orientation_match.group(1)), float(orientation_match.group(2)), float(orientation_match.group(3)), float(orientation_match.group(4))]
+
+        if block is not None:
+            fov_match = re.search(r'fieldOfView\s+([\d.]+)', block)
+            if fov_match:
+                fov = float(fov_match.group(1))
+            
+            position_match = re.search(r'position\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)', block)
+            if position_match:
+                position = [float(position_match.group(1)), float(position_match.group(2)), float(position_match.group(3))]
+            
+            orientation_match = re.search(r'orientation\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)', block)
+            if orientation_match:
+                orientation = [float(orientation_match.group(1)), float(orientation_match.group(2)), float(orientation_match.group(3)), float(orientation_match.group(4))]
         
         return fov, position, orientation
     
 
     def parse_polyline_block(self, block):
+        '''
+        Parse a polyline block to get particle track information.
+        '''
         coord = []
         coordIndex = []
         color = [1, 1, 1]
@@ -222,6 +228,9 @@ class GeViewer:
     
 
     def parse_marker_block(self, block):
+        '''
+        Parse a marker block to get hit information.
+        '''
         coord = []
         color = [1, 1, 1]
         radius = 1
@@ -243,6 +252,9 @@ class GeViewer:
     
 
     def parse_solid_block(self, block):
+        '''
+        Parse a solid block to get geometry information.
+        '''
         coord = []
         coordIndex = []
         color = [1, 1, 1]
@@ -289,7 +301,7 @@ class GeViewer:
         self.plotter.add_key_event('c', self.save_screenshot)
         self.plotter.add_key_event('g', self.save_graphic)
         self.plotter.add_key_event('t', self.toggle_tracks)
-        self.plotter.add_key_event('d', self.toggle_energy_deps)
+        self.plotter.add_key_event('h', self.toggle_hits)
         self.plotter.add_key_event('b', self.toggle_background)
         # solid and wireframe rendering modes have key events by default
         self.set_viewpoint(*self.view_params)
@@ -375,19 +387,19 @@ class GeViewer:
             print('This feature is disabled in quick plot mode.')
                 
                 
-    def toggle_energy_deps(self):
+    def toggle_hits(self):
         '''
-        Toggle the energy depositions on and off.
+        Toggle the hits on and off.
         '''
         if not self.safe_mode:
             self.visible[2] = not self.visible[2]
-            print('Toggling energy depositions ' + ['on.','off.'][self.visible[2]])
-            edep_actors = self.actors[sum(self.counts[:1]):sum(self.counts[:2])]
+            print('Toggling hits ' + ['on.','off.'][self.visible[2]])
+            hit_actors = self.actors[sum(self.counts[:1]):sum(self.counts[:2])]
             if self.visible[2]:
-                for actor in edep_actors:
+                for actor in hit_actors:
                     actor.visibility = True
             else:
-                for actor in edep_actors:
+                for actor in hit_actors:
                     actor.visibility = False
             self.plotter.update()
         else:
