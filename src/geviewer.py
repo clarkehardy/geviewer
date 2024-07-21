@@ -4,6 +4,8 @@ import re
 import asyncio
 from tqdm import tqdm
 
+from pathlib import Path
+
 
 class GeViewer:
 
@@ -126,7 +128,8 @@ class GeViewer:
                 if indices[i] != -1 and indices[i + 1] != -1:
                     lines.extend([2, indices[i], indices[i + 1]])
             line_mesh = pv.PolyData(points)
-            line_mesh.lines = lines
+            if len(lines) > 0:
+                line_mesh.lines = lines
             meshes.append((line_mesh, color, None))
 
         # energy depositions are saved as marker blocks
