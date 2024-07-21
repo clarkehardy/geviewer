@@ -3,6 +3,7 @@ import pyvista as pv
 import re
 import asyncio
 from tqdm import tqdm
+from pathlib import Path
 
 
 class GeViewer:
@@ -11,14 +12,14 @@ class GeViewer:
         '''
         Read data from a file and create meshes from it.
         '''
-        self.print_instructions()
         self.filename = filename
         self.bkg_on = False
         self.wireframe = False
         self.safe_mode = safe_mode
         if safe_mode:
-            print('Running in quick plot mode with some features disabled.')
+            print('Running in safe mode with some features disabled.')
             print()
+            self.view_params = (None, None, None)
             self.create_plotter()
             self.plotter.import_vrml(self.filename)
             self.counts = []
@@ -33,37 +34,6 @@ class GeViewer:
             self.meshes = self.create_meshes(polyline_blocks, marker_blocks, solid_blocks)
             self.create_plotter()
             self.plot_meshes()
-
-
-    def print_instructions(self):
-        '''
-        Print the instructions for the user.
-        '''
-        print()
-        print('###################################################')
-        print('#    _____   __      ___                          #')
-        print('#   / ____|  \\ \\    / (_)                         #')
-        print('#  | |  __  __\\ \\  / / _  _____      _____ _ __   #')
-        print('#  | | |_ |/ _ \\ \\/ / | |/ _ \\ \\ /\\ / / _ \\  __|  #')
-        print('#  | |__| |  __/\\  /  | |  __/\\ V  V /  __/ |     #')
-        print('#   \\_____|\\___| \\/   |_|\\___| \\_/\\_/ \\___|_|     #')
-        print('#                                                 #')
-        print('###################################################')
-        print()
-        print('Instructions:')
-        print('-------------')
-        print('* Click and drag to rotate the view, shift + click')
-        print('  and drag to pan, and scroll to zoom')
-        print('* Press "c" to capture a screenshot of the current view')
-        print('* Press "g" to save a higher quality graphic')
-        print('* Press "t" to toggle the tracks on or off')
-        print('* Press "h" to toggle the hits on or off')
-        print('* Press "b" to toggle the background on or off')
-        print('* Press "w" to switch to a wireframe rendering mode')
-        print('* Press "s" to switch to a solid rendering mode')
-        print('* Press "v" to switch to the default viewpoint')
-        print('* Press "q" or "e" to quit the viewer')
-        print()
 
         
     def read_file(self):
@@ -184,11 +154,13 @@ class GeViewer:
             
             position_match = re.search(r'position\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)', block)
             if position_match:
-                position = [float(position_match.group(1)), float(position_match.group(2)), float(position_match.group(3))]
+                position = [float(position_match.group(1)), float(position_match.group(2)), \
+                            float(position_match.group(3))]
             
             orientation_match = re.search(r'orientation\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)', block)
             if orientation_match:
-                orientation = [float(orientation_match.group(1)), float(orientation_match.group(2)), float(orientation_match.group(3)), float(orientation_match.group(4))]
+                orientation = [float(orientation_match.group(1)), float(orientation_match.group(2)), \
+                               float(orientation_match.group(3)), float(orientation_match.group(4))]
         
         return fov, position, orientation
     
@@ -301,7 +273,7 @@ class GeViewer:
         '''
         Create a PyVista plotter.
         '''
-        self.plotter = pv.Plotter(title='GeViewer — ' + self.filename)
+        self.plotter = pv.Plotter(title='GeViewer — ' + str(Path(self.filename).resolve()))
         self.plotter.add_key_event('c', self.save_screenshot)
         self.plotter.add_key_event('g', self.save_graphic)
         self.plotter.add_key_event('t', self.toggle_tracks)
@@ -388,7 +360,7 @@ class GeViewer:
                     actor.visibility = False
             self.plotter.update()
         else:
-            print('This feature is disabled in quick plot mode.')
+            print('This feature is disabled in safe mode.')
                 
                 
     def toggle_hits(self):
@@ -407,7 +379,7 @@ class GeViewer:
                     actor.visibility = False
             self.plotter.update()
         else:
-            print('This feature is disabled in quick plot mode.')
+            print('This feature is disabled in safe mode.')
 
 
     def toggle_background(self):
@@ -441,4 +413,4 @@ class GeViewer:
         '''
         Show the plotting window.
         '''
-        self.plotter.show()
+        self.plotter.show(before_close_callback=lambda x: print('\nExiting GeViewer.\n'))
