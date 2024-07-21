@@ -9,7 +9,7 @@ from pathlib import Path
 
 class GeViewer:
 
-    def __init__(self, filename, quick_plot=False):
+    def __init__(self, filename, safe_mode=False):
         '''
         Read data from a file and create meshes from it.
         '''
@@ -17,8 +17,8 @@ class GeViewer:
         self.filename = filename
         self.bkg_on = False
         self.wireframe = False
-        self.quick_plot = quick_plot
-        if quick_plot:
+        self.safe_mode = safe_mode
+        if safe_mode:
             print('Running in quick plot mode with some features disabled.')
             print()
             self.create_plotter()
@@ -28,7 +28,8 @@ class GeViewer:
             self.meshes = []
         else:
             data = self.read_file()
-            polyline_blocks, marker_blocks, solid_blocks = self.extract_blocks(data)
+            viewpoint_block, polyline_blocks, marker_blocks, solid_blocks = self.extract_blocks(data)
+            self.view_params = self.parse_viewpoint_block(viewpoint_block)
             self.counts = [len(polyline_blocks), len(marker_blocks), len(solid_blocks)]
             self.visible = [True, True, True]
             self.meshes = self.create_meshes(polyline_blocks, marker_blocks, solid_blocks)
@@ -58,6 +59,7 @@ class GeViewer:
         print('* Press "b" to toggle the background on or off')
         print('* Press "w" to switch to a wireframe rendering mode')
         print('* Press "s" to switch to a solid rendering mode')
+        print('* Press "v" to switch to the default viewpoint')
         print('* Press "q" or "e" to quit the viewer')
         print()
 
@@ -89,7 +91,8 @@ class GeViewer:
         for line in lines:
             stripped_line = line.strip()
 
-            if stripped_line.startswith('Shape') or stripped_line.startswith('Anchor'):
+            if stripped_line.startswith('Shape') or stripped_line.startswith('Anchor')\
+                or stripped_line.startswith('Viewpoint'):
                 inside_block = True
                 brace_count = 0
             
@@ -106,11 +109,13 @@ class GeViewer:
                         marker_blocks.append(block_content)
                     elif 'IndexedFaceSet' in block_content:
                         solid_blocks.append(block_content)
+                    elif 'Viewpoint' in block_content:
+                        viewpoint_block = block_content
 
                     block = []
                     inside_block = False
 
-        return polyline_blocks, marker_blocks, solid_blocks
+        return viewpoint_block, polyline_blocks, marker_blocks, solid_blocks
     
     
     def create_meshes(self, polyline_blocks, marker_blocks, solid_blocks):
@@ -159,6 +164,26 @@ class GeViewer:
             meshes.append((solid_mesh, color, transparency))
 
         return meshes
+    
+
+    def parse_viewpoint_block(self, block):
+        fov = None
+        position = None
+        orientation = None
+        
+        fov_match = re.search(r'fieldOfView\s+([\d.]+)', block)
+        if fov_match:
+            fov = float(fov_match.group(1))
+        
+        position_match = re.search(r'position\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)', block)
+        if position_match:
+            position = [float(position_match.group(1)), float(position_match.group(2)), float(position_match.group(3))]
+        
+        orientation_match = re.search(r'orientation\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)', block)
+        if orientation_match:
+            orientation = [float(orientation_match.group(1)), float(orientation_match.group(2)), float(orientation_match.group(3)), float(orientation_match.group(4))]
+        
+        return fov, position, orientation
     
 
     def parse_polyline_block(self, block):
@@ -267,6 +292,24 @@ class GeViewer:
         self.plotter.add_key_event('d', self.toggle_energy_deps)
         self.plotter.add_key_event('b', self.toggle_background)
         # solid and wireframe rendering modes have key events by default
+        self.set_viewpoint(*self.view_params)
+
+
+    def set_viewpoint(self, fov=None, position=None, orientation=None):
+        '''
+        Initialize the viewpoint according to the parameters in the VRML file.
+        '''
+        if fov is not None:
+            self.plotter.camera.view_angle = fov
+        
+        if position is not None:
+            self.plotter.camera.position = position
+        
+        if orientation is not None:
+            # Convert axis-angle representation to view up and focal point
+            axis = orientation[:3]
+            angle = orientation[3]
+            self.plotter.camera.roll = angle  # This sets the roll (rotation around the view axis)
 
 
     def save_graphic(self):
@@ -317,7 +360,7 @@ class GeViewer:
         '''
         Toggle the tracks on and off.
         '''
-        if not self.quick_plot:
+        if not self.safe_mode:
             self.visible[0] = not self.visible[0]
             print('Toggling particle tracks ' + ['on.','off.'][self.visible[0]])
             track_actors = self.actors[:self.counts[0]]
@@ -336,7 +379,7 @@ class GeViewer:
         '''
         Toggle the energy depositions on and off.
         '''
-        if not self.quick_plot:
+        if not self.safe_mode:
             self.visible[2] = not self.visible[2]
             print('Toggling energy depositions ' + ['on.','off.'][self.visible[2]])
             edep_actors = self.actors[sum(self.counts[:1]):sum(self.counts[:2])]

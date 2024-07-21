@@ -7,13 +7,13 @@ def main():
     '''
     parser = argparse.ArgumentParser(description='View Geant4 simulation results.')
     parser.add_argument('filename', help='The VRML file to be displayed.')
-    parser.add_argument('--quick-plot', help='Option to get more robust VRML parsing ' \
+    parser.add_argument('--safe-mode', help='Option to get more robust VRML parsing ' \
                           + 'at the expense of some interactive features.',action='store_true')
     args = parser.parse_args()
     filename = args.filename
-    quick_plot = args.quick_plot
+    safe_mode = args.safe_mode
 
-    gev = GeViewer(filename, quick_plot)
+    gev = GeViewer(filename, safe_mode)
     gev.show()
 
 if __name__ == '__main__':
