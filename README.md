@@ -19,7 +19,7 @@ pip uninstall geviewer
 ```
 
 ## Usage
-This package is intended to be used primarily as a command-line tool. Following installation, the program can be run using:
+This package is intended to be used primarily as a command line tool. Following installation, the program can be run using:
 ```bash
 geviewer /path/to/file.wrl
 ```
@@ -49,7 +49,7 @@ Note that if you are running Geant4 on a remote machine over `ssh`, piping the s
 
 
 ### Safe mode
-By default, `geviewer` relies on its own VRML parser to extract the meshes to be plotted, however this has only been tested on a small sample set of Geant4 simulation results. If you encounter errors trying to parse a file, try using the `--safe-mode` command line argument (and let me know what caused the error so I can update the parser). This will use a VRML parsing tool from [`vtk`](https://vtk.org) which should be more robust, but which does not allow the program to distinguish trajectories, hits, and detector geometry. In this mode, some features will not be available.
+By default, `geviewer` relies on its own VRML parser to extract the meshes to be plotted, however this has only been tested on a small sample set of Geant4 simulation results. If you encounter file parsing errors, try using the `--safe-mode` command line argument (and let me know what caused the error so I can update the parser). This will use a VRML parsing tool from [`vtk`](https://vtk.org) which should be more robust, but which does not allow the program to distinguish trajectories, hits, and detector geometry. In this mode, some features will not be available.
 
 ## License
 Distributed under the MIT License. See [LICENSE](LICENSE) for more information.
