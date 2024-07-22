@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools","setuptools-git-versioning"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools-git-versioning]
+enabled = true
+
+[project]
+dynamic = ["version"]
+name = "geviewer"
+description = "A lightweight, python-based visualization tool for Geant4."
+authors = [{ name = "Clarke Hardy", email = "cahardy@stanford.edu" }]
+license = {file = 'LICENSE'}
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = ["numpy", "pyvista", "tqdm"]
+keywords = ["geant4",
+            "viewer",
+            "visualizer",
+            "display",
+            "event",
+            "simulation",
+            "hep",
+            "physics",
+            "particle",
+            "track",
+            "detector",
+            "geometry",
+            "vrml"]
+
+[project.scripts]
+geviewer = "geviewer.main:main"
+
+[project.urls]
+repository = "https://github.com/clarkehardy/geviewer.git"

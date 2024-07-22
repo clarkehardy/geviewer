@@ -1,4 +1,4 @@
-from geviewer import GeViewer
+from geviewer.geviewer import GeViewer
 import argparse
 
 
