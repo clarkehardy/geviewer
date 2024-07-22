@@ -22,7 +22,7 @@ def print_instructions():
     print('* Click and drag to rotate the view, shift + click')
     print('  and drag to pan, and scroll to zoom')
     print('* Press "c" to capture a screenshot of the current view')
-    print('* Press "g" to save a higher quality graphic')
+    print('* Press "g" to save a vector graphic of the current view')
     print('* Press "t" to toggle the tracks on or off')
     print('* Press "h" to toggle the hits on or off')
     print('* Press "b" to toggle the background on or off')
