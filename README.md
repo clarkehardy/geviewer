@@ -1,5 +1,5 @@
 # GeViewer
-A lightweight, python-based visualization tool for Geant4. It provides a convenient way to view detector geometries, particle trajectories, and hits, with smooth rendering in an interactive window.
+A lightweight, python-based visualization tool for Geant4. GeViewer provides a convenient way to view detector geometries, particle trajectories, and hits, with smooth rendering in an interactive window.
 
 ## Getting started
 ### Dependencies
