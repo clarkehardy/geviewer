@@ -8,11 +8,12 @@ from pathlib import Path
 
 class GeViewer:
 
-    def __init__(self, filename, safe_mode=False):
+    def __init__(self, filename, safe_mode=False, off_screen=False):
         '''
         Read data from a file and create meshes from it.
         '''
         self.filename = filename
+        self.off_screen = off_screen
         self.bkg_on = False
         self.wireframe = False
         self.safe_mode = safe_mode
@@ -273,7 +274,8 @@ class GeViewer:
         '''
         Create a PyVista plotter.
         '''
-        self.plotter = pv.Plotter(title='GeViewer — ' + str(Path(self.filename).resolve()))
+        self.plotter = pv.Plotter(title='GeViewer — ' + str(Path(self.filename).resolve()),\
+                                  off_screen=self.off_screen)
         self.plotter.add_key_event('c', self.save_screenshot)
         self.plotter.add_key_event('g', self.save_graphic)
         self.plotter.add_key_event('t', self.toggle_tracks)
@@ -358,7 +360,8 @@ class GeViewer:
             else:
                 for actor in track_actors:
                     actor.visibility = False
-            self.plotter.update()
+            if not self.off_screen:
+                self.plotter.update()
         else:
             print('This feature is disabled in safe mode.')
                 
@@ -377,7 +380,8 @@ class GeViewer:
             else:
                 for actor in hit_actors:
                     actor.visibility = False
-            self.plotter.update()
+            if not self.off_screen:
+                self.plotter.update()
         else:
             print('This feature is disabled in safe mode.')
 
@@ -392,7 +396,8 @@ class GeViewer:
             self.plotter.set_background('lightskyblue',top='midnightblue')
         else:
             self.plotter.set_background('white')
-        self.plotter.update()
+        if not self.off_screen:
+            self.plotter.update()
 
 
     def show(self):
