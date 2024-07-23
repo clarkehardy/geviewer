@@ -11,7 +11,7 @@ enabled = true
 [project]
 dynamic = ["version"]
 name = "geviewer"
-description = "A lightweight, python-based visualization tool for Geant4."
+description = "A lightweight, Python-based visualization tool for Geant4."
 authors = [{ name = "Clarke Hardy", email = "cahardy@stanford.edu" }]
 license = {file = 'LICENSE'}
 readme = "README.md"
