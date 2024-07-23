@@ -394,20 +394,6 @@ class GeViewer:
             self.plotter.set_background('white')
         self.plotter.update()
 
-    
-    def toggle_wireframe(self):
-        '''
-        Toggle between wireframe and solid rendering.
-        '''
-        self.wireframe = not self.wireframe
-        print('Toggling rendering mode to ' + ['solid.','wireframe.'][self.wireframe])
-        for actor in self.actors:
-            if self.wireframe:
-                actor.prop.SetRepresentationToWireframe()
-            else:
-                actor.prop.SetRepresentationToSurface()
-        self.plotter.update()
-
 
     def show(self):
         '''

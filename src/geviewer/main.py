@@ -50,5 +50,6 @@ def main():
     gev = GeViewer(filename, safe_mode)
     gev.show()
 
+
 if __name__ == '__main__':
     main()
