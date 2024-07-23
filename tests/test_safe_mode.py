@@ -1,6 +1,7 @@
 import unittest
 from unittest import mock
 import tempfile
+from os.path import isfile
 from geviewer import geviewer
 
 
@@ -17,9 +18,16 @@ class TestGeViewerSafe(unittest.TestCase):
         '''
         Test the key inputs for the GeViewer object.
         '''
-        self.assertEqual(self.gev.toggle_tracks(),None)
-        self.assertEqual(self.gev.toggle_hits(),None)
-        self.assertEqual(self.gev.toggle_background(),None)
+        for i in range(2):
+            with self.subTest():
+                self.gev.toggle_tracks()
+            with self.subTest():
+                self.gev.toggle_hits()
+            with self.subTest():
+                colors = ['lightskyblue','white']
+                bkg_status = self.gev.bkg_on
+                self.gev.toggle_background()
+                self.assertEqual(self.gev.plotter.background_color,colors[bkg_status])
 
 
     @mock.patch.object(geviewer.GeViewer,'prompt_for_file_path')
@@ -27,8 +35,10 @@ class TestGeViewerSafe(unittest.TestCase):
         '''
         Test the save_screenshot method with a mocked file name input.
         '''
-        mocked_input.side_effect = [tempfile.mkstemp(suffix='.png')[1]]
-        self.assertEqual(self.gev.save_screenshot(),None)
+        file_names = [tempfile.mkstemp(suffix='.png')[1]]
+        mocked_input.side_effect = file_names
+        self.gev.save_screenshot()
+        self.assertTrue(isfile(file_names[0]))
 
 
     @mock.patch.object(geviewer.GeViewer,'prompt_for_file_path')
@@ -36,13 +46,16 @@ class TestGeViewerSafe(unittest.TestCase):
         '''
         Test the save_graphic method with mocked file name inputs.
         '''
-        mocked_input.side_effect = [None,tempfile.mkstemp(suffix='.svg')[1],\
-                                    None,tempfile.mkstemp(suffix='.eps')[1],\
-                                    None,tempfile.mkstemp(suffix='.ps')[1],\
-                                    None,tempfile.mkstemp(suffix='.pdf')[1],\
-                                    None,tempfile.mkstemp(suffix='.tex')[1]]
+        file_names = [tempfile.mkstemp(suffix='.svg')[1],\
+                      tempfile.mkstemp(suffix='.eps')[1],\
+                      tempfile.mkstemp(suffix='.ps')[1],\
+                      tempfile.mkstemp(suffix='.pdf')[1],\
+                      tempfile.mkstemp(suffix='.tex')[1]]
+        mocked_input.side_effect = file_names
+        self.gev.save_graphic()
         for i in mocked_input.side_effect:
-            self.assertEqual(self.gev.save_graphic(),None)
+            with self.subTest():
+                self.assertTrue(isfile(i))
     
 
 if __name__ == '__main__':
