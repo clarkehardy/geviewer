@@ -9,9 +9,9 @@ The following packages are required:
 * `pyvista`
 
 ### Installation
-Installation can be done using `pip` as follows:
+GeViewer can be installed using `pip` as follows:
 ```bash
-pip install /path/to/geviewer
+pip install geviewer
 ```
 To uninstall:
 ```bash
