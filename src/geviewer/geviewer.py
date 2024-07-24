@@ -282,6 +282,7 @@ class GeViewer:
         self.plotter.add_key_event('h', self.toggle_hits)
         self.plotter.add_key_event('b', self.toggle_background)
         # solid and wireframe rendering modes have key events by default
+        self.plotter.add_key_event('d', self.set_window_size)
         self.set_viewpoint(*self.view_params)
 
 
@@ -322,12 +323,43 @@ class GeViewer:
 
     async def prompt_for_file_path(self,*args):
         '''
-        Asynchronously get input from the terminal.
+        Asynchronously get file path input from the terminal.
         '''
         print('Enter the file path to save the ' + args[0])
         file_path = await asyncio.to_thread(input,'  (e.g., /path/to/your_file.' + args[1] + '): ')
         
         return file_path
+    
+
+    def set_window_size(self):
+        '''
+        Set the window size in pixels.
+        '''
+        width, height = asyncio.run(self.prompt_for_window_size())
+        self.plotter.window_size = width, height
+        print('Window size set to ' + str(width) + 'x' + str(height) + '.\n')
+
+
+    async def prompt_for_window_size(self):
+        '''
+        Asynchronously get window size input from the terminal.
+        '''
+        while(True):
+            try:
+                width = await asyncio.to_thread(input, 'Enter the window width in pixels: ')
+                width = int(width)
+                break
+            except ValueError:
+                print('Error: invalid input. Please enter an integer.')
+        while(True):
+            try:
+                height = await asyncio.to_thread(input, 'Enter the window height in pixels: ')
+                height = int(height)
+                break
+            except ValueError:
+                print('Error: invalid input. Please enter an integer.')
+        return width, height
+
     
     
     def plot_meshes(self):
