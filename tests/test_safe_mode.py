@@ -1,6 +1,7 @@
 import unittest
 from unittest import mock
 import tempfile
+import numpy as np
 from os.path import isfile
 from geviewer import geviewer
 
@@ -56,6 +57,41 @@ class TestGeViewerSafe(unittest.TestCase):
         for i in mocked_input.side_effect:
             with self.subTest():
                 self.assertTrue(isfile(i))
+
+
+    @mock.patch.object(geviewer.GeViewer,'prompt_for_window_size',return_value=[800,600])
+    def test_set_window_size(self,mocked_input):
+        '''
+        Test the set_window_size method with a mocked window size input.
+        '''
+        self.gev.set_window_size()
+        self.assertEqual(self.gev.plotter.window_size,[800,600])
+
+
+    @mock.patch.object(geviewer.GeViewer,'prompt_for_camera_view')
+    def test_set_camera_view(self,mocked_input):
+        '''
+        Test the set_camera_view method with a mocked camera viewpoint input.
+        '''
+        fov = 60
+        pos = (1,2,3)
+        up_input = (4,5,6)
+        up_output = tuple(np.array(up_input)/np.linalg.norm(up_input))
+        mocked_input.return_value = [fov,pos,up_input,None,None,None]                                   
+        with self.subTest():
+            self.gev.set_camera_view()
+            self.assertEqual(self.gev.plotter.camera.view_angle,fov)
+            self.assertEqual(self.gev.plotter.camera.position,pos)
+            self.assertEqual(self.gev.plotter.camera.up,up_output)
+        zoom = 2
+        elev = 30
+        azim = 60
+        mocked_input.return_value = [None,None,None,zoom,elev,azim]
+        with self.subTest():
+            self.gev.set_camera_view()
+            self.assertEqual(self.gev.plotter.camera.zoom,zoom)
+            self.assertEqual(self.gev.plotter.camera.elevation,elev)
+            self.assertEqual(self.gev.plotter.camera.azimuth,azim)
     
 
 if __name__ == '__main__':
