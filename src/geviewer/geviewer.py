@@ -59,6 +59,9 @@ class GeViewer:
             orientation = self.view_params[2]
             up = None
             focus = None
+            if position is not None:
+                up = np.array([0.,1.,0.])
+                focus = np.array([0.,0.,-1.])*np.linalg.norm(position) - np.array(position)
             if orientation is not None:
                 up,focus = utils.orientation_transform(orientation)
                 if position is not None:
