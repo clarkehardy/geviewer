@@ -19,8 +19,7 @@ class GeViewer:
         self.wireframe = False
         self.safe_mode = safe_mode
         if safe_mode:
-            print('Running in safe mode with some features disabled.')
-            print()
+            print('Running in safe mode with some features disabled.\n')
             self.view_params = (None, None, None)
             self.create_plotter()
             self.plotter.import_vrml(self.filename)
@@ -285,6 +284,20 @@ class GeViewer:
         # solid and wireframe rendering modes have key events by default
         self.plotter.add_key_event('d', self.set_window_size)
         self.plotter.add_key_event('p', self.set_camera_view)
+        
+        # compute the initial camera position
+        fov = self.view_params[0]
+        position = self.view_params[1]
+        if self.view_params[2] is not None:
+            up = self.view_params[2][:3]
+            azim = self.view_params[2][3]
+        else:
+            # need to do this to avoid a zero-norm vector
+            up = [1,0,-position[0]]
+            azim = None
+        self.plotter.reset_camera()
+        self.set_camera_view((fov,position,up,None,None,azim))
+        self.initial_camera_pos = self.plotter.camera_position
 
 
     def set_camera_view(self,args=None):
@@ -295,7 +308,6 @@ class GeViewer:
             fov, position, up, zoom, elev, azim = asyncio.run(self.prompt_for_camera_view())
         else:
             fov, position, up, zoom, elev, azim = args
-            print(fov,position,)
         if fov is not None:
             self.plotter.camera.view_angle = fov
         if position is not None:
@@ -521,4 +533,5 @@ class GeViewer:
         '''
         Show the plotting window.
         '''
-        self.plotter.show(before_close_callback=lambda x: print('\nExiting GeViewer.\n'))
+        self.plotter.show(cpos=self.initial_camera_pos,\
+                          before_close_callback=lambda x: print('\nExiting GeViewer.\n'))
