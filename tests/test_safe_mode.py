@@ -58,5 +58,14 @@ class TestGeViewerSafe(unittest.TestCase):
                 self.assertTrue(isfile(i))
     
 
+    @mock.patch.object(geviewer.GeViewer,'prompt_for_window_size',return_value=[800,600])
+    def test_set_window_size(self,mocked_input):
+        '''
+        Test the set_window_size method with a mocked window size input.
+        '''
+        self.gev.set_window_size()
+        self.assertEqual(self.gev.plotter.window_size,[800,600])
+    
+
 if __name__ == '__main__':
     unittest.main()
