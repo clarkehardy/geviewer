@@ -31,6 +31,7 @@ def print_instructions():
     print('* Press "s" to switch to a solid rendering mode')
     print('* Press "v" to reset to the default viewpoint')
     print('* Press "d" to set the display window size')
+    print('* Press "p" to set the camera viewpoint')
     print('* Press "q" or "e" to quit the viewer')
     print()
 

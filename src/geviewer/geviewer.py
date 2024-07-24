@@ -4,6 +4,7 @@ import re
 import asyncio
 from tqdm import tqdm
 from pathlib import Path
+from geviewer import utils
 
 
 class GeViewer:
@@ -151,17 +152,17 @@ class GeViewer:
         if block is not None:
             fov_match = re.search(r'fieldOfView\s+([\d.]+)', block)
             if fov_match:
-                fov = float(fov_match.group(1))
+                fov = float(fov_match.group(1))*180/np.pi
             
             position_match = re.search(r'position\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)', block)
             if position_match:
                 position = [float(position_match.group(1)), float(position_match.group(2)), \
                             float(position_match.group(3))]
-            
+
             orientation_match = re.search(r'orientation\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)', block)
             if orientation_match:
                 orientation = [float(orientation_match.group(1)), float(orientation_match.group(2)), \
-                               float(orientation_match.group(3)), float(orientation_match.group(4))]
+                               float(orientation_match.group(3)), float(orientation_match.group(4))*180/np.pi]
         
         return fov, position, orientation
     
@@ -283,24 +284,107 @@ class GeViewer:
         self.plotter.add_key_event('b', self.toggle_background)
         # solid and wireframe rendering modes have key events by default
         self.plotter.add_key_event('d', self.set_window_size)
-        self.set_viewpoint(*self.view_params)
+        self.plotter.add_key_event('p', self.set_camera_view)
 
 
-    def set_viewpoint(self, fov=None, position=None, orientation=None):
+    def set_camera_view(self,args=None):
         '''
-        Initialize the viewpoint according to the parameters in the VRML file.
+        Set the camera viewpoint.
         '''
+        if args is None:
+            fov, position, up, zoom, elev, azim = asyncio.run(self.prompt_for_camera_view())
+        else:
+            fov, position, up, zoom, elev, azim = args
+            print(fov,position,)
         if fov is not None:
             self.plotter.camera.view_angle = fov
-        
         if position is not None:
             self.plotter.camera.position = position
-        
-        if orientation is not None:
-            # Convert axis-angle representation to view up and focal point
-            axis = orientation[:3]
-            angle = orientation[3]
-            self.plotter.camera.roll = angle  # This sets the roll (rotation around the view axis)
+        if up is not None:
+            self.plotter.camera.up = up
+        if zoom is not None:
+            self.plotter.camera.zoom = zoom
+        if elev is not None:
+            self.plotter.camera.elevation = elev
+        if azim is not None:
+            self.plotter.camera.azimuth = azim
+        if args is None:
+            print('Camera view set.\n')
+
+    
+    async def prompt_for_camera_view(self):
+        '''
+        Asyncronously get camera view input from the terminal.
+        '''
+        print('Setting the camera position and orientation.')
+        print('Press enter to skip any of the following prompts.')
+        print('If the camera view is overdefined, later inputs will override earlier ones.')
+        utils.clear_input_buffer()
+        while(True):
+            try:
+                fov = await asyncio.to_thread(input, 'Enter the field of view in degrees: ')
+                if fov == '':
+                    fov = None
+                    break
+                fov = float(fov)
+                break
+            except ValueError:
+                print('Error: invalid input. Please enter a number.')
+        while(True):
+            try:
+                position = await asyncio.to_thread(input, 'Enter the position as three space-separated numbers: ')
+                if position == '':
+                    position = None
+                    break
+                position = list(map(float, position.split()))
+                if len(position) != 3:
+                    raise ValueError
+                break
+            except ValueError:
+                print('Error: invalid input. Please enter three numbers separated by spaces.')
+        while(True):
+            try:
+                up = await asyncio.to_thread(input, 'Enter the up vector as three space-separated numbers: ')
+                if up == '':
+                    up = None
+                    break
+                up = list(map(float, up.split()))
+                if len(up) != 3:
+                    raise ValueError
+                break
+            except ValueError:
+                print('Error: invalid input. Please enter three numbers separated by spaces.')
+        while(True):
+            try:
+                zoom = await asyncio.to_thread(input, 'Enter the zoom factor: ')
+                if zoom == '':
+                    zoom = None
+                    break
+                zoom = float(zoom)
+                break
+            except ValueError:
+                print('Error: invalid input. Please enter a number.')
+        while(True):
+            try:
+                elev = await asyncio.to_thread(input, 'Enter the elevation in degrees: ')
+                if elev == '':
+                    elev = None
+                    break
+                elev = float(elev)
+                break
+            except ValueError:
+                print('Error: invalid input. Please enter a number.')
+        while(True):
+            try:
+                azim = await asyncio.to_thread(input, 'Enter the azimuth in degrees: ')
+                if azim == '':
+                    azim = None
+                    break
+                azim = float(azim)
+                break
+            except ValueError:
+                print('Error: invalid input. Please enter a number.')
+        return fov, position, up, zoom, elev, azim
 
 
     def save_graphic(self):
@@ -326,6 +410,7 @@ class GeViewer:
         Asynchronously get file path input from the terminal.
         '''
         print('Enter the file path to save the ' + args[0])
+        utils.clear_input_buffer()
         file_path = await asyncio.to_thread(input,'  (e.g., /path/to/your_file.' + args[1] + '): ')
         
         return file_path
@@ -344,6 +429,7 @@ class GeViewer:
         '''
         Asynchronously get window size input from the terminal.
         '''
+        utils.clear_input_buffer()
         while(True):
             try:
                 width = await asyncio.to_thread(input, 'Enter the window width in pixels: ')
@@ -360,7 +446,6 @@ class GeViewer:
                 print('Error: invalid input. Please enter an integer.')
         return width, height
 
-    
     
     def plot_meshes(self):
         '''
