@@ -293,7 +293,10 @@ class GeViewer:
             azim = self.view_params[2][3]
         else:
             # need to do this to avoid a zero-norm vector
-            up = [1,0,-position[0]]
+            if position is not None:
+                up = [1,0,-position[0]]
+            else:
+                up = [1,0,0]
             azim = None
         self.plotter.reset_camera()
         self.set_camera_view((fov,position,up,None,None,azim))
