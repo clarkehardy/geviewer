@@ -31,7 +31,7 @@ class TestGeViewerSafe(unittest.TestCase):
                 self.assertEqual(self.gev.plotter.background_color,colors[bkg_status])
 
 
-    @mock.patch.object(geviewer.GeViewer,'prompt_for_file_path')
+    @mock.patch('geviewer.utils.prompt_for_file_path')
     def test_save_screenshot(self,mocked_input):
         '''
         Test the save_screenshot method with a mocked file name input.
@@ -42,7 +42,7 @@ class TestGeViewerSafe(unittest.TestCase):
         self.assertTrue(isfile(file_names[0]))
 
 
-    @mock.patch.object(geviewer.GeViewer,'prompt_for_file_path')
+    @mock.patch('geviewer.utils.prompt_for_file_path')
     def test_save_graphic(self,mocked_input):
         '''
         Test the save_graphic method with mocked file name inputs.
@@ -59,7 +59,7 @@ class TestGeViewerSafe(unittest.TestCase):
                 self.assertTrue(isfile(i))
 
 
-    @mock.patch.object(geviewer.GeViewer,'prompt_for_window_size',return_value=[800,600])
+    @mock.patch('geviewer.utils.prompt_for_window_size',return_value=[800,600])
     def test_set_window_size(self,mocked_input):
         '''
         Test the set_window_size method with a mocked window size input.
@@ -68,7 +68,7 @@ class TestGeViewerSafe(unittest.TestCase):
         self.assertEqual(self.gev.plotter.window_size,[800,600])
 
 
-    @mock.patch.object(geviewer.GeViewer,'prompt_for_camera_view')
+    @mock.patch('geviewer.utils.prompt_for_camera_view')
     def test_set_camera_view(self,mocked_input):
         '''
         Test the set_camera_view method with a mocked camera viewpoint input.
