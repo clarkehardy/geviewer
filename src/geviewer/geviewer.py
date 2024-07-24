@@ -76,9 +76,8 @@ class GeViewer:
         '''
         if args is None:
             fov = None
-            position, up, focus, elev, azim, roll = asyncio.run(utils.prompt_for_camera_view())
+            position, up, focus = asyncio.run(utils.prompt_for_camera_view())
         else:
-            elev, azim, roll = None, None, None
             fov, position, up, focus = args
         if fov is not None:
             self.plotter.camera.view_angle = fov
@@ -88,12 +87,6 @@ class GeViewer:
             self.plotter.camera.up = up
         if focus is not None:
             self.plotter.camera.focal_point = focus
-        if elev is not None:
-            self.plotter.camera.elevation = elev
-        if azim is not None:
-            self.plotter.camera.azimuth = azim
-        if roll is not None:
-            self.plotter.camera.roll = roll
         if args is None:
             if not self.off_screen:
                 self.plotter.update()
@@ -105,14 +98,10 @@ class GeViewer:
         Print the current camera viewpoint parameters.
         '''
         print('Viewpoint parameters:')
-        print('  Window size: ' + str(self.plotter.window_size))
-        print(self.plotter.camera_position)
-        print('  Field of view: ' + str(self.plotter.camera.view_angle))
-        print('  Position: ' + str(self.plotter.camera.position))
-        print('  Up vector: ' + str(self.plotter.camera.up))
-        print('  Zoom: ' + str(self.plotter.camera.zoom))
-        print('  Elevation: ' + str(self.plotter.camera.elevation))
-        print('  Azimuth: ' + str(self.plotter.camera.azimuth) + '\n')
+        print('  Window size: {}x{}'.format(*self.plotter.window_size))
+        print('  Position:    ({}, {}, {})'.format(*self.plotter.camera.position))
+        print('  Focal point: ({}, {}, {})'.format(*self.plotter.camera.focal_point))
+        print('  Up vector:   ({}, {}, {})\n'.format(*self.plotter.camera.up))
 
 
     def plot_meshes(self):

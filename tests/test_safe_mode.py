@@ -77,21 +77,12 @@ class TestGeViewerSafe(unittest.TestCase):
         up_input = (4,5,6)
         focus = (7,8,9)
         up_output = tuple(np.array(up_input)/np.linalg.norm(up_input))
-        mocked_input.return_value = [pos,up_input,focus,None,None,None]                                   
+        mocked_input.return_value = [pos,up_input,focus]                                   
         with self.subTest():
             self.gev.set_camera_view()
             self.assertEqual(self.gev.plotter.camera.position,pos)
             self.assertEqual(self.gev.plotter.camera.up,up_output)
             self.assertEqual(self.gev.plotter.camera.focal_point,focus)
-        elev = 30
-        azim = 60
-        roll = 90
-        mocked_input.return_value = [None,None,None,elev,azim,roll]
-        with self.subTest():
-            self.gev.set_camera_view()
-            self.assertEqual(self.gev.plotter.camera.elevation,elev)
-            self.assertEqual(self.gev.plotter.camera.azimuth,azim)
-            self.assertEqual(self.gev.plotter.camera.roll,roll)
     
 
 if __name__ == '__main__':
