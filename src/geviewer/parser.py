@@ -117,7 +117,7 @@ def parse_viewpoint_block(block):
         orientation_match = re.search(r'orientation\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)', block)
         if orientation_match:
             orientation = [float(orientation_match.group(1)), float(orientation_match.group(2)), \
-                            float(orientation_match.group(3)), float(orientation_match.group(4))*180/np.pi]
+                           float(orientation_match.group(3)), float(orientation_match.group(4))*180/np.pi]
     
     return fov, position, orientation
 

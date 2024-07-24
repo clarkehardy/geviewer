@@ -1,3 +1,4 @@
+import numpy as np
 import sys
 import asyncio
 
@@ -38,16 +39,6 @@ async def prompt_for_camera_view():
     clear_input_buffer()
     while(True):
         try:
-            fov = await asyncio.to_thread(input, 'Enter the field of view in degrees: ')
-            if fov == '':
-                fov = None
-                break
-            fov = float(fov)
-            break
-        except ValueError:
-            print('Error: invalid input. Please enter a number.')
-    while(True):
-        try:
             position = await asyncio.to_thread(input, 'Enter the position as three space-separated numbers: ')
             if position == '':
                 position = None
@@ -72,17 +63,19 @@ async def prompt_for_camera_view():
             print('Error: invalid input. Please enter three numbers separated by spaces.')
     while(True):
         try:
-            zoom = await asyncio.to_thread(input, 'Enter the zoom factor: ')
-            if zoom == '':
-                zoom = None
+            focus = await asyncio.to_thread(input, 'Enter the focal point as three space-separated numbers: ')
+            if focus == '':
+                focus = None
                 break
-            zoom = float(zoom)
+            focus = list(map(float, focus.split()))
+            if len(focus) != 3:
+                raise ValueError
             break
         except ValueError:
-            print('Error: invalid input. Please enter a number.')
+            print('Error: invalid input. Please enter three numbers separated by spaces.')
     while(True):
         try:
-            elev = await asyncio.to_thread(input, 'Enter the elevation in degrees: ')
+            elev = await asyncio.to_thread(input, 'Enter the camera elevation in degrees: ')
             if elev == '':
                 elev = None
                 break
@@ -92,7 +85,7 @@ async def prompt_for_camera_view():
             print('Error: invalid input. Please enter a number.')
     while(True):
         try:
-            azim = await asyncio.to_thread(input, 'Enter the azimuth in degrees: ')
+            azim = await asyncio.to_thread(input, 'Enter the camera azimuth in degrees: ')
             if azim == '':
                 azim = None
                 break
@@ -100,7 +93,18 @@ async def prompt_for_camera_view():
             break
         except ValueError:
             print('Error: invalid input. Please enter a number.')
-    return fov, position, up, zoom, elev, azim
+    while(True):
+        try:
+            roll = await asyncio.to_thread(input, 'Enter the camera roll in degrees: ')
+            if roll == '':
+                roll = None
+                break
+            roll = float(roll)
+            break
+        except ValueError:
+            print('Error: invalid input. Please enter a number.')
+    
+    return position, up, focus, elev, azim, roll
 
 
 async def prompt_for_file_path(*args):
@@ -133,3 +137,22 @@ async def prompt_for_window_size():
         except ValueError:
             print('Error: invalid input. Please enter an integer.')
     return width, height
+
+
+def orientation_transform(orientation):
+    '''
+    Get the up vector from the orientation. The orientation is of the form
+    (x, y, z, theta) where (x, y, z) is the axis of rotation and theta is the
+    angle of rotation. The rotation is applied to the default up vector (0, 1, 0).
+    '''
+    v = orientation[:3]
+    v = np.array(v)/np.linalg.norm(v)
+    theta = orientation[3]
+    up = np.array((v[0]*v[1]*(1-np.cos(theta)) - v[2]*np.sin(theta),\
+                   v[1]*v[1]*(1-np.cos(theta)) + np.cos(theta),\
+                   v[1]*v[2]*(1-np.cos(theta)) + v[0]*np.sin(theta)))
+    focus = -np.array((v[0]*v[2]*(1-np.cos(theta)) + v[1]*np.sin(theta),\
+                       v[1]*v[2]*(1-np.cos(theta)) - v[0]*np.sin(theta),\
+                       v[2]*v[2]*(1-np.cos(theta)) + np.cos(theta)))
+    return up,focus
+    

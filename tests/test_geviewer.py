@@ -87,25 +87,25 @@ class TestGeViewerMain(unittest.TestCase):
         '''
         Test the set_camera_view method with a mocked camera viewpoint input.
         '''
-        fov = 60
         pos = (1,2,3)
         up_input = (4,5,6)
+        focus = (7,8,9)
         up_output = tuple(np.array(up_input)/np.linalg.norm(up_input))
-        mocked_input.return_value = [fov,pos,up_input,None,None,None]                                   
+        mocked_input.return_value = [pos,up_input,focus,None,None,None]                                   
         with self.subTest():
             self.gev.set_camera_view()
-            self.assertEqual(self.gev.plotter.camera.view_angle,fov)
             self.assertEqual(self.gev.plotter.camera.position,pos)
             self.assertEqual(self.gev.plotter.camera.up,up_output)
-        zoom = 2
+            self.assertEqual(self.gev.plotter.camera.focal_point,focus)
         elev = 30
         azim = 60
-        mocked_input.return_value = [None,None,None,zoom,elev,azim]
+        roll = 90
+        mocked_input.return_value = [None,None,None,elev,azim,roll]
         with self.subTest():
             self.gev.set_camera_view()
-            self.assertEqual(self.gev.plotter.camera.zoom,zoom)
             self.assertEqual(self.gev.plotter.camera.elevation,elev)
             self.assertEqual(self.gev.plotter.camera.azimuth,azim)
+            self.assertEqual(self.gev.plotter.camera.roll,roll)
     
 
 if __name__ == '__main__':
