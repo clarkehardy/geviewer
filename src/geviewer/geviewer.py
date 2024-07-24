@@ -352,7 +352,7 @@ class GeViewer:
         '''
         if not self.safe_mode:
             self.visible[0] = not self.visible[0]
-            print('Toggling particle tracks ' + ['on.','off.'][self.visible[0]])
+            print('Toggling particle tracks ' + ['off.','on.'][self.visible[0]])
             track_actors = self.actors[:self.counts[0]]
             if self.visible[0]:
                 for actor in track_actors:
