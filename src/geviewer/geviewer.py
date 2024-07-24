@@ -49,24 +49,25 @@ class GeViewer:
         self.plotter.add_key_event('b', self.toggle_background)
         # solid and wireframe rendering modes have key events by default
         self.plotter.add_key_event('d', self.set_window_size)
-        self.plotter.add_key_event('p', self.set_camera_view)
+        self.plotter.add_key_event('o', self.set_camera_view)
+        self.plotter.add_key_event('p', self.print_view_params)
         
         # compute the initial camera position
-        fov = self.view_params[0]
-        position = self.view_params[1]
-        if self.view_params[2] is not None:
-            up = self.view_params[2][:3]
-            azim = self.view_params[2][3]
+        if not self.safe_mode:
+            fov = self.view_params[0]
+            position = self.view_params[1]
+            orientation = self.view_params[2]
+            up = None
+            focus = None
+            if orientation is not None:
+                up,focus = utils.orientation_transform(orientation)
+                if position is not None:
+                    focus = np.array(focus)*np.linalg.norm(position) - np.array(position)
+            self.plotter.reset_camera()
+            self.set_camera_view((fov,position,up,focus))
+            self.initial_camera_pos = self.plotter.camera_position
         else:
-            # need to do this to avoid a zero-norm vector
-            if position is not None:
-                up = [1,0,-position[0]]
-            else:
-                up = [1,0,0]
-            azim = None
-        self.plotter.reset_camera()
-        self.set_camera_view((fov,position,up,None,None,azim))
-        self.initial_camera_pos = self.plotter.camera_position
+            self.initial_camera_pos = None
 
 
     def set_camera_view(self,args=None):
@@ -74,23 +75,33 @@ class GeViewer:
         Set the camera viewpoint.
         '''
         if args is None:
-            fov, position, up, zoom, elev, azim = asyncio.run(utils.prompt_for_camera_view())
+            fov = None
+            position, up, focus = asyncio.run(utils.prompt_for_camera_view())
         else:
-            fov, position, up, zoom, elev, azim = args
+            fov, position, up, focus = args
         if fov is not None:
             self.plotter.camera.view_angle = fov
         if position is not None:
             self.plotter.camera.position = position
         if up is not None:
             self.plotter.camera.up = up
-        if zoom is not None:
-            self.plotter.camera.zoom = zoom
-        if elev is not None:
-            self.plotter.camera.elevation = elev
-        if azim is not None:
-            self.plotter.camera.azimuth = azim
+        if focus is not None:
+            self.plotter.camera.focal_point = focus
         if args is None:
+            if not self.off_screen:
+                self.plotter.update()
             print('Camera view set.\n')
+
+
+    def print_view_params(self):
+        '''
+        Print the current camera viewpoint parameters.
+        '''
+        print('Viewpoint parameters:')
+        print('  Window size: {}x{}'.format(*self.plotter.window_size))
+        print('  Position:    ({}, {}, {})'.format(*self.plotter.camera.position))
+        print('  Focal point: ({}, {}, {})'.format(*self.plotter.camera.focal_point))
+        print('  Up vector:   ({}, {}, {})\n'.format(*self.plotter.camera.up))
 
 
     def plot_meshes(self):

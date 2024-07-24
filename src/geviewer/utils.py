@@ -1,4 +1,6 @@
+import numpy as np
 import sys
+import ast
 import asyncio
 
 
@@ -34,73 +36,44 @@ async def prompt_for_camera_view():
     '''
     print('Setting the camera position and orientation.')
     print('Press enter to skip any of the following prompts.')
-    print('If the camera view is overdefined, later inputs will override earlier ones.')
     clear_input_buffer()
     while(True):
         try:
-            fov = await asyncio.to_thread(input, 'Enter the field of view in degrees: ')
-            if fov == '':
-                fov = None
-                break
-            fov = float(fov)
-            break
-        except ValueError:
-            print('Error: invalid input. Please enter a number.')
-    while(True):
-        try:
-            position = await asyncio.to_thread(input, 'Enter the position as three space-separated numbers: ')
+            position = await asyncio.to_thread(input, 'Enter the position as three comma-separated numbers: ')
             if position == '':
                 position = None
                 break
-            position = list(map(float, position.split()))
+            position = list(map(float, ast.literal_eval(position)))
             if len(position) != 3:
                 raise ValueError
             break
         except ValueError:
-            print('Error: invalid input. Please enter three numbers separated by spaces.')
+            print('Error: invalid input. Please enter three numbers separated by commas.')
     while(True):
         try:
-            up = await asyncio.to_thread(input, 'Enter the up vector as three space-separated numbers: ')
+            focus = await asyncio.to_thread(input, 'Enter the focal point as three comma-separated numbers: ')
+            if focus == '':
+                focus = None
+                break
+            focus = list(map(float, ast.literal_eval(focus)))
+            if len(focus) != 3:
+                raise ValueError
+            break
+        except ValueError:
+            print('Error: invalid input. Please enter three numbers separated by commas.')
+    while(True):
+        try:
+            up = await asyncio.to_thread(input, 'Enter the up vector as three comma-separated numbers: ')
             if up == '':
                 up = None
                 break
-            up = list(map(float, up.split()))
+            up = list(map(float, ast.literal_eval(up)))
             if len(up) != 3:
                 raise ValueError
             break
         except ValueError:
-            print('Error: invalid input. Please enter three numbers separated by spaces.')
-    while(True):
-        try:
-            zoom = await asyncio.to_thread(input, 'Enter the zoom factor: ')
-            if zoom == '':
-                zoom = None
-                break
-            zoom = float(zoom)
-            break
-        except ValueError:
-            print('Error: invalid input. Please enter a number.')
-    while(True):
-        try:
-            elev = await asyncio.to_thread(input, 'Enter the elevation in degrees: ')
-            if elev == '':
-                elev = None
-                break
-            elev = float(elev)
-            break
-        except ValueError:
-            print('Error: invalid input. Please enter a number.')
-    while(True):
-        try:
-            azim = await asyncio.to_thread(input, 'Enter the azimuth in degrees: ')
-            if azim == '':
-                azim = None
-                break
-            azim = float(azim)
-            break
-        except ValueError:
-            print('Error: invalid input. Please enter a number.')
-    return fov, position, up, zoom, elev, azim
+            print('Error: invalid input. Please enter three numbers separated by commas.')
+    return position, up, focus
 
 
 async def prompt_for_file_path(*args):
@@ -120,16 +93,29 @@ async def prompt_for_window_size():
     clear_input_buffer()
     while(True):
         try:
-            width = await asyncio.to_thread(input, 'Enter the window width in pixels: ')
-            width = int(width)
+            dims = await asyncio.to_thread(input, 'Enter the window dimensions in pixels as two comma-separated integers: ')
+            dims = list(map(int, ast.literal_eval(dims)))
             break
         except ValueError:
             print('Error: invalid input. Please enter an integer.')
-    while(True):
-        try:
-            height = await asyncio.to_thread(input, 'Enter the window height in pixels: ')
-            height = int(height)
-            break
-        except ValueError:
-            print('Error: invalid input. Please enter an integer.')
+    width, height = dims
     return width, height
+
+
+def orientation_transform(orientation):
+    '''
+    Get the up vector from the orientation. The orientation is of the form
+    (x, y, z, theta) where (x, y, z) is the axis of rotation and theta is the
+    angle of rotation. The rotation is applied to the default up vector (0, 1, 0).
+    '''
+    v = orientation[:3]
+    v = np.array(v)/np.linalg.norm(v)
+    theta = orientation[3]
+    up = np.array((v[0]*v[1]*(1-np.cos(theta)) - v[2]*np.sin(theta),\
+                   v[1]*v[1]*(1-np.cos(theta)) + np.cos(theta),\
+                   v[1]*v[2]*(1-np.cos(theta)) + v[0]*np.sin(theta)))
+    focus = -np.array((v[0]*v[2]*(1-np.cos(theta)) + v[1]*np.sin(theta),\
+                       v[1]*v[2]*(1-np.cos(theta)) - v[0]*np.sin(theta),\
+                       v[2]*v[2]*(1-np.cos(theta)) + np.cos(theta)))
+    return up,focus
+    
