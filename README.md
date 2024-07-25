@@ -7,15 +7,15 @@
 A lightweight, Python-based visualization tool for Geant4. GeViewer provides a convenient way to view detector geometries and particle trajectories, with smooth rendering in an interactive window.
 
 ## Features
-* 🔬 **Physics Visualization:** See color-coded particle trajectories in a 3D rendering of the detector
+* 🔬 **Physics visualization:** See color-coded particle trajectories in a 3D rendering of the detector
 
-* 🕹️ **Intuitive Controls:** Use your mouse to rotate, zoom, and pan to explore the geometry
+* 🕹️ **Intuitive controls:** Use your mouse to rotate, zoom, and pan to explore the geometry
 
-* 🎨 **Customizable Rendering:** Toggle through different viewing options with simple keystroke commands
+* 🎨 **Customizable rendering:** Toggle through different viewing options with simple keystroke commands
 
-* ✨ **High-Quality Graphics:** Produce publication-quality visuals of detectors and events
+* ✨ **High-quality graphics:** Produce publication-quality visuals of detectors and events
 
-* 🚀 **Smooth & Fast:** Efficient handling of large and complex detector geometries
+* 🚀 **Smooth & fast:** Efficient handling of large and complex detector geometries
 
 ## Getting started
 ### Dependencies
@@ -85,7 +85,7 @@ For more information on how to construct a macro, refer to the [Geant4 documenta
 By default, GeViewer relies on its own VRML parser to extract the meshes to be plotted, however this has only been tested on a small sample set of Geant4 simulation results. If you encounter file parsing errors, try using the `--safe-mode` command line argument (and create an issue to report the problem). This will use a VRML parsing tool from [`vtk`](https://vtk.org) which should be more robust, but which does not allow the program to distinguish trajectories, step markers, and detector components. In this mode, some features will not be available.
 
 ## License
-Distributed under the MIT License. See [LICENSE](LICENSE) for more information.
+Distributed under the MIT License. See [LICENSE](https://github.com/clarkehardy/geviewer/blob/main/LICENSE) for more information.
 
 ## Contact
 Clarke Hardy - [cahardy@stanford.edu](mailto:cahardy@stanford.edu)
