@@ -83,14 +83,19 @@ async def prompt_for_file_path():
     Asynchronously get file path input from the terminal.
     '''
     clear_input_buffer()
-    print('Enter the destination file path to save the screenshot.')
+    print('Enter the destination file path to save the screenshot,')
+    print('or press enter to cancel.')
     print('Accepted formats are .png, .svg, .eps, .ps, .pdf, and .tex.')
-    try:
-        file_path = await asyncio.to_thread(input,'Save as (e.g. /path/to/file.png): ')
-        if not file_path.endswith(('.png', '.svg', '.eps', '.ps', '.pdf', '.tex')):
-            raise ValueError
-    except ValueError:
-        print('Error: invalid input. Please enter a valid file path.')
+    while(True):
+        try:
+            file_path = await asyncio.to_thread(input,'Save as (e.g. /path/to/file.png): ')
+            if file_path == '':
+                return None
+            if not file_path.endswith(('.png', '.svg', '.eps', '.ps', '.pdf', '.tex')):
+                raise ValueError
+            break
+        except ValueError:
+            print('Error: invalid input. Please enter a valid file path.')
     return file_path
 
 
@@ -101,7 +106,10 @@ async def prompt_for_window_size():
     clear_input_buffer()
     while(True):
         try:
-            dims = await asyncio.to_thread(input, 'Enter the window dimensions in pixels as two comma-separated integers: ')
+            print('Enter (width,height) in pixels as two comma-separated integers,')
+            dims = await asyncio.to_thread(input, 'or press enter to cancel: ')
+            if dims == '':
+                return None, None
             dims = list(map(int, ast.literal_eval(dims)))
             break
         except ValueError:

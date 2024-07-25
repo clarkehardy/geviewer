@@ -23,7 +23,7 @@ class GeViewer:
             self.create_plotter()
             if len(filenames)>1:
                 print('Only the first file will be displayed in safe mode.\n')
-                self.plotter.import_vrml(filenames[0])
+            self.plotter.import_vrml(filenames[0])
             self.counts = []
             self.visible = []
             self.meshes = []
@@ -43,7 +43,8 @@ class GeViewer:
         Create a PyVista plotter.
         '''
         self.plotter = pv.Plotter(title='GeViewer — ' + str(Path(self.filenames[0] + \
-                                  ['',' + {} more'.format(len(self.filenames)-1)][len(self.filenames)>1]).resolve()),\
+                                  ['',' + {} more'.format(len(self.filenames)-1)]\
+                                  [(len(self.filenames)>1) and not self.safe_mode]).resolve()),\
                                   off_screen=self.off_screen)
         self.plotter.add_key_event('c', self.save_screenshot)
         self.plotter.add_key_event('t', self.toggle_tracks)
@@ -141,11 +142,14 @@ class GeViewer:
         Save a screenshot (as a png) of the current view.
         '''
         file_path = asyncio.run(utils.prompt_for_file_path())
-        if file_path.endswith('.png'):
+        if file_path is None:
+            print('Operation cancelled.\n')
+            return
+        elif file_path.endswith('.png'):
             self.plotter.screenshot(file_path)
         else:
             self.plotter.save_graphic(file_path)
-        print('Screenshot saved to ' + file_path + '\n')
+        print('Screenshot saved to ' + file_path + '.\n')
     
 
     def set_window_size(self):
@@ -153,6 +157,9 @@ class GeViewer:
         Set the window size in pixels.
         '''
         width, height = asyncio.run(utils.prompt_for_window_size())
+        if width is None and height is None:
+            print('Operation cancelled.\n')
+            return
         self.plotter.window_size = width, height
         print('Window size set to ' + str(width) + 'x' + str(height) + '.\n')
         
