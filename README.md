@@ -6,6 +6,17 @@
 
 A lightweight, Python-based visualization tool for Geant4. GeViewer provides a convenient way to view detector geometries, particle trajectories, and hits, with smooth rendering in an interactive window.
 
+## Features
+* 🔬 **Physics Visualization:** See color-coded particle trajectories in a 3D rendering of your detector
+
+* 🕹️ **Intuitive Controls:** Use your mouse to rotate, zoom, and pan to explore the geometry
+
+* 🎨 **Customizable Rendering:** Toggle through different viewing options with simple keystroke commands
+
+* ✨ **High-Quality Graphics:** Produce publication-quality visuals of detectors and events
+
+* 🚀 **Smooth & Fast:** Efficient handling of large and complex detector geometries
+
 ## Getting started
 ### Dependencies
 The following packages are required:
@@ -24,37 +35,50 @@ pip uninstall geviewer
 ```
 
 ## Usage
-This package is intended to be used primarily as a command line tool. Following installation, the program can be run using:
+This package is intended to be used primarily as a command line tool. To run the program, you must have already produced one or more [VRML files](https://en.wikipedia.org/wiki/VRML) from Geant4 simulations. See the section below for instructions on what to put in your Geant4 macro. Following installation, the program can be run using:
 ```bash
-geviewer /path/to/file.wrl
+geviewer /path/to/file1.wrl
 ```
-This will load the meshes described in `/path/to/file.wrl` and display them in an interactive window. The viewing perspective can be changed by clicking, dragging, and scrolling in the window, while other options can be toggled on and off using key presses. More specific instructions for use will print in the terminal window when the program is launched.
+This will load the meshes described in `/path/to/file.wrl` and display them in an interactive window. To view multiple files at once, simply provide multiple paths when launching the program. The viewing perspective can be changed by clicking, dragging, and scrolling in the window, while other functions can be activated using keystrokes. More specific instructions for use will print in the terminal window when the program is launched.
 
 ###  Instructions for Geant4
-To produce Geant4 outputs that can be read by GeViewer, you must use `/vis/open VRML2FILE` to tell Geant4 to save the visualization as a VRML file. The following sample macro shows how this could be implemented.
+To produce Geant4 outputs that can be read by GeViewer, you must use `/vis/open VRML2FILE` to tell Geant4 to save the visualization as a VRML file. The following macro snippet shows how this could be implemented, along with some other options.
 ```
 # tell Geant4 we want a VRML file rather than to use an interactive viewer
+# this line should come BEFORE the /run/beamOn command
 /vis/open VRML2FILE
+
+# now ensure that the geometry is displayed
+/vis/drawVolume
+
+# add the trajectories
+/vis/scene/add/trajectories
+
+# ensure that they are not cleared at the end of the event
+/vis/scene/endOfEventAction accumulate
+
+# you can also apply other commands here to control other
+# aspects of how the geometry and events will be displayed
 
 # the main content of your Geant4 macro goes here
 
-# if you want to see particle tracks and hits
+# specify the number of events and start the simulation
 /run/beamOn 1
 
 # by default, the file will be saved as g4_00.wrl
 # but it can easily be renamed from within the macro
 /control/shell mv g4_00.wrl /new/path/to/file.wrl
 
-# the output can be piped directly to geviewer
+# if you are running on your local computer, the
+# VRML file can be piped directly to GeViewer
 /control/shell geviewer /new/path/to/file.wrl
 
 exit
 ```
-Note that if you are running Geant4 on a remote machine over `ssh`, piping the simulation outputs directly to GeViewer may not work as expected. If this is the case, you can download the VRML files and run GeViewer on your local machine instead.
-
+For more information on how to construct a macro, refer to the [Geant4 documentation](https://geant4.web.cern.ch/docs/). Note that if you are running Geant4 on a remote machine over `ssh`, you will have to download the VRML files to view on your local computer, as GeViewer does not work over X11 forwarding.
 
 ### Safe mode
-By default, GeViewer relies on its own VRML parser to extract the meshes to be plotted, however this has only been tested on a small sample set of Geant4 simulation results. If you encounter file parsing errors, try using the `--safe-mode` command line argument (and let me know what caused the error so I can update the parser). This will use a VRML parsing tool from [`vtk`](https://vtk.org) which should be more robust, but which does not allow the program to distinguish trajectories, hits, and detector geometry. In this mode, some features will not be available.
+By default, GeViewer relies on its own VRML parser to extract the meshes to be plotted, however this has only been tested on a small sample set of Geant4 simulation results. If you encounter file parsing errors, try using the `--safe-mode` command line argument (and create an issue to report the problem). This will use a VRML parsing tool from [`vtk`](https://vtk.org) which should be more robust, but which does not allow the program to distinguish trajectories, hits, and detector geometry. In this mode, some features will not be available.
 
 ## License
 Distributed under the MIT License. See [LICENSE](LICENSE) for more information.
