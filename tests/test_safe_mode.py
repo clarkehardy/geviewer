@@ -23,7 +23,7 @@ class TestGeViewerSafe(unittest.TestCase):
             with self.subTest():
                 self.gev.toggle_tracks()
             with self.subTest():
-                self.gev.toggle_hits()
+                self.gev.toggle_step_markers()
             with self.subTest():
                 colors = ['lightskyblue','white']
                 bkg_status = self.gev.bkg_on

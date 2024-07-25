@@ -24,7 +24,7 @@ def print_instructions():
     print('  and scroll to zoom')
     print('* Press "c" to capture a screenshot of the current view')
     print('* Press "t" to toggle the trajectories on or off')
-    print('* Press "h" to toggle the hits on or off')
+    print('* Press "m" to toggle the step markers on or off')
     print('* Press "b" to toggle the background on or off')
     print('* Press "w" to switch to a wireframe rendering mode')
     print('* Press "s" to switch to a solid rendering mode')

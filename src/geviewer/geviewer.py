@@ -48,7 +48,7 @@ class GeViewer:
                                   off_screen=self.off_screen)
         self.plotter.add_key_event('c', self.save_screenshot)
         self.plotter.add_key_event('t', self.toggle_tracks)
-        self.plotter.add_key_event('h', self.toggle_hits)
+        self.plotter.add_key_event('m', self.toggle_step_markers)
         self.plotter.add_key_event('b', self.toggle_background)
         # solid and wireframe rendering modes have key events by default
         self.plotter.add_key_event('d', self.set_window_size)
@@ -184,19 +184,19 @@ class GeViewer:
             print('This feature is disabled in safe mode.')
                 
                 
-    def toggle_hits(self):
+    def toggle_step_markers(self):
         '''
-        Toggle the hits on and off.
+        Toggle the step markers on and off.
         '''
         if not self.safe_mode:
             self.visible[2] = not self.visible[2]
-            print('Toggling hits ' + ['off.','on.'][self.visible[2]])
-            hit_actors = self.actors[sum(self.counts[:1]):sum(self.counts[:2])]
+            print('Toggling step markers ' + ['off.','on.'][self.visible[2]])
+            step_actors = self.actors[sum(self.counts[:1]):sum(self.counts[:2])]
             if self.visible[2]:
-                for actor in hit_actors:
+                for actor in step_actors:
                     actor.visibility = True
             else:
-                for actor in hit_actors:
+                for actor in step_actors:
                     actor.visibility = False
             if not self.off_screen:
                 self.plotter.update()

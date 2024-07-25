@@ -162,7 +162,7 @@ def parse_polyline_block(block):
 
 def parse_marker_block(block):
     '''
-    Parse a marker block to get hit information.
+    Parse a marker block to get step information.
     '''
     coord = []
     color = [1, 1, 1]

@@ -33,10 +33,10 @@ class TestGeViewerMain(unittest.TestCase):
                 track_actors = self.gev.actors[:self.gev.counts[0]]
                 self.assertTrue(all([a.visibility!=track_status for a in track_actors]))
             with self.subTest():
-                hit_status = self.gev.visible[2]
-                self.gev.toggle_hits()
-                hit_actors = self.gev.actors[sum(self.gev.counts[:1]):sum(self.gev.counts[:2])]
-                self.assertTrue(all([a.visibility!=hit_status for a in hit_actors]))
+                step_status = self.gev.visible[2]
+                self.gev.toggle_step_markers()
+                step_actors = self.gev.actors[sum(self.gev.counts[:1]):sum(self.gev.counts[:2])]
+                self.assertTrue(all([a.visibility!=step_status for a in step_actors]))
             with self.subTest():
                 colors = ['lightskyblue','white']
                 bkg_status = self.gev.bkg_on

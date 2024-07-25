@@ -4,7 +4,7 @@
 ![Last Commit](https://img.shields.io/github/last-commit/clarkehardy/geviewer)
 ![GitHub License](https://img.shields.io/github/license/clarkehardy/geviewer)
 
-A lightweight, Python-based visualization tool for Geant4. GeViewer provides a convenient way to view detector geometries, particle trajectories, and hits, with smooth rendering in an interactive window.
+A lightweight, Python-based visualization tool for Geant4. GeViewer provides a convenient way to view detector geometries and particle trajectories, with smooth rendering in an interactive window.
 
 ## Features
 * 🔬 **Physics Visualization:** See color-coded particle trajectories in a 3D rendering of your detector
@@ -54,6 +54,10 @@ To produce Geant4 outputs that can be read by GeViewer, you must use `/vis/open 
 # add the trajectories
 /vis/scene/add/trajectories
 
+# add the step markers
+/vis/modeling/trajectories/create/drawByParticleID
+/vis/modeling/trajectories/drawByParticleID-0/default/setDrawStepPts true
+
 # ensure that they are not cleared at the end of the event
 /vis/scene/endOfEventAction accumulate
 
@@ -78,7 +82,7 @@ exit
 For more information on how to construct a macro, refer to the [Geant4 documentation](https://geant4.web.cern.ch/docs/). Note that if you are running Geant4 on a remote machine over `ssh`, you will have to download the VRML files to view on your local computer, as GeViewer does not work over X11 forwarding.
 
 ### Safe mode
-By default, GeViewer relies on its own VRML parser to extract the meshes to be plotted, however this has only been tested on a small sample set of Geant4 simulation results. If you encounter file parsing errors, try using the `--safe-mode` command line argument (and create an issue to report the problem). This will use a VRML parsing tool from [`vtk`](https://vtk.org) which should be more robust, but which does not allow the program to distinguish trajectories, hits, and detector geometry. In this mode, some features will not be available.
+By default, GeViewer relies on its own VRML parser to extract the meshes to be plotted, however this has only been tested on a small sample set of Geant4 simulation results. If you encounter file parsing errors, try using the `--safe-mode` command line argument (and create an issue to report the problem). This will use a VRML parsing tool from [`vtk`](https://vtk.org) which should be more robust, but which does not allow the program to distinguish trajectories, step markers, and detector components. In this mode, some features will not be available.
 
 ## License
 Distributed under the MIT License. See [LICENSE](LICENSE) for more information.
