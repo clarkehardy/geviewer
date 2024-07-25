@@ -12,7 +12,7 @@ class TestGeViewerMain(unittest.TestCase):
         '''
         Create a GeViewer object.
         '''
-        self.gev = geviewer.GeViewer('tests/sample.wrl',off_screen=True)
+        self.gev = geviewer.GeViewer(['tests/sample.wrl'],off_screen=True)
 
 
     def test_print_instructions(self):

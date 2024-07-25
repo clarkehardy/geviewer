@@ -8,11 +8,11 @@ from geviewer import utils, parser
 
 class GeViewer:
 
-    def __init__(self, filename, safe_mode=False, off_screen=False):
+    def __init__(self, filenames, safe_mode=False, off_screen=False):
         '''
         Read data from a file and create meshes from it.
         '''
-        self.filename = filename
+        self.filenames = filenames
         self.off_screen = off_screen
         self.bkg_on = False
         self.wireframe = False
@@ -21,12 +21,14 @@ class GeViewer:
             print('Running in safe mode with some features disabled.\n')
             self.view_params = (None, None, None)
             self.create_plotter()
-            self.plotter.import_vrml(self.filename)
+            if len(filenames)>1:
+                print('Only the first file will be displayed in safe mode.\n')
+                self.plotter.import_vrml(filenames[0])
             self.counts = []
             self.visible = []
             self.meshes = []
         else:
-            data = utils.read_file(filename)
+            data = utils.read_files(filenames)
             viewpoint_block, polyline_blocks, marker_blocks, solid_blocks = parser.extract_blocks(data)
             self.view_params = parser.parse_viewpoint_block(viewpoint_block)
             self.counts = [len(polyline_blocks), len(marker_blocks), len(solid_blocks)]
@@ -40,7 +42,8 @@ class GeViewer:
         '''
         Create a PyVista plotter.
         '''
-        self.plotter = pv.Plotter(title='GeViewer — ' + str(Path(self.filename).resolve()),\
+        self.plotter = pv.Plotter(title='GeViewer — ' + str(Path(self.filenames[0] + \
+                                  ['',' + {} more'.format(len(self.filenames)-1)][len(self.filenames)>1]).resolve()),\
                                   off_screen=self.off_screen)
         self.plotter.add_key_event('c', self.save_screenshot)
         self.plotter.add_key_event('t', self.toggle_tracks)

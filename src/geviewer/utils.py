@@ -4,13 +4,15 @@ import ast
 import asyncio
 
 
-def read_file(filename):
+def read_files(filenames):
     '''
     Read the content of the file.
     '''
-    print('Reading mesh data from ' + filename + '...')
-    with open(filename, 'r') as f:
-        data = f.read()
+    data = ''
+    for filename in filenames:
+        print('Reading mesh data from ' + filename + '...')
+        with open(filename, 'r') as f:
+            data += f.read()[:-15]
     return data
 
 

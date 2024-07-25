@@ -12,7 +12,7 @@ class TestGeViewerSafe(unittest.TestCase):
         '''
         Create a GeViewer object with safe mode enabled.
         '''
-        self.gev = geviewer.GeViewer('tests/sample.wrl',safe_mode=True,off_screen=True)
+        self.gev = geviewer.GeViewer(['tests/sample.wrl'],safe_mode=True,off_screen=True)
 
 
     def test_key_inputs(self):
