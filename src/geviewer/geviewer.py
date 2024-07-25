@@ -3,6 +3,7 @@ import pyvista as pv
 import asyncio
 from tqdm import tqdm
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from geviewer import utils, parser
 
 
@@ -110,16 +111,27 @@ class GeViewer:
 
     def plot_meshes(self):
         '''
-        Add the meshes to the plot.
+        Add the meshes to the plot in parallel while maintaining order.
         '''
         print('Rendering meshes...')
-        actors = []
-        for mesh, color, transparency in tqdm(self.meshes):
-            if transparency:
-                opacity = 1. - transparency
+
+        def create_actor(index, mesh, color, transparency):
+            if transparency is not None:
+                opacity = 1.0 - transparency
             else:
-                opacity = 1.
-            actors.append(self.plotter.add_mesh(mesh, color=color, opacity=opacity))
+                opacity = 1.0
+            actor = self.plotter.add_mesh(mesh, color=color, opacity=opacity)
+            return index, actor
+
+        actors = [None] * len(self.meshes)
+        with ThreadPoolExecutor() as executor:
+            futures = [executor.submit(create_actor, i, mesh, color, transparency)
+                       for i, (mesh, color, transparency) in enumerate(self.meshes)]
+
+            for future in tqdm(as_completed(futures), total=len(self.meshes)):
+                index, actor = future.result()
+                actors[index] = actor
+
         self.actors = actors
         print('Done.\n')
 
