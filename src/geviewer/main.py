@@ -23,15 +23,15 @@ def print_instructions():
     print('  and drag to pan,  ctrl + click and drag to roll,')
     print('  and scroll to zoom')
     print('* Press "c" to capture a screenshot of the current view')
-    print('* Press "g" to save a vector graphic of the current view')
-    print('* Press "t" to toggle the tracks on or off')
+    print('* Press "t" to toggle the trajectories on or off')
     print('* Press "h" to toggle the hits on or off')
     print('* Press "b" to toggle the background on or off')
     print('* Press "w" to switch to a wireframe rendering mode')
     print('* Press "s" to switch to a solid rendering mode')
     print('* Press "v" to reset to the default viewpoint')
     print('* Press "d" to set the display window size')
-    print('* Press "p" to set the camera viewpoint')
+    print('* Press "o" to set the camera viewpoint')
+    print('* Press "p" to print the current display settings')
     print('* Press "q" or "e" to quit the viewer')
     print()
 
@@ -43,14 +43,14 @@ def main():
     print_instructions()
 
     parser = argparse.ArgumentParser(description='View Geant4 simulation results.')
-    parser.add_argument('filename', help='The VRML file to be displayed.')
+    parser.add_argument('filenames', nargs='*', help='The VRML file to be displayed.')
     parser.add_argument('--safe-mode', help='Option to get more robust VRML parsing ' \
                           + 'at the expense of some interactive features.',action='store_true')
     args = parser.parse_args()
-    filename = args.filename
+    filenames = args.filenames
     safe_mode = args.safe_mode
 
-    gev = GeViewer(filename, safe_mode)
+    gev = GeViewer(filenames, safe_mode)
     gev.show()
 
 

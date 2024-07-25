@@ -8,25 +8,26 @@ from geviewer import utils, parser
 
 class GeViewer:
 
-    def __init__(self, filename, safe_mode=False, off_screen=False):
+    def __init__(self, filenames, safe_mode=False, off_screen=False):
         '''
         Read data from a file and create meshes from it.
         '''
-        self.filename = filename
+        self.filenames = filenames
         self.off_screen = off_screen
         self.bkg_on = False
-        self.wireframe = False
         self.safe_mode = safe_mode
         if safe_mode:
             print('Running in safe mode with some features disabled.\n')
             self.view_params = (None, None, None)
             self.create_plotter()
-            self.plotter.import_vrml(self.filename)
+            if len(filenames)>1:
+                print('Only the first file will be displayed in safe mode.\n')
+                self.plotter.import_vrml(filenames[0])
             self.counts = []
             self.visible = []
             self.meshes = []
         else:
-            data = utils.read_file(filename)
+            data = utils.read_files(filenames)
             viewpoint_block, polyline_blocks, marker_blocks, solid_blocks = parser.extract_blocks(data)
             self.view_params = parser.parse_viewpoint_block(viewpoint_block)
             self.counts = [len(polyline_blocks), len(marker_blocks), len(solid_blocks)]
@@ -40,10 +41,10 @@ class GeViewer:
         '''
         Create a PyVista plotter.
         '''
-        self.plotter = pv.Plotter(title='GeViewer — ' + str(Path(self.filename).resolve()),\
+        self.plotter = pv.Plotter(title='GeViewer — ' + str(Path(self.filenames[0] + \
+                                  ['',' + {} more'.format(len(self.filenames)-1)][len(self.filenames)>1]).resolve()),\
                                   off_screen=self.off_screen)
         self.plotter.add_key_event('c', self.save_screenshot)
-        self.plotter.add_key_event('g', self.save_graphic)
         self.plotter.add_key_event('t', self.toggle_tracks)
         self.plotter.add_key_event('h', self.toggle_hits)
         self.plotter.add_key_event('b', self.toggle_background)
@@ -123,21 +124,15 @@ class GeViewer:
         print('Done.\n')
 
 
-    def save_graphic(self):
-        '''
-        Save a high-quality graphic (ie a vector graphic) of the current view.
-        '''
-        file_path = asyncio.run(utils.prompt_for_file_path('graphic', 'svg'))
-        self.plotter.save_graphic(file_path)
-        print('Graphic saved to ' + file_path + '\n')
-
-
     def save_screenshot(self):
         '''
         Save a screenshot (as a png) of the current view.
         '''
-        file_path = asyncio.run(utils.prompt_for_file_path('screenshot', 'png'))
-        self.plotter.screenshot(file_path)
+        file_path = asyncio.run(utils.prompt_for_file_path())
+        if file_path.endswith('.png'):
+            self.plotter.screenshot(file_path)
+        else:
+            self.plotter.save_graphic(file_path)
         print('Screenshot saved to ' + file_path + '\n')
     
 
