@@ -15,7 +15,6 @@ class GeViewer:
         self.filenames = filenames
         self.off_screen = off_screen
         self.bkg_on = False
-        self.wireframe = False
         self.safe_mode = safe_mode
         if safe_mode:
             print('Running in safe mode with some features disabled.\n')
