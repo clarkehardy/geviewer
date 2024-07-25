@@ -43,7 +43,6 @@ class GeViewer:
         self.plotter = pv.Plotter(title='GeViewer — ' + str(Path(self.filename).resolve()),\
                                   off_screen=self.off_screen)
         self.plotter.add_key_event('c', self.save_screenshot)
-        self.plotter.add_key_event('g', self.save_graphic)
         self.plotter.add_key_event('t', self.toggle_tracks)
         self.plotter.add_key_event('h', self.toggle_hits)
         self.plotter.add_key_event('b', self.toggle_background)
@@ -123,21 +122,15 @@ class GeViewer:
         print('Done.\n')
 
 
-    def save_graphic(self):
-        '''
-        Save a high-quality graphic (ie a vector graphic) of the current view.
-        '''
-        file_path = asyncio.run(utils.prompt_for_file_path('graphic', 'svg'))
-        self.plotter.save_graphic(file_path)
-        print('Graphic saved to ' + file_path + '\n')
-
-
     def save_screenshot(self):
         '''
         Save a screenshot (as a png) of the current view.
         '''
-        file_path = asyncio.run(utils.prompt_for_file_path('screenshot', 'png'))
-        self.plotter.screenshot(file_path)
+        file_path = asyncio.run(utils.prompt_for_file_path())
+        if file_path.endswith('.png'):
+            self.plotter.screenshot(file_path)
+        else:
+            self.plotter.save_graphic(file_path)
         print('Screenshot saved to ' + file_path + '\n')
     
 

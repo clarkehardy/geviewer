@@ -76,13 +76,19 @@ async def prompt_for_camera_view():
     return position, up, focus
 
 
-async def prompt_for_file_path(*args):
+async def prompt_for_file_path():
     '''
     Asynchronously get file path input from the terminal.
     '''
-    print('Enter the file path to save the ' + args[0])
     clear_input_buffer()
-    file_path = await asyncio.to_thread(input,'  (e.g., /path/to/your_file.' + args[1] + '): ')
+    print('Enter the destination file path to save the screenshot.')
+    print('Accepted formats are .png, .svg, .eps, .ps, .pdf, and .tex.')
+    try:
+        file_path = await asyncio.to_thread(input,'Save as (e.g. /path/to/file.png): ')
+        if not file_path.endswith(('.png', '.svg', '.eps', '.ps', '.pdf', '.tex')):
+            raise ValueError
+    except ValueError:
+        print('Error: invalid input. Please enter a valid file path.')
     return file_path
 
 

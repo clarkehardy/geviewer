@@ -47,26 +47,16 @@ class TestGeViewerMain(unittest.TestCase):
     @mock.patch('geviewer.utils.prompt_for_file_path')
     def test_save_screenshot(self,mocked_input):
         '''
-        Test the save_screenshot method with a mocked file name input.
-        '''
-        file_names = [tempfile.mkstemp(suffix='.png')[1]]
-        mocked_input.side_effect = file_names
-        self.gev.save_screenshot()
-        self.assertTrue(isfile(file_names[0]))
-
-
-    @mock.patch('geviewer.utils.prompt_for_file_path')
-    def test_save_graphic(self,mocked_input):
-        '''
         Test the save_graphic method with mocked file name inputs.
         '''
-        file_names = [tempfile.mkstemp(suffix='.svg')[1],\
+        file_names = [tempfile.mkstemp(suffix='.png')[1],\
+                      tempfile.mkstemp(suffix='.svg')[1],\
                       tempfile.mkstemp(suffix='.eps')[1],\
                       tempfile.mkstemp(suffix='.ps')[1],\
                       tempfile.mkstemp(suffix='.pdf')[1],\
                       tempfile.mkstemp(suffix='.tex')[1]]
         mocked_input.side_effect = file_names
-        self.gev.save_graphic()
+        self.gev.save_screenshot()
         for i in mocked_input.side_effect:
             with self.subTest():
                 self.assertTrue(isfile(i))
