@@ -32,6 +32,7 @@ def print_instructions():
     print('* Press "d" to set the display window size')
     print('* Press "o" to set the camera viewpoint')
     print('* Press "p" to print the current display settings')
+    print('* Press "h" to export the viewer to an HTML file')
     print('* Press "q" or "e" to quit the viewer')
     print()
 
@@ -43,17 +44,22 @@ def main():
     print_instructions()
 
     parser = argparse.ArgumentParser(description='View Geant4 simulation results.')
-    parser.add_argument('filenames', nargs='*', help='The VRML file to be displayed.')
-    parser.add_argument('--safe-mode', help='Option to get more robust VRML parsing ' \
-                          + 'at the expense of some interactive features.', action='store_true')
-    parser.add_argument('--save-session', help='Option to save the current session to a file.', \
-                        action='store_true')
+    parser.add_argument('filenames', nargs='+', help='The VRML file to be displayed.')
+    parser.add_argument('-d', '--destination', nargs='?', help='The location where the session' \
+                        + ' will be saved.', default=None, const='viewer.gev')
+    parser.add_argument('-o', '--off-screen', help='Option to run in off-screen mode.', action='store_true')
+    parser.add_argument('-s', '--safe-mode', help='Option to use more robust VRML parsing ' \
+                        + 'at the expense of some interactive features.', action='store_true')
+    parser.add_argument('-w', '--ignore-warnings', help='Option to ignore warnings.', action='store_true')
     args = parser.parse_args()
     filenames = args.filenames
+    destination = args.destination
+    off_screen = args.off_screen
     safe_mode = args.safe_mode
-    save_session = args.save_session
+    ignore_warnings = args.ignore_warnings
 
-    GeViewer(filenames, safe_mode=safe_mode, save_session=save_session)
+    GeViewer(filenames, destination=destination, off_screen=off_screen,\
+             safe_mode=safe_mode, ignore_warnings=ignore_warnings)
 
 
 if __name__ == '__main__':

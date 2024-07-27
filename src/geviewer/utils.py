@@ -157,7 +157,7 @@ def prompt_for_save_session(total_meshes):
                 raise ValueError
             save_session = save_input.lower() == 'y'
             print('This session will ' + ['not ', ''][save_session] + 'be saved.')
-            print('(To save the session by default, use the --save-session flag.')
+            print('(To save the session by default, use the --destination flag.')
             print('To avoid this warning, use the --ignore-warnings flag.)\n')
             return save_session
         except ValueError:

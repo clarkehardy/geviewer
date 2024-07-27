@@ -12,17 +12,32 @@ from geviewer import utils, parser
 
 class GeViewer:
 
-    def __init__(self, filenames, safe_mode=False, off_screen=False, save_session=False,\
-                 ignore_warnings=False):
+    def __init__(self, filenames, destination=None, off_screen=False,\
+                 safe_mode=False, ignore_warnings=False):
         '''
         Read data from a file and create meshes from it.
         '''
         self.filenames = filenames
         self.safe_mode = safe_mode
         self.off_screen = off_screen
-        self.save_session = save_session
         self.ignore_warnings = ignore_warnings
         self.bkg_on = False
+
+        # if destination is given, the program will save the session to that file
+        if destination is not None:
+            self.save_session = True
+            if not destination.endswith('.gev'):
+                if self.off_screen:
+                    print('Renaming the session file to end in .gev so it can be loaded later.')
+                    destination = destination.split('.')[:-1] + '.gev'
+                else:
+                    print('Error: invalid file extension.')
+                    print('Try again, or press enter to continue without saving.\n')
+                    destination = utils.prompt_for_file_path()
+            if destination is None:
+                self.save_session = False
+        else:
+            self.save_session = False
 
         # ensure the input arguments are valid
         self.from_gev = True if filenames[0].endswith('.gev') else False
@@ -36,11 +51,20 @@ class GeViewer:
             filenames = [filenames[0]]
         if self.from_gev and self.safe_mode:
             print('Safe mode can only be used for VRML files.')
-            print('Loading the file without safe mode.\n')
+            print('Ignoring the --safe-mode flag.\n')
             self.safe_mode = False
-        if self.from_gev and save_session:
-            print('This session has already been saved. Ignoring the --save-session flag.\n')
+        if self.from_gev and self.save_session:
+            print('This session has already been saved.')
+            print('Ignoring the --destination flag.\n')
             self.save_session = False
+        if destination is not None and self.safe_mode:
+            print('Cannot save a session in safe mode.')
+            print('Ignoring the --destination flag.\n')
+            self.save_session = False
+        if self.off_screen and self.safe_mode:
+            print('Cannot run in safe mode and off-screen mode.')
+            print('Ignoring the --safe-mode flag.\n')
+            self.safe_mode = False
 
         if self.safe_mode:
             print('Running in safe mode with some features disabled.\n')
@@ -61,13 +85,8 @@ class GeViewer:
                 viewpoint_block, polyline_blocks, marker_blocks, solid_blocks = parser.extract_blocks(data)
                 self.view_params = parser.parse_viewpoint_block(viewpoint_block)
                 self.counts = [len(polyline_blocks), len(marker_blocks), len(solid_blocks)]
-                if not ignore_warnings and sum(self.counts)>1e4:
+                if not self.save_session and not ignore_warnings and sum(self.counts)>1e4:
                     self.save_session = utils.prompt_for_save_session(sum(self.counts))
-                if self.save_session:
-                    saveto = utils.prompt_for_file_path()
-                    if saveto is None:
-                        self.save_session = False
-                    print('This session will ' + ['not ', ''][self.save_session] + 'be saved.')
                 self.meshes, self.scalars, self.cmaps = parser.create_meshes(polyline_blocks, \
                                                                             marker_blocks, \
                                                                             solid_blocks)
@@ -76,10 +95,9 @@ class GeViewer:
             self.create_plotter()
             self.plot_meshes()
             if self.save_session:
-                self.save(saveto)
-                print('Session saved to ' + str(Path(saveto).resolve()) + '.\n')
-            if not off_screen:
-                self.show()
+                self.save(destination)
+        if not off_screen:
+            self.show()
 
     
     def create_plotter(self):
@@ -330,7 +348,17 @@ class GeViewer:
                 for file_name in os.listdir(tmpfolder):
                     file_path = os.path.join(tmpfolder, file_name)
                     archive.write(file_path, arcname=file_name)
+
+            # if using the default filename and it exists, increment
+            # the number until a unique filename is found
+            if filename=='viewer.gev' and os.path.exists(filename):
+                filename = 'viewer2.gev'
+                i = 2
+                while(os.path.exists('viewer{}.gev'.format(i))):
+                    i += 1
+                filename = 'viewer{}.gev'.format(i)
             os.rename(tmpdir + 'gevfile.gev', filename)
+            print('Session saved to ' + str(Path(filename).resolve()) + '.\n')
 
                 
     def load(self, filename):
