@@ -1,9 +1,7 @@
 import numpy as np
 import pyvista as pv
 import asyncio
-from tqdm import tqdm
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from geviewer import utils, parser
 
 
@@ -33,7 +31,7 @@ class GeViewer:
             self.view_params = parser.parse_viewpoint_block(viewpoint_block)
             self.counts = [len(polyline_blocks), len(marker_blocks), len(solid_blocks)]
             self.visible = [True, True, True]
-            self.meshes = parser.create_meshes(polyline_blocks, marker_blocks, solid_blocks)
+            self.meshes,self.cmap,self.color_inds = parser.create_meshes(polyline_blocks, marker_blocks, solid_blocks)
             self.create_plotter()
             self.plot_meshes()
 
@@ -42,9 +40,9 @@ class GeViewer:
         '''
         Create a PyVista plotter.
         '''
-        self.plotter = pv.Plotter(title='GeViewer — ' + str(Path(self.filenames[0] + \
+        self.plotter = pv.Plotter(title='GeViewer — ' + str(Path(self.filenames[0]).resolve()) + \
                                   ['',' + {} more'.format(len(self.filenames)-1)]\
-                                  [(len(self.filenames)>1) and not self.safe_mode]).resolve()),\
+                                  [(len(self.filenames)>1) and not self.safe_mode],\
                                   off_screen=self.off_screen)
         self.plotter.add_key_event('c', self.save_screenshot)
         self.plotter.add_key_event('t', self.toggle_tracks)
@@ -112,28 +110,24 @@ class GeViewer:
 
     def plot_meshes(self):
         '''
-        Add the meshes to the plot in parallel while maintaining order.
+        Add the meshes to the plot.
         '''
-        print('Rendering meshes...')
 
-        def create_actor(index, mesh, color, transparency):
-            if transparency is not None:
-                opacity = 1.0 - transparency
-            else:
-                opacity = 1.0
-            actor = self.plotter.add_mesh(mesh, color=color, opacity=opacity)
-            return index, actor
+        blocks = pv.MultiBlock()
+        cell_inds = []
+        for i, mesh in enumerate(self.meshes):
+            blocks.append(mesh)
+            cell_inds += [int(self.color_inds[i])]*mesh.n_cells
 
-        actors = [None] * len(self.meshes)
-        with ThreadPoolExecutor() as executor:
-            futures = [executor.submit(create_actor, i, mesh, color, transparency)
-                       for i, (mesh, color, transparency) in enumerate(self.meshes)]
+        blocks = blocks.combine()
+        cell_inds = np.array(cell_inds)
+        scalar_range = [np.amin(cell_inds),np.amax(cell_inds)+1]
+        lut = pv.LookupTable(scalar_range=scalar_range)
+        lut.apply_cmap(self.cmap,n_values=self.cmap.N)
 
-            for future in tqdm(as_completed(futures), total=len(self.meshes)):
-                index, actor = future.result()
-                actors[index] = actor
+        self.plotter.add_mesh(blocks,scalars=cell_inds+0.5,cmap=lut,show_scalar_bar=False)
 
-        self.actors = actors
+        self.actors = blocks
         print('Done.\n')
 
 

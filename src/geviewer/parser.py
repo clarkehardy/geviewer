@@ -1,13 +1,95 @@
 import numpy as np
 import pyvista as pv
+from tqdm import tqdm
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from matplotlib.colors import LinearSegmentedColormap
+
+
+def process_polyline_block(block):
+    '''
+    Process a polyline block to create a polyline mesh.
+    '''
+    points, indices, color = parse_polyline_block(block)
+    lines = []
+    for i in range(len(indices) - 1):
+        if indices[i] != -1 and indices[i + 1] != -1:
+            lines.extend([2, indices[i], indices[i + 1]])
+    line_mesh = pv.PolyData(points)
+    if len(lines) > 0:
+        line_mesh.lines = lines
+    return line_mesh, color
+
+
+def process_marker_block(block):
+    '''
+    Process a marker block to create a marker mesh.
+    '''
+    center, radius, color = parse_marker_block(block)
+    sphere = pv.Sphere(radius=radius, center=center)
+    return sphere, color
+
+
+def process_solid_block(block):
+    '''
+    Process a solid block to create a solid mesh.
+    '''
+    points, indices, color = parse_solid_block(block)
+    faces = []
+    current_face = []
+    for index in indices:
+        if index == -1:
+            if len(current_face) == 3:
+                faces.extend([3] + current_face)
+            elif len(current_face) == 4:
+                faces.extend([4] + current_face)
+            current_face = []
+        else:
+            current_face.append(index)
+    faces = np.array(faces)
+    solid_mesh = pv.PolyData(points, faces)
+    return solid_mesh, color
+
+
+def create_meshes(polyline_blocks, marker_blocks, solid_blocks):
+    '''
+    Create meshes from the polyline, marker, and solid blocks.
+    '''
+    total_blocks = len(polyline_blocks) + len(marker_blocks) + len(solid_blocks)
+    meshes = [None] * total_blocks
+    colors = [None] * total_blocks
+    
+    def process_block(block, index, func):
+        meshes[index], colors[index] = func(block)
+    
+    with ThreadPoolExecutor() as executor:
+        futures = []
+        
+        for i, block in enumerate(polyline_blocks):
+            futures.append(executor.submit(process_block, block, i, process_polyline_block))
+        
+        start_index = len(polyline_blocks)
+        for i, block in enumerate(marker_blocks):
+            futures.append(executor.submit(process_block, block, start_index + i, process_marker_block))
+        
+        start_index = len(polyline_blocks) + len(marker_blocks)
+        for i, block in enumerate(solid_blocks):
+            futures.append(executor.submit(process_block, block, start_index + i, process_solid_block))
+        
+        for future in tqdm(as_completed(futures), desc='Building meshes', total=total_blocks):
+            future.result()
+
+    colors = np.array(colors)
+    unique_colors,inverse_indices = np.unique(colors, axis=0, return_inverse=True)
+    cmap = LinearSegmentedColormap.from_list('geometry', unique_colors, N=len(unique_colors))
+        
+    return meshes, cmap, inverse_indices
 
 
 def extract_blocks(file_content):
     '''
     Extract polyline, marker, and solid blocks from the file content.
     '''
-    print('Parsing mesh data...')
     polyline_blocks = []
     marker_blocks = []
     solid_blocks = []
@@ -18,7 +100,7 @@ def extract_blocks(file_content):
     inside_block = False
     brace_count = 0
 
-    for line in lines:
+    for line in tqdm(lines, desc='Parsing data...'):
         stripped_line = line.strip()
 
         if stripped_line.startswith('Shape') or stripped_line.startswith('Anchor')\
@@ -46,54 +128,6 @@ def extract_blocks(file_content):
                 inside_block = False
 
     return viewpoint_block, polyline_blocks, marker_blocks, solid_blocks
-
-
-def create_meshes(polyline_blocks, marker_blocks, solid_blocks):
-    '''
-    Create meshes from the polyline, marker, and solid blocks.
-    '''
-    print('Creating meshes...')
-    meshes = []
-
-    # tracks are saved as polyline blocks
-    for block in polyline_blocks:
-        points, indices, color = parse_polyline_block(block)
-        lines = []
-        for i in range(len(indices) - 1):
-            if indices[i] != -1 and indices[i + 1] != -1:
-                lines.extend([2, indices[i], indices[i + 1]])
-        line_mesh = pv.PolyData(points)
-        if len(lines) > 0:
-            line_mesh.lines = lines
-        meshes.append((line_mesh, color, None))
-
-    # energy depositions are saved as marker blocks
-    for block in marker_blocks:
-        center, radius, color = parse_marker_block(block)
-        sphere = pv.Sphere(radius=radius, center=center)
-        meshes.append((sphere, color, None))
-
-    # geometry is saved as solid blocks
-    for block in solid_blocks:
-        points, indices, color, transparency = parse_solid_block(block)
-        
-        faces = []
-        current_face = []
-        for index in indices:
-            if index == -1:
-                if len(current_face) == 3:
-                    faces.extend([3] + current_face)
-                elif len(current_face) == 4:
-                    faces.extend([4] + current_face)
-                current_face = []
-            else:
-                current_face.append(index)
-        
-        faces = np.array(faces)
-        solid_mesh = pv.PolyData(points, faces)
-        meshes.append((solid_mesh, color, transparency))
-
-    return meshes
 
 
 def parse_viewpoint_block(block):
@@ -126,8 +160,8 @@ def parse_polyline_block(block):
     '''
     Parse a polyline block to get particle track information.
     '''
-    coord = []
-    coordIndex = []
+    coords = []
+    coord_inds = []
     color = [1, 1, 1]
 
     lines = block.split('\n')
@@ -148,24 +182,26 @@ def parse_polyline_block(block):
             continue
         elif 'diffuseColor' in line:
             color = list(map(float, re.findall(r'[-+]?\d*\.?\d+', line)))
-
         if reading_points:
             point = line.replace(',', '').split()
             if len(point) == 3:
-                coord.append(list(map(float, point)))
+                coords.append(list(map(float, point)))
         elif reading_indices:
             indices = line.replace(',', '').split()
-            coordIndex.extend(list(map(int, indices)))
+            coord_inds.extend(list(map(int, indices)))
 
-    return np.array(coord), coordIndex, color
+    color.append(1)
+
+    return np.array(coords), np.array(coord_inds), np.array(color)
 
 
 def parse_marker_block(block):
     '''
     Parse a marker block to get step information.
     '''
-    coord = []
+    coords = []
     color = [1, 1, 1]
+    transparency = 0
     radius = 1
 
     lines = block.split('\n')
@@ -175,22 +211,26 @@ def parse_marker_block(block):
         if line.startswith('translation'):
             point = line.split()[1:]
             if len(point) == 3:
-                coord = list(map(float, point))
+                coords = list(map(float, point))
         elif 'diffuseColor' in line:
             color = list(map(float, re.findall(r'[-+]?\d*\.?\d+', line)))
+        elif 'transparency' in line:
+            transparency = float(re.findall(r'[-+]?\d*\.?\d+', line)[0])
         elif 'radius' in line:
             radius = float(re.findall(r'[-+]?\d*\.?\d+', line)[0])
 
-    return np.array(coord), radius, color
+    color.append(1 - transparency)
+
+    return np.array(coords), radius, np.array(color)
 
 
 def parse_solid_block(block):
     '''
     Parse a solid block to get geometry information.
     '''
-    coord = []
-    coordIndex = []
-    color = [1, 1, 1]
+    coords = []
+    coord_inds = []
+    color = [1, 1, 1, 0]
     transparency = 0
 
     lines = block.split('\n')
@@ -213,14 +253,14 @@ def parse_solid_block(block):
             color = list(map(float, re.findall(r'[-+]?\d*\.?\d+', line)))
         elif 'transparency' in line:
             transparency = float(re.findall(r'[-+]?\d*\.?\d+', line)[0])
-
         if reading_points:
             point = line.replace(',', '').split()
             if len(point) == 3:
-                coord.append(list(map(float, point)))
+                coords.append(list(map(float, point)))
         elif reading_indices:
             indices = line.replace(',', '').split()
+            coord_inds.extend(list(map(int, indices)))
 
-            coordIndex.extend(list(map(int, indices)))
+    color.append(1 - transparency)
 
-    return np.array(coord), coordIndex, color, transparency
+    return np.array(coords), np.array(coord_inds), np.array(color)

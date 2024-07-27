@@ -10,7 +10,7 @@ def read_files(filenames):
     '''
     data = ''
     for filename in filenames:
-        print('Reading mesh data from ' + filename + '...')
+        print('Reading data from ' + filename + '...')
         with open(filename, 'r') as f:
             data += f.read()[:-15]
     return data
