@@ -2,20 +2,47 @@ import numpy as np
 import pyvista as pv
 import asyncio
 from pathlib import Path
+import json
+import os
+import zipfile
+import tempfile
+from matplotlib.colors import LinearSegmentedColormap
 from geviewer import utils, parser
 
 
 class GeViewer:
 
-    def __init__(self, filenames, safe_mode=False, off_screen=False):
+    def __init__(self, filenames, safe_mode=False, off_screen=False, save_session=False,\
+                 ignore_warnings=False):
         '''
         Read data from a file and create meshes from it.
         '''
         self.filenames = filenames
-        self.off_screen = off_screen
-        self.bkg_on = False
         self.safe_mode = safe_mode
-        if safe_mode:
+        self.off_screen = off_screen
+        self.save_session = save_session
+        self.ignore_warnings = ignore_warnings
+        self.bkg_on = False
+
+        # ensure the input arguments are valid
+        self.from_gev = True if filenames[0].endswith('.gev') else False
+        if len(filenames) > 1:
+            extensions = [Path(f).suffix for f in filenames]
+            if not all([e == extensions[0] for e in extensions]):
+                raise Exception('Cannot load .wrl and .gev files together.')
+        if self.from_gev and len(filenames) > 1:
+            print('Loading multiple .gev files at a time is not supported.')
+            print('Only the first file will be loaded.\n')
+            filenames = [filenames[0]]
+        if self.from_gev and self.safe_mode:
+            print('Safe mode can only be used for VRML files.')
+            print('Loading the file without safe mode.\n')
+            self.safe_mode = False
+        if self.from_gev and save_session:
+            print('This session has already been saved. Ignoring the --save-session flag.\n')
+            self.save_session = False
+
+        if self.safe_mode:
             print('Running in safe mode with some features disabled.\n')
             self.view_params = (None, None, None)
             self.create_plotter()
@@ -26,16 +53,33 @@ class GeViewer:
             self.visible = []
             self.meshes = []
         else:
-            data = utils.read_files(filenames)
-            viewpoint_block, polyline_blocks, marker_blocks, solid_blocks = parser.extract_blocks(data)
-            self.view_params = parser.parse_viewpoint_block(viewpoint_block)
-            self.counts = [len(polyline_blocks), len(marker_blocks), len(solid_blocks)]
             self.visible = [True, True, True]
-            self.meshes, self.scalars, self.cmaps = parser.create_meshes(polyline_blocks, \
+            if self.from_gev:
+                self.load(filenames[0])
+            else:
+                data = utils.read_files(filenames)
+                viewpoint_block, polyline_blocks, marker_blocks, solid_blocks = parser.extract_blocks(data)
+                self.view_params = parser.parse_viewpoint_block(viewpoint_block)
+                self.counts = [len(polyline_blocks), len(marker_blocks), len(solid_blocks)]
+                if not ignore_warnings and sum(self.counts)>1e4:
+                    self.save_session = utils.prompt_for_save_session(sum(self.counts))
+                if self.save_session:
+                    saveto = utils.prompt_for_file_path()
+                    if saveto is None:
+                        self.save_session = False
+                    print('This session will ' + ['not ', ''][self.save_session] + 'be saved.')
+                self.meshes, self.scalars, self.cmaps = parser.create_meshes(polyline_blocks, \
                                                                             marker_blocks, \
                                                                             solid_blocks)
+                self.reduce_meshes()
+            self.make_colormaps()
             self.create_plotter()
             self.plot_meshes()
+            if self.save_session:
+                self.save(saveto)
+                print('Session saved to ' + str(Path(saveto).resolve()) + '.\n')
+            if not off_screen:
+                self.show()
 
     
     def create_plotter(self):
@@ -110,11 +154,26 @@ class GeViewer:
         print('  Up vector:   ({}, {}, {})\n'.format(*self.plotter.camera.up))
 
 
-    def plot_meshes(self):
+    def make_colormaps(self):
         '''
-        Add the meshes to the plot.
+        Make the colormaps used to color the meshes.
         '''
-        actors = [None, None, None]
+        luts = []
+        for t in range(3):
+            if self.counts[t] > 0:
+                scalar_range = [min(self.scalars[t]), max(self.scalars[t]) + 1]
+                lut = pv.LookupTable(scalar_range=scalar_range)
+                lut.apply_cmap(self.cmaps[t], n_values=self.cmaps[t].N)
+                luts.append(lut)
+            else:
+                luts.append(None)
+        self.luts = luts
+
+
+    def reduce_meshes(self):
+        '''
+        Reduce the number of meshes by combining them.
+        '''
         blocks = [pv.MultiBlock() for i in range(3)]
         scalars = [[] for i in range(3)]
         for i, mesh in enumerate(self.meshes):
@@ -129,11 +188,22 @@ class GeViewer:
         for t in range(3):
             if self.counts[t] > 0:
                 blocks[t] = blocks[t].combine()
-                scalar_range = [min(scalars[t]), max(scalars[t]) + 1]
-                lut = pv.LookupTable(scalar_range=scalar_range)
-                lut.apply_cmap(self.cmaps[t], n_values=self.cmaps[t].N)
-                actors[t] = self.plotter.add_mesh(blocks[t], scalars=np.array(scalars[t]) + 0.5,\
-                                                  cmap=lut, show_scalar_bar=False)
+            else:
+                blocks[t] = None
+        self.meshes = blocks
+        self.scalars = scalars
+
+
+    def plot_meshes(self):
+        '''
+        Add the meshes to the plot.
+        '''
+        print('Plotting meshes...')
+        actors = [None for i in range(3)]
+        for t in range(3):
+            if self.counts[t] > 0:
+                actors[t] = self.plotter.add_mesh(self.meshes[t], scalars=np.array(self.scalars[t]) + 0.5,\
+                                                  cmap=self.luts[t], show_scalar_bar=False)
         self.actors = actors
         print('Done.\n')
 
@@ -142,7 +212,7 @@ class GeViewer:
         '''
         Save a screenshot (as a png) of the current view.
         '''
-        file_path = asyncio.run(utils.prompt_for_file_path())
+        file_path = asyncio.run(utils.prompt_for_screenshot_path())
         if file_path is None:
             print('Operation cancelled.\n')
             return
@@ -150,7 +220,7 @@ class GeViewer:
             self.plotter.screenshot(file_path)
         else:
             self.plotter.save_graphic(file_path)
-        print('Screenshot saved to ' + file_path + '.\n')
+        print('Screenshot saved to ' + str(Path(file_path).resolve()) + '.\n')
     
 
     def set_window_size(self):
@@ -215,6 +285,83 @@ class GeViewer:
             self.plotter.set_background('white')
         if not self.off_screen:
             self.plotter.update()
+
+
+    def save(self, filename):
+        '''
+        Save the meshes to a file.
+        '''
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpfolder = tmpdir + '/gevfile/'
+            os.makedirs(tmpfolder, exist_ok=False)
+            for i,mesh in enumerate(self.meshes):
+                if mesh is not None:
+                    mesh.save(tmpfolder + 'mesh{}.vtk'.format(i))
+                    np.save(tmpfolder + 'scalars{}.npy'.format(i),self.scalars[i],allow_pickle=False)
+                    with open(tmpfolder + 'cmap{}.json'.format(i), 'w') as f:
+                        cmap_dict = self.cmaps[i]._segmentdata
+                        cmap_dict['N'] = self.cmaps[i].N
+                        for c in ['red', 'green', 'blue', 'alpha']:
+                            cmap_dict[c] = [val.item() for val in cmap_dict[c][:,-1]]
+                        json.dump(cmap_dict, f)
+            fov, pos, ori = self.view_params
+            if fov is None:
+                fov = 'None'
+            if pos is None:
+                pos = ['None' for i in range(3)]
+            if ori is None:
+                ori = ['None' for i in range(4)]
+            viewpoint = np.array([str(fov)] + [str(p) for p in pos] + [str(o) for o in ori])
+            np.save(tmpfolder + 'viewpoint.npy',np.array(viewpoint),allow_pickle=False)
+            with zipfile.ZipFile(tmpdir + 'gevfile.gev', 'w') as archive:
+                for file_name in os.listdir(tmpfolder):
+                    file_path = os.path.join(tmpfolder, file_name)
+                    archive.write(file_path, arcname=file_name)
+            os.rename(tmpdir + 'gevfile.gev', filename)
+
+                
+    def load(self, filename):
+        '''
+        Load the meshes from a file.
+        '''
+        print('Loading session from ' + str(Path(filename).resolve()) + '...')
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpfolder = tmpdir + '/gevfile/'
+            os.makedirs(tmpfolder, exist_ok=False)
+            with zipfile.ZipFile(filename, 'r') as archive:
+                archive.extractall(tmpfolder)
+            meshes = []
+            scalars = []
+            cmaps = []
+            counts = []
+            mesh_files = [file[-5] for file in os.listdir(tmpfolder) if file.endswith('.vtk')]
+            for i in range(3):
+                if str(i) not in mesh_files:
+                    meshes.append(None)
+                    scalars.append(None)
+                    cmaps.append(None)
+                    counts.append(0)
+                    continue
+                meshes.append(pv.read(tmpfolder + 'mesh{}.vtk'.format(i)))
+                scalars.append(np.load(tmpfolder + 'scalars{}.npy'.format(i)))
+                with open(tmpfolder + 'cmap{}.json'.format(i), 'r') as f:
+                    cmap_dict = json.load(f)
+                cmap_list = [np.array((cmap_dict['red'][i],\
+                                       cmap_dict['green'][i],\
+                                       cmap_dict['blue'][i],\
+                                       cmap_dict['alpha'][i]))\
+                             for i in range(len(cmap_dict['red']))]
+                cmaps.append(LinearSegmentedColormap.from_list("my_colormap", cmap_list, N=cmap_dict['N']))
+                counts.append(1)
+            viewpoint = np.load(tmpfolder + 'viewpoint.npy')
+            fov = float(viewpoint[0]) if viewpoint[0] != 'None' else None
+            pos = [float(p) for p in viewpoint[1:4]] if viewpoint[1] != 'None' else None
+            ori = [float(o) for o in viewpoint[4:]] if viewpoint[4] != 'None' else None
+            self.view_params = (fov, pos, ori)
+            self.meshes = meshes
+            self.scalars = scalars
+            self.cmaps = cmaps
+            self.counts = counts
 
 
     def show(self):

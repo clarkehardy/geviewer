@@ -79,7 +79,7 @@ async def prompt_for_camera_view():
     return position, up, focus
 
 
-async def prompt_for_file_path():
+async def prompt_for_screenshot_path():
     '''
     Asynchronously get file path input from the terminal.
     '''
@@ -119,11 +119,57 @@ async def prompt_for_window_size():
     return width, height
 
 
+def prompt_for_file_path():
+    '''
+    Get file path input from the terminal.
+    '''
+    clear_input_buffer()
+    print('Enter the destination file path to save the session,')
+    print('or press enter to cancel. Use the file extension .gev')
+    print('so GeViewer can load the session later.')
+    while(True):
+        try:
+            file_path = input('Save as (e.g. /path/to/file.gev): ')
+            if file_path == '':
+                return None
+            if not file_path.endswith('.gev'):
+                raise ValueError
+            break
+        except ValueError:
+            print('Error: invalid input. Please enter a valid file path.')
+            print('Ending in .gev')
+    return file_path
+
+
+def prompt_for_save_session(total_meshes):
+    '''
+    If the user tries to load a large file, ask them if they want
+    to save the session to avoid reloading it again later.
+    '''
+    clear_input_buffer()
+    print('\nWarning: the file you are attempting to view is large')
+    print('({} meshes) and may take a while to load. Do you want to save'.format(total_meshes))
+    print('the session after loading to avoid having to reload it later?')
+    while(True):
+        try:
+            save_input = input('Enter "y" or "n": ')
+            if save_input.lower() not in ['y', 'n']:
+                raise ValueError
+            save_session = save_input.lower() == 'y'
+            print('This session will ' + ['not ', ''][save_session] + 'be saved.')
+            print('(To save the session by default, use the --save-session flag.')
+            print('To avoid this warning, use the --ignore-warnings flag.)\n')
+            return save_session
+        except ValueError:
+            print('Error: invalid input. Please enter "y" or "n".')
+
+
 def orientation_transform(orientation):
     '''
-    Get the up vector from the orientation. The orientation is of the form
-    (x, y, z, theta) where (x, y, z) is the axis of rotation and theta is the
-    angle of rotation. The rotation is applied to the default up vector (0, 1, 0).
+    Get the up and focus vectors from the orientation. The orientation is of the
+    form (x, y, z, theta) where (x, y, z) is the axis of rotation and theta is the
+    angle of rotation. The rotation is applied to the default up vector (0, 1, 0)
+    and the default focus vector (0, 0, -1).
     '''
     v = orientation[:3]
     v = np.array(v)/np.linalg.norm(v)

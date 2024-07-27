@@ -45,13 +45,15 @@ def main():
     parser = argparse.ArgumentParser(description='View Geant4 simulation results.')
     parser.add_argument('filenames', nargs='*', help='The VRML file to be displayed.')
     parser.add_argument('--safe-mode', help='Option to get more robust VRML parsing ' \
-                          + 'at the expense of some interactive features.',action='store_true')
+                          + 'at the expense of some interactive features.', action='store_true')
+    parser.add_argument('--save-session', help='Option to save the current session to a file.', \
+                        action='store_true')
     args = parser.parse_args()
     filenames = args.filenames
     safe_mode = args.safe_mode
+    save_session = args.save_session
 
-    gev = GeViewer(filenames, safe_mode)
-    gev.show()
+    GeViewer(filenames, safe_mode=safe_mode, save_session=save_session)
 
 
 if __name__ == '__main__':
