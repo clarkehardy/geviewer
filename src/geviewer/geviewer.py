@@ -4,6 +4,7 @@ import asyncio
 from pathlib import Path
 import json
 import os
+import shutil
 import zipfile
 import tempfile
 from matplotlib.colors import LinearSegmentedColormap
@@ -357,7 +358,7 @@ class GeViewer:
                 while(os.path.exists('viewer{}.gev'.format(i))):
                     i += 1
                 filename = 'viewer{}.gev'.format(i)
-            os.rename(tmpdir + 'gevfile.gev', filename)
+            shutil.copy(tmpdir + 'gevfile.gev', filename)
             print('Session saved to ' + str(Path(filename).resolve()) + '.\n')
 
                 
