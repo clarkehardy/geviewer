@@ -119,10 +119,10 @@ class GeViewer:
         self.plotter.add_key_event('h', self.export_to_html)
         
         # compute the initial camera position
-        if not self.safe_mode:
-            fov = self.view_params[0]
-            position = self.view_params[1]
-            orientation = self.view_params[2]
+        fov = self.view_params[0]
+        position = self.view_params[1]
+        orientation = self.view_params[2]
+        if fov is not None or position is not None or orientation is not None:
             up = None
             focus = None
             if position is not None:
