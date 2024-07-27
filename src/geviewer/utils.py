@@ -164,6 +164,28 @@ def prompt_for_save_session(total_meshes):
             print('Error: invalid input. Please enter "y" or "n".')
 
 
+async def prompt_for_html_path():
+    '''
+    Get the file path to save the HTML file.
+    '''
+    clear_input_buffer()
+    print('Enter the destination file path to save the HTML file,')
+    print('or press enter to cancel. Use the file extension .html')
+    print('to save the viewer as an interactive HTML file.')
+    while(True):
+        try:
+            file_path = await asyncio.to_thread(input, 'Save as (e.g. /path/to/file.html): ')
+            if file_path == '':
+                return None
+            if not file_path.endswith('.html'):
+                raise ValueError
+            break
+        except ValueError:
+            print('Error: invalid input. Please enter a valid file path.')
+            print('Ending in .html')
+    return file_path
+
+
 def orientation_transform(orientation):
     '''
     Get the up and focus vectors from the orientation. The orientation is of the

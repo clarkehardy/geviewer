@@ -98,6 +98,7 @@ class GeViewer:
         self.plotter.add_key_event('d', self.set_window_size)
         self.plotter.add_key_event('o', self.set_camera_view)
         self.plotter.add_key_event('p', self.print_view_params)
+        self.plotter.add_key_event('h', self.export_to_html)
         
         # compute the initial camera position
         if not self.safe_mode:
@@ -287,6 +288,18 @@ class GeViewer:
             self.plotter.update()
 
 
+    def export_to_html(self):
+        '''
+        Save the interactive plotter to an HTML file.
+        '''
+        file_path = asyncio.run(utils.prompt_for_html_path())
+        if file_path is None:
+            print('Operation cancelled.\n')
+            return
+        self.plotter.export_html(file_path)
+        print('Interactive viewer saved to ' + str(Path(file_path).resolve()) + '.\n')
+
+
     def save(self, filename):
         '''
         Save the meshes to a file.
@@ -324,6 +337,8 @@ class GeViewer:
         '''
         Load the meshes from a file.
         '''
+        if not filename.endswith('.gev'):
+            raise Exception('Invalid file format. Only .gev files are supported.')
         print('Loading session from ' + str(Path(filename).resolve()) + '...')
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpfolder = tmpdir + '/gevfile/'
