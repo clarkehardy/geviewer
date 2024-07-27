@@ -2,6 +2,7 @@ import numpy as np
 import sys
 import ast
 import asyncio
+from pathlib import Path
 
 
 def read_files(filenames):
@@ -10,7 +11,7 @@ def read_files(filenames):
     '''
     data = ''
     for filename in filenames:
-        print('Reading data from ' + filename + '...')
+        print('Reading data from ' + str(Path(filename).resolve())+ '...')
         with open(filename, 'r') as f:
             data += f.read()[:-15]
     return data

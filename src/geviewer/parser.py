@@ -6,56 +6,13 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from matplotlib.colors import LinearSegmentedColormap
 
 
-def process_polyline_block(block):
-    '''
-    Process a polyline block to create a polyline mesh.
-    '''
-    points, indices, color = parse_polyline_block(block)
-    lines = []
-    for i in range(len(indices) - 1):
-        if indices[i] != -1 and indices[i + 1] != -1:
-            lines.extend([2, indices[i], indices[i + 1]])
-    line_mesh = pv.PolyData(points)
-    if len(lines) > 0:
-        line_mesh.lines = lines
-    return line_mesh, color
-
-
-def process_marker_block(block):
-    '''
-    Process a marker block to create a marker mesh.
-    '''
-    center, radius, color = parse_marker_block(block)
-    sphere = pv.Sphere(radius=radius, center=center)
-    return sphere, color
-
-
-def process_solid_block(block):
-    '''
-    Process a solid block to create a solid mesh.
-    '''
-    points, indices, color = parse_solid_block(block)
-    faces = []
-    current_face = []
-    for index in indices:
-        if index == -1:
-            if len(current_face) == 3:
-                faces.extend([3] + current_face)
-            elif len(current_face) == 4:
-                faces.extend([4] + current_face)
-            current_face = []
-        else:
-            current_face.append(index)
-    faces = np.array(faces)
-    solid_mesh = pv.PolyData(points, faces)
-    return solid_mesh, color
-
-
 def create_meshes(polyline_blocks, marker_blocks, solid_blocks):
     '''
     Create meshes from the polyline, marker, and solid blocks.
     '''
-    total_blocks = len(polyline_blocks) + len(marker_blocks) + len(solid_blocks)
+    counts = [len(polyline_blocks), len(marker_blocks), len(solid_blocks)]
+    start_inds = np.cumsum([0] + counts)
+    total_blocks = start_inds[-1]
     meshes = [None] * total_blocks
     colors = [None] * total_blocks
     
@@ -68,22 +25,32 @@ def create_meshes(polyline_blocks, marker_blocks, solid_blocks):
         for i, block in enumerate(polyline_blocks):
             futures.append(executor.submit(process_block, block, i, process_polyline_block))
         
-        start_index = len(polyline_blocks)
         for i, block in enumerate(marker_blocks):
-            futures.append(executor.submit(process_block, block, start_index + i, process_marker_block))
+            futures.append(executor.submit(process_block, block, start_inds[1] + i, process_marker_block))
         
-        start_index = len(polyline_blocks) + len(marker_blocks)
         for i, block in enumerate(solid_blocks):
-            futures.append(executor.submit(process_block, block, start_index + i, process_solid_block))
+            futures.append(executor.submit(process_block, block, start_inds[2] + i, process_solid_block))
         
         for future in tqdm(as_completed(futures), desc='Building meshes', total=total_blocks):
             future.result()
 
     colors = np.array(colors)
-    unique_colors,inverse_indices = np.unique(colors, axis=0, return_inverse=True)
-    cmap = LinearSegmentedColormap.from_list('geometry', unique_colors, N=len(unique_colors))
+    cmaps = []
+    scalars = np.array([])
+    titles = ['trajectories', 'markers', 'solids']
+    for i in range(3):
+        if start_inds[i+1] - start_inds[i] == 0:
+            cmaps.append(None)
+            continue
+        # construct a color map for each type of mesh to be plotted
+        unique_colors,inverse_indices = np.unique(colors[start_inds[i]:start_inds[i+1]], axis=0, return_inverse=True)
+        if unique_colors.shape[0] == 1:
+            unique_colors = np.concatenate((unique_colors, unique_colors))
+        cmaps.append(LinearSegmentedColormap.from_list(titles[i], unique_colors, N=len(unique_colors)))
+        # take the color index for each mesh to be the scalar determining its color
+        scalars = np.concatenate((scalars, inverse_indices))
         
-    return meshes, cmap, inverse_indices
+    return meshes, scalars, cmaps
 
 
 def extract_blocks(file_content):
@@ -128,6 +95,51 @@ def extract_blocks(file_content):
                 inside_block = False
 
     return viewpoint_block, polyline_blocks, marker_blocks, solid_blocks
+
+
+def process_polyline_block(block):
+    '''
+    Process a polyline block to create a polyline mesh.
+    '''
+    points, indices, color = parse_polyline_block(block)
+    lines = []
+    for i in range(len(indices) - 1):
+        if indices[i] != -1 and indices[i + 1] != -1:
+            lines.extend([2, indices[i], indices[i + 1]])
+    line_mesh = pv.PolyData(points)
+    if len(lines) > 0:
+        line_mesh.lines = lines
+    return line_mesh, color
+
+
+def process_marker_block(block):
+    '''
+    Process a marker block to create a marker mesh.
+    '''
+    center, radius, color = parse_marker_block(block)
+    sphere = pv.Sphere(radius=radius, center=center)
+    return sphere, color
+
+
+def process_solid_block(block):
+    '''
+    Process a solid block to create a solid mesh.
+    '''
+    points, indices, color = parse_solid_block(block)
+    faces = []
+    current_face = []
+    for index in indices:
+        if index == -1:
+            if len(current_face) == 3:
+                faces.extend([3] + current_face)
+            elif len(current_face) == 4:
+                faces.extend([4] + current_face)
+            current_face = []
+        else:
+            current_face.append(index)
+    faces = np.array(faces)
+    solid_mesh = pv.PolyData(points, faces)
+    return solid_mesh, color
 
 
 def parse_viewpoint_block(block):

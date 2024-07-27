@@ -31,7 +31,9 @@ class GeViewer:
             self.view_params = parser.parse_viewpoint_block(viewpoint_block)
             self.counts = [len(polyline_blocks), len(marker_blocks), len(solid_blocks)]
             self.visible = [True, True, True]
-            self.meshes,self.cmap,self.color_inds = parser.create_meshes(polyline_blocks, marker_blocks, solid_blocks)
+            self.meshes, self.scalars, self.cmaps = parser.create_meshes(polyline_blocks, \
+                                                                            marker_blocks, \
+                                                                            solid_blocks)
             self.create_plotter()
             self.plot_meshes()
 
@@ -112,22 +114,27 @@ class GeViewer:
         '''
         Add the meshes to the plot.
         '''
-
-        blocks = pv.MultiBlock()
-        cell_inds = []
+        actors = [None, None, None]
+        blocks = [pv.MultiBlock() for i in range(3)]
+        scalars = [[] for i in range(3)]
         for i, mesh in enumerate(self.meshes):
-            blocks.append(mesh)
-            cell_inds += [int(self.color_inds[i])]*mesh.n_cells
-
-        blocks = blocks.combine()
-        cell_inds = np.array(cell_inds)
-        scalar_range = [np.amin(cell_inds),np.amax(cell_inds)+1]
-        lut = pv.LookupTable(scalar_range=scalar_range)
-        lut.apply_cmap(self.cmap,n_values=self.cmap.N)
-
-        self.plotter.add_mesh(blocks,scalars=cell_inds+0.5,cmap=lut,show_scalar_bar=False)
-
-        self.actors = blocks
+            if i < self.counts[0]:
+                type_ind = 0
+            elif i < sum(self.counts[:2]):
+                type_ind = 1
+            else:
+                type_ind = 2
+            blocks[type_ind].append(mesh)
+            scalars[type_ind] += [self.scalars[i].astype(int)]*mesh.n_cells
+        for t in range(3):
+            if self.counts[t] > 0:
+                blocks[t] = blocks[t].combine()
+                scalar_range = [min(scalars[t]), max(scalars[t]) + 1]
+                lut = pv.LookupTable(scalar_range=scalar_range)
+                lut.apply_cmap(self.cmaps[t], n_values=self.cmaps[t].N)
+                actors[t] = self.plotter.add_mesh(blocks[t], scalars=np.array(scalars[t]) + 0.5,\
+                                                  cmap=lut, show_scalar_bar=False)
+        self.actors = actors
         print('Done.\n')
 
 
@@ -165,13 +172,12 @@ class GeViewer:
         if not self.safe_mode:
             self.visible[0] = not self.visible[0]
             print('Toggling particle tracks ' + ['off.','on.'][self.visible[0]])
-            track_actors = self.actors[:self.counts[0]]
             if self.visible[0]:
-                for actor in track_actors:
-                    actor.visibility = True
+                if self.actors[0] is not None:
+                    self.actors[0].visibility = True
             else:
-                for actor in track_actors:
-                    actor.visibility = False
+                if self.actors[0] is not None:
+                    self.actors[0].visibility = False
             if not self.off_screen:
                 self.plotter.update()
         else:
@@ -183,15 +189,14 @@ class GeViewer:
         Toggle the step markers on and off.
         '''
         if not self.safe_mode:
-            self.visible[2] = not self.visible[2]
+            self.visible[1] = not self.visible[1]
             print('Toggling step markers ' + ['off.','on.'][self.visible[2]])
-            step_actors = self.actors[sum(self.counts[:1]):sum(self.counts[:2])]
-            if self.visible[2]:
-                for actor in step_actors:
-                    actor.visibility = True
+            if self.visible[1]:
+                if self.actors[1] is not None:
+                    self.actors[1].visibility = True
             else:
-                for actor in step_actors:
-                    actor.visibility = False
+                if self.actors[1] is not None:
+                    self.actors[1].visibility = False
             if not self.off_screen:
                 self.plotter.update()
         else:
