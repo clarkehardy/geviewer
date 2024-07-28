@@ -13,7 +13,7 @@ def read_files(filenames):
     for filename in filenames:
         print('Reading data from ' + str(Path(filename).resolve())+ '...')
         with open(filename, 'r') as f:
-            data += f.read()[:-15]
+            data += f.read()
     return data
 
 

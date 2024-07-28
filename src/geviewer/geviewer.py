@@ -22,7 +22,6 @@ class GeViewer:
         self.safe_mode = safe_mode
         self.off_screen = off_screen
         self.ignore_warnings = ignore_warnings
-        self.bkg_on = False
 
         # if destination is given, the program will save the session to that file
         if destination is not None:
@@ -62,10 +61,6 @@ class GeViewer:
             print('Cannot save a session in safe mode.')
             print('Ignoring the --destination flag.\n')
             self.save_session = False
-        if self.off_screen and self.safe_mode:
-            print('Cannot run in safe mode and off-screen mode.')
-            print('Ignoring the --safe-mode flag.\n')
-            self.safe_mode = False
 
         if self.safe_mode:
             print('Running in safe mode with some features disabled.\n')
@@ -118,6 +113,8 @@ class GeViewer:
         self.plotter.add_key_event('o', self.set_camera_view)
         self.plotter.add_key_event('p', self.print_view_params)
         self.plotter.add_key_event('h', self.export_to_html)
+        self.plotter.set_background('lightskyblue',top='midnightblue')
+        self.bkg_on = True
         
         # compute the initial camera position
         fov = self.view_params[0]
@@ -223,7 +220,7 @@ class GeViewer:
         for t in range(3):
             if self.counts[t] > 0:
                 actors[t] = self.plotter.add_mesh(self.meshes[t], scalars=np.array(self.scalars[t]) + 0.5,\
-                                                  cmap=self.luts[t], show_scalar_bar=False)
+                                                  cmap=self.luts[t], show_scalar_bar=False, point_size=0)
         self.actors = actors
         print('Done.\n')
 
@@ -280,7 +277,7 @@ class GeViewer:
         '''
         if not self.safe_mode:
             self.visible[1] = not self.visible[1]
-            print('Toggling step markers ' + ['off.','on.'][self.visible[2]])
+            print('Toggling step markers ' + ['off.','on.'][self.visible[1]])
             if self.visible[1]:
                 if self.actors[1] is not None:
                     self.actors[1].visibility = True
@@ -345,7 +342,7 @@ class GeViewer:
                 ori = ['None' for i in range(4)]
             viewpoint = np.array([str(fov)] + [str(p) for p in pos] + [str(o) for o in ori])
             np.save(tmpfolder + 'viewpoint.npy',np.array(viewpoint),allow_pickle=False)
-            with zipfile.ZipFile(tmpdir + 'gevfile.gev', 'w') as archive:
+            with zipfile.ZipFile(tmpdir + '/gevfile.gev', 'w') as archive:
                 for file_name in os.listdir(tmpfolder):
                     file_path = os.path.join(tmpfolder, file_name)
                     archive.write(file_path, arcname=file_name)
@@ -358,8 +355,8 @@ class GeViewer:
                 while(os.path.exists('viewer{}.gev'.format(i))):
                     i += 1
                 filename = 'viewer{}.gev'.format(i)
-            shutil.copy(tmpdir + 'gevfile.gev', filename)
-            print('Session saved to ' + str(Path(filename).resolve()) + '.\n')
+            shutil.copy(tmpdir + '/gevfile.gev', filename)
+        print('Session saved to ' + str(Path(filename).resolve()) + '.\n')
 
                 
     def load(self, filename):

@@ -44,14 +44,11 @@ def create_meshes(polyline_blocks, marker_blocks, solid_blocks):
             continue
         # construct a color map for each type of mesh to be plotted
         unique_colors,inverse_indices = np.unique(colors[start_inds[i]:start_inds[i+1]], axis=0, return_inverse=True)
-        # need to ensure the shape is correct because different numpy versions return different shapes
-        if len(inverse_indices.shape)>0:
-            inverse_indices = inverse_indices.flatten()
         if unique_colors.shape[0] == 1:
             unique_colors = np.concatenate((unique_colors, unique_colors))
         cmaps.append(LinearSegmentedColormap.from_list(titles[i], unique_colors, N=len(unique_colors)))
         # take the color index for each mesh to be the scalar determining its color
-        scalars = np.concatenate((scalars, inverse_indices))
+        scalars = np.concatenate((scalars, inverse_indices.flatten()))
         
     return meshes, scalars, cmaps
 
