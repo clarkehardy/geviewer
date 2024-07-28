@@ -15,7 +15,7 @@ A lightweight, Python-based visualization tool for Geant4. GeViewer provides a c
 
 * ✨ **High-quality graphics:** Produce publication-quality visuals of detectors and events
 
-* 🚀 **Smooth & fast:** Efficient handling of large and complex detector geometries
+* ⚡️ **Fast & smooth:** Efficient handling of large and complex detector geometries
 
 ## Getting started
 ### Dependencies
@@ -39,14 +39,14 @@ pip uninstall geviewer
 ```
 
 ## Usage
-### Quick start
+### 🚀 Quick start
 GeViewer is intended to be used primarily as a command line tool. To run the program, you should have already produced one or more [VRML files](https://en.wikipedia.org/wiki/VRML) from Geant4 simulations. See the section below for instructions on what to put in your Geant4 macro. If you already have a VRML file, you can view it using:
 ```bash
 geviewer /path/to/file.wrl
 ```
 This will load the meshes described in `/path/to/file.wrl` and display them in an interactive window. The viewing perspective can be changed by clicking, dragging, and scrolling in the window, while other functions can be activated using keystrokes. More specific instructions for use will print in the terminal window when the program is launched.
 
-###  Instructions for Geant4
+### 📜 Instructions for Geant4
 To produce Geant4 outputs that can be read by GeViewer, you must tell Geant4 to save the visualization as a VRML file. You can do this by putting the following in your Macro file:
 ```
 # this line should come BEFORE the /run/beamOn command
@@ -86,7 +86,7 @@ If you are using your local computer, you can even pipe the VRML file directly t
 ```
 Note that this will not work if you are running Geant4 on a remote machine over `ssh`, as GeViewer cannot be run using X11 forwarding. If that is your use case, you can download the resulting VRML file to open on your local computer, or you can add the `-o` and `-d` flags to the command above to save a GeViewer session to disk. This will be discussed more later on.
 
-### Interacting with the viewer
+### 🖱️ Interacting with the viewer
 The following instructions for interacting with the viewer will display when the program is launched:
 * Click and drag to rotate the view, `shift` + click
   and drag to pan,  `ctrl` + click and drag to roll,
@@ -119,7 +119,7 @@ The following is an example of how you might use GeViewer to produce figures. Su
 
 This process will give you two graphics of the desired resolution from an identical viewpoint.
 
-### Additional options
+### ⚙️ Additional options
 The full list of command-line options can be displayed using the `--help` flag:
 ```console
 $ geviewer --help
