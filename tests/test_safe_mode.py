@@ -3,6 +3,7 @@ from unittest import mock
 import tempfile
 import numpy as np
 from os.path import isfile
+from os import remove
 from geviewer import geviewer
 
 
@@ -12,7 +13,7 @@ class TestGeViewerSafe(unittest.TestCase):
         '''
         Create a GeViewer object with safe mode enabled.
         '''
-        self.gev = geviewer.GeViewer(['tests/sample.wrl'],safe_mode=True,off_screen=True)
+        self.gev = geviewer.GeViewer(['tests/sample.wrl'], safe_mode=True, off_screen=True)
 
 
     def test_key_inputs(self):
@@ -31,7 +32,7 @@ class TestGeViewerSafe(unittest.TestCase):
                 self.assertEqual(self.gev.plotter.background_color,colors[bkg_status])
 
 
-    @mock.patch('geviewer.utils.prompt_for_file_path')
+    @mock.patch('geviewer.utils.prompt_for_screenshot_path')
     def test_save_screenshot(self,mocked_input):
         '''
         Test the save_graphic method with mocked file name inputs.
@@ -43,17 +44,20 @@ class TestGeViewerSafe(unittest.TestCase):
                       tempfile.mkstemp(suffix='.pdf')[1],\
                       tempfile.mkstemp(suffix='.tex')[1]]
         mocked_input.side_effect = file_names
-        self.gev.save_screenshot()
-        for i in mocked_input.side_effect:
+        for i in file_names:
+            self.gev.save_screenshot()
             with self.subTest():
                 self.assertTrue(isfile(i))
+        for file in file_names:
+            remove(file)
 
 
-    @mock.patch('geviewer.utils.prompt_for_window_size',return_value=[800,600])
+    @mock.patch('geviewer.utils.prompt_for_window_size')
     def test_set_window_size(self,mocked_input):
         '''
         Test the set_window_size method with a mocked window size input.
         '''
+        mocked_input.return_value = [800,600]
         self.gev.set_window_size()
         self.assertEqual(self.gev.plotter.window_size,[800,600])
 
@@ -73,6 +77,17 @@ class TestGeViewerSafe(unittest.TestCase):
             self.assertEqual(self.gev.plotter.camera.position,pos)
             self.assertEqual(self.gev.plotter.camera.up,up_output)
             self.assertEqual(self.gev.plotter.camera.focal_point,focus)
+    
+
+    @mock.patch('geviewer.utils.prompt_for_html_path')
+    def test_export_to_html(self, mocked_input):
+        '''
+        Test the export_to_html method with a mocked file path input.
+        '''
+        with tempfile.NamedTemporaryFile(suffix='.html') as temp:
+            mocked_input.return_value = str(temp.name)
+            self.gev.export_to_html()
+            self.assertTrue(isfile(mocked_input.return_value))
     
 
 if __name__ == '__main__':

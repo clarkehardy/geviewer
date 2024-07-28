@@ -16,7 +16,13 @@ authors = [{ name = "Clarke Hardy", email = "cahardy@stanford.edu" }]
 license = {file = 'LICENSE'}
 readme = "README.md"
 requires-python = ">=3.8"
-dependencies = ["numpy", "pyvista", "tqdm"]
+dependencies = ["numpy",
+                "pyvista",
+                "tqdm",
+                "nest_asyncio",
+                "trame",
+                "trame_vuetify",
+                "trame_vtk"]
 keywords = ["geant4",
             "viewer",
             "visualizer",
