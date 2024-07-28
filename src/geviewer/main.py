@@ -30,7 +30,7 @@ def print_instructions():
     print('* Press "s" to switch to a solid rendering mode')
     print('* Press "v" to reset to the default viewpoint')
     print('* Press "d" to set the display window size')
-    print('* Press "o" to set the camera viewpoint')
+    print('* Press "i" to set the camera viewpoint')
     print('* Press "p" to print the current display settings')
     print('* Press "h" to export the viewer to an HTML file')
     print('* Press "q" or "e" to quit the viewer')
@@ -44,22 +44,23 @@ def main():
     print_instructions()
 
     parser = argparse.ArgumentParser(description='View Geant4 simulation results.')
-    parser.add_argument('filenames', nargs='+', help='The VRML file to be displayed.')
-    parser.add_argument('-d', '--destination', nargs='?', help='The location where the session' \
-                        + ' will be saved.', default=None, const='viewer.gev')
-    parser.add_argument('-o', '--off-screen', help='Option to run in off-screen mode.', action='store_true')
-    parser.add_argument('-s', '--safe-mode', help='Option to use more robust VRML parsing ' \
-                        + 'at the expense of some interactive features.', action='store_true')
-    parser.add_argument('-w', '--ignore-warnings', help='Option to ignore warnings.', action='store_true')
+    parser.add_argument('filenames', nargs='+', help='the file or list of files to be displayed')
+    parser.add_argument('-d', '--destination', nargs='?', help='save the session to this location', \
+                        default=None, const='viewer.gev')
+    parser.add_argument('-o', '--off-screen', help='run in offscreen mode.', action='store_true')
+    parser.add_argument('-s', '--safe-mode', help='use more robust VRML parsing ' \
+                        + 'at the expense of some interactive features', action='store_true')
+    parser.add_argument('-w', '--no-warnings', help='do not pause the program to display warnings', \
+                        action='store_true')
     args = parser.parse_args()
     filenames = args.filenames
     destination = args.destination
     off_screen = args.off_screen
     safe_mode = args.safe_mode
-    ignore_warnings = args.ignore_warnings
+    no_warnings = args.no_warnings
 
     GeViewer(filenames, destination=destination, off_screen=off_screen,\
-             safe_mode=safe_mode, ignore_warnings=ignore_warnings)
+             safe_mode=safe_mode, no_warnings=no_warnings)
 
 
 if __name__ == '__main__':

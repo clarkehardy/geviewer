@@ -14,14 +14,14 @@ from geviewer import utils, parser
 class GeViewer:
 
     def __init__(self, filenames, destination=None, off_screen=False,\
-                 safe_mode=False, ignore_warnings=False):
+                 safe_mode=False, no_warnings=False):
         '''
         Read data from a file and create meshes from it.
         '''
         self.filenames = filenames
         self.safe_mode = safe_mode
         self.off_screen = off_screen
-        self.ignore_warnings = ignore_warnings
+        self.no_warnings = no_warnings
 
         # if destination is given, the program will save the session to that file
         if destination is not None:
@@ -81,7 +81,7 @@ class GeViewer:
                 viewpoint_block, polyline_blocks, marker_blocks, solid_blocks = parser.extract_blocks(data)
                 self.view_params = parser.parse_viewpoint_block(viewpoint_block)
                 self.counts = [len(polyline_blocks), len(marker_blocks), len(solid_blocks)]
-                if not self.save_session and not ignore_warnings and sum(self.counts)>1e4:
+                if not self.save_session and not no_warnings and sum(self.counts)>1e4:
                     self.save_session = utils.prompt_for_save_session(sum(self.counts))
                 self.meshes, self.scalars, self.cmaps = parser.create_meshes(polyline_blocks, \
                                                                             marker_blocks, \
@@ -110,7 +110,7 @@ class GeViewer:
         self.plotter.add_key_event('b', self.toggle_background)
         # solid and wireframe rendering modes have key events by default
         self.plotter.add_key_event('d', self.set_window_size)
-        self.plotter.add_key_event('o', self.set_camera_view)
+        self.plotter.add_key_event('i', self.set_camera_view)
         self.plotter.add_key_event('p', self.print_view_params)
         self.plotter.add_key_event('h', self.export_to_html)
         self.plotter.set_background('lightskyblue',top='midnightblue')
