@@ -95,7 +95,7 @@ async def prompt_for_screenshot_path():
                 return None
             if not file_path.endswith(('.png', '.svg', '.eps', '.ps', '.pdf', '.tex')):
                 raise ValueError
-            if not os.path.isdir('/'.join(file_path.split('/')[:-1])):
+            if not os.path.isdir('/'.join(str(Path(file_path).resolve()).split('/')[:-1])):
                 raise ValueError
             break
         except ValueError:
@@ -137,7 +137,7 @@ def prompt_for_file_path():
                 return None
             if not file_path.endswith('.gev'):
                 raise ValueError
-            if not os.path.isdir('/'.join(file_path.split('/')[:-1])):
+            if not os.path.isdir('/'.join(str(Path(file_path).resolve()).split('/')[:-1])):
                 raise ValueError
             print()
             break
@@ -185,7 +185,7 @@ async def prompt_for_html_path():
                 return None
             if not file_path.endswith('.html'):
                 raise ValueError
-            if not os.path.isdir('/'.join(file_path.split('/')[:-1])):
+            if not os.path.isdir('/'.join(str(Path(file_path).resolve()).split('/')[:-1])):
                 raise ValueError
             break
         except ValueError:

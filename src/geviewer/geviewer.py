@@ -8,7 +8,7 @@ import shutil
 import zipfile
 import tempfile
 from matplotlib.colors import LinearSegmentedColormap
-from geviewer import utils, parser
+from geviewer import utils, parser, plotter
 
 
 class GeViewer:
@@ -102,21 +102,22 @@ class GeViewer:
         '''
         Create a PyVista plotter.
         '''
-        self.plotter = pv.Plotter(title='GeViewer — ' + str(Path(self.filenames[0]).resolve()) + \
-                                  ['',' + {} more'.format(len(self.filenames)-1)]\
-                                  [(len(self.filenames)>1) and not self.safe_mode],\
-                                  off_screen=self.off_screen)
+        self.plotter = plotter.Plotter(title='GeViewer — ' + str(Path(self.filenames[0]).resolve()) \
+                                       + ['',' + {} more'.format(len(self.filenames)-1)]\
+                                         [(len(self.filenames)>1) and not self.safe_mode],\
+                                       off_screen=self.off_screen)
         self.plotter.add_key_event('c', self.save_screenshot)
         self.plotter.add_key_event('t', self.toggle_tracks)
         self.plotter.add_key_event('m', self.toggle_step_markers)
         self.plotter.add_key_event('b', self.toggle_background)
-        # solid and wireframe rendering modes have key events by default
+        self.plotter.add_key_event('w', self.toggle_wireframe)
         self.plotter.add_key_event('d', self.set_window_size)
         self.plotter.add_key_event('i', self.set_camera_view)
         self.plotter.add_key_event('p', self.print_view_params)
         self.plotter.add_key_event('h', self.export_to_html)
         self.plotter.set_background('lightskyblue',top='midnightblue')
         self.bkg_on = True
+        self.wireframe = False
         
         # compute the initial camera position
         fov = self.view_params[0]
@@ -302,6 +303,20 @@ class GeViewer:
             self.plotter.set_background('lightskyblue',top='midnightblue')
         else:
             self.plotter.set_background('white')
+        if not self.off_screen:
+            self.plotter.update()
+
+
+    def toggle_wireframe(self):
+        '''
+        Toggle between solid and wireframe display modes.
+        '''
+        self.wireframe = not self.wireframe
+        print('Switching to ' + ['solid','wireframe'][self.wireframe] + ' mode.')
+        if self.wireframe:
+            self.actors[2].prop.SetRepresentationToWireframe()
+        else:
+            self.actors[2].prop.SetRepresentationToSurface()
         if not self.off_screen:
             self.plotter.update()
 

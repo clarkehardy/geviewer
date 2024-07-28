@@ -95,14 +95,13 @@ The following instructions for interacting with the viewer will display when the
 * Press `t` to toggle the trajectories on or off
 * Press `m` to toggle the step markers on or off
 * Press `b` to toggle the background on or off
-* Press `w` to switch to a wireframe rendering mode
-* Press `s` to switch to a solid rendering mode
-* Press `v` to reset to the default viewpoint
+* Press `w` to toggle between wireframe and solid modes
+* Press `v` to switch to an isometric view
 * Press `d` to set the display window size
 * Press `i` to set the camera viewpoint
 * Press `p` to print the current display settings
 * Press `h` to export the viewer to an HTML file
-* Press `q` or `e` to quit the viewer
+* Press `q` to quit the viewer
 
 While the primary interface is with the viewer window, some commands require text entry in the terminal window. Any saving commands will require the user to enter a file path in the terminal. Some of these functions have been specifically designed to provide more precise control of the viewer than can be achieved using the mouse alone.
 

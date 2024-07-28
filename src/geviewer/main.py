@@ -26,14 +26,13 @@ def print_instructions():
     print('* Press "t" to toggle the trajectories on or off')
     print('* Press "m" to toggle the step markers on or off')
     print('* Press "b" to toggle the background on or off')
-    print('* Press "w" to switch to a wireframe rendering mode')
-    print('* Press "s" to switch to a solid rendering mode')
-    print('* Press "v" to reset to the default viewpoint')
+    print('* Press "w" to toggle between wireframe and solid modes')
+    print('* Press "v" to switch to an isometric view')
     print('* Press "d" to set the display window size')
     print('* Press "i" to set the camera viewpoint')
     print('* Press "p" to print the current display settings')
     print('* Press "h" to export the viewer to an HTML file')
-    print('* Press "q" or "e" to quit the viewer')
+    print('* Press "q" to quit the viewer')
     print()
 
 
