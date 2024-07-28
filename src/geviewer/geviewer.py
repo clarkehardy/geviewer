@@ -83,6 +83,8 @@ class GeViewer:
                 self.counts = [len(polyline_blocks), len(marker_blocks), len(solid_blocks)]
                 if not self.save_session and not no_warnings and sum(self.counts)>1e4:
                     self.save_session = utils.prompt_for_save_session(sum(self.counts))
+                    if self.save_session:
+                        destination = utils.prompt_for_file_path()
                 self.meshes, self.scalars, self.cmaps = parser.create_meshes(polyline_blocks, \
                                                                             marker_blocks, \
                                                                             solid_blocks)

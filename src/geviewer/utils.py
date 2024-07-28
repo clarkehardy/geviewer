@@ -158,7 +158,7 @@ def prompt_for_save_session(total_meshes):
             save_session = save_input.lower() == 'y'
             print('This session will ' + ['not ', ''][save_session] + 'be saved.')
             print('(To save the session by default, use the --destination flag.')
-            print('To avoid this warning, use the --ignore-warnings flag.)\n')
+            print('To avoid this warning, use the --no-warnings flag.)\n')
             return save_session
         except ValueError:
             print('Error: invalid input. Please enter "y" or "n".')
