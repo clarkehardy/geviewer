@@ -1,5 +1,6 @@
 import numpy as np
 import sys
+import os
 import ast
 import asyncio
 from pathlib import Path
@@ -94,6 +95,8 @@ async def prompt_for_screenshot_path():
                 return None
             if not file_path.endswith(('.png', '.svg', '.eps', '.ps', '.pdf', '.tex')):
                 raise ValueError
+            if not os.path.isdir('/'.join(file_path.split('/')[:-1])):
+                raise ValueError
             break
         except ValueError:
             print('Error: invalid input. Please enter a valid file path.')
@@ -134,10 +137,13 @@ def prompt_for_file_path():
                 return None
             if not file_path.endswith('.gev'):
                 raise ValueError
+            if not os.path.isdir('/'.join(file_path.split('/')[:-1])):
+                raise ValueError
+            print()
             break
         except ValueError:
-            print('Error: invalid input. Please enter a valid file path.')
-            print('Ending in .gev')
+            print('Error: invalid input. Please enter a valid file path')
+            print('ending in .gev')
     return file_path
 
 
@@ -179,10 +185,12 @@ async def prompt_for_html_path():
                 return None
             if not file_path.endswith('.html'):
                 raise ValueError
+            if not os.path.isdir('/'.join(file_path.split('/')[:-1])):
+                raise ValueError
             break
         except ValueError:
-            print('Error: invalid input. Please enter a valid file path.')
-            print('Ending in .html')
+            print('Error: invalid input. Please enter a valid file path')
+            print('ending in .html')
     return file_path
 
 
