@@ -12,12 +12,34 @@ from geviewer import utils, parser, plotter
 
 
 class GeViewer:
+    """The main interface for the GeViewer application, responsible for loading,
+    processing, and visualizing data files. This class manages the creation
+    and display of 3D visualizations based on the provided data files and
+    offers various functionalities such as toggling display options and saving
+    sessions.
+
+    :param filenames: A list of file paths to be loaded. Supported file formats
+        include .gev and .wrl. Only the first file is used if multiple .gev files
+        are provided.
+    :type filenames: list of str
+    :param destination: The file path where the session will be saved. If not provided,
+        the session is not saved. The file extension must be .gev if specified.
+    :type destination: str, optional
+    :param off_screen: If True, the plotter is created without displaying it. Defaults to False.
+    :type off_screen: bool, optional
+    :param safe_mode: If True, the viewer operates in safe mode with some features disabled.
+    :type safe_mode: bool, optional
+    :param no_warnings: If True, suppresses warning messages. Defaults to False.
+    :type no_warnings: bool, optional
+
+    :raises Exception: If .gev and .wrl files are mixed, or if multiple .gev files are provided.
+    :raises Exception: If attempting to save a session using an invalid file extension.
+    """
 
     def __init__(self, filenames, destination=None, off_screen=False,\
                  safe_mode=False, no_warnings=False):
-        '''
-        Read data from a file and create meshes from it.
-        '''
+        """Constructor method for the GeViewer object.
+        """
         self.filenames = filenames
         self.safe_mode = safe_mode
         self.off_screen = off_screen
@@ -99,9 +121,8 @@ class GeViewer:
 
     
     def create_plotter(self):
-        '''
-        Create a PyVista plotter.
-        '''
+        """Creates a Plotter object, a subclass of pyvista.Plotter.
+        """
         self.plotter = plotter.Plotter(title='GeViewer — ' + str(Path(self.filenames[0]).resolve()) \
                                        + ['',' + {} more'.format(len(self.filenames)-1)]\
                                          [(len(self.filenames)>1) and not self.safe_mode],\
@@ -141,9 +162,11 @@ class GeViewer:
 
 
     def set_camera_view(self,args=None):
-        '''
-        Set the camera viewpoint.
-        '''
+        """Sets the camera viewpoint.
+
+        :param args: A list of the view parameters, defaults to None
+        :type args: list, optional
+        """
         if args is None:
             fov = None
             position, up, focus = asyncio.run(utils.prompt_for_camera_view())
@@ -164,9 +187,8 @@ class GeViewer:
 
 
     def print_view_params(self):
-        '''
-        Print the current camera viewpoint parameters.
-        '''
+        """Prints the current camera viewpoint parameters.
+        """
         print('Viewpoint parameters:')
         print('  Window size: {}x{}'.format(*self.plotter.window_size))
         print('  Position:    ({}, {}, {})'.format(*self.plotter.camera.position))
@@ -175,9 +197,8 @@ class GeViewer:
 
 
     def make_colormaps(self):
-        '''
-        Make the colormaps used to color the meshes.
-        '''
+        """Makes the colormaps used to color the meshes.
+        """
         luts = []
         for t in range(3):
             if self.counts[t] > 0:
@@ -191,9 +212,8 @@ class GeViewer:
 
 
     def reduce_meshes(self):
-        '''
-        Reduce the number of meshes by combining them.
-        '''
+        """Reduces the number of meshes by combining them.
+        """
         blocks = [pv.MultiBlock() for i in range(3)]
         scalars = [[] for i in range(3)]
         for i, mesh in enumerate(self.meshes):
@@ -215,9 +235,8 @@ class GeViewer:
 
 
     def plot_meshes(self):
-        '''
-        Add the meshes to the plot.
-        '''
+        """Adds the meshes to the plot.
+        """
         print('Plotting meshes...')
         actors = [None for i in range(3)]
         for t in range(3):
@@ -229,9 +248,9 @@ class GeViewer:
 
 
     def save_screenshot(self):
-        '''
-        Save a screenshot (as a png) of the current view.
-        '''
+        """Saves a screenshot of of the current view, prompting the user
+        for a file path.
+        """
         file_path = asyncio.run(utils.prompt_for_screenshot_path())
         if file_path is None:
             print('Operation cancelled.\n')
@@ -244,9 +263,9 @@ class GeViewer:
     
 
     def set_window_size(self):
-        '''
-        Set the window size in pixels.
-        '''
+        """Sets the size of the viewer window in pixels, prompting the user
+        for the width and height.
+        """
         width, height = asyncio.run(utils.prompt_for_window_size())
         if width is None and height is None:
             print('Operation cancelled.\n')
@@ -256,9 +275,8 @@ class GeViewer:
         
 
     def toggle_tracks(self):
-        '''
-        Toggle the tracks on and off.
-        '''
+        """Toggles the particle trajectories on or off.
+        """
         if not self.safe_mode:
             self.visible[0] = not self.visible[0]
             print('Toggling particle tracks ' + ['off.','on.'][self.visible[0]])
@@ -275,9 +293,8 @@ class GeViewer:
                 
                 
     def toggle_step_markers(self):
-        '''
-        Toggle the step markers on and off.
-        '''
+        """Toggles the step markers on or off.
+        """
         if not self.safe_mode:
             self.visible[1] = not self.visible[1]
             print('Toggling step markers ' + ['off.','on.'][self.visible[1]])
@@ -294,9 +311,8 @@ class GeViewer:
 
 
     def toggle_background(self):
-        '''
-        Toggle the gradient background on and off.
-        '''
+        """Toggles the gradient background on and off.
+        """
         self.bkg_on = not self.bkg_on
         print('Toggling background ' + ['off.','on.'][self.bkg_on])
         if self.bkg_on:
@@ -308,9 +324,8 @@ class GeViewer:
 
 
     def toggle_wireframe(self):
-        '''
-        Toggle between solid and wireframe display modes.
-        '''
+        """Toggles between solid and wireframe display modes.
+        """
         self.wireframe = not self.wireframe
         print('Switching to ' + ['solid','wireframe'][self.wireframe] + ' mode.')
         if self.wireframe:
@@ -322,9 +337,9 @@ class GeViewer:
 
 
     def export_to_html(self):
-        '''
-        Save the interactive plotter to an HTML file.
-        '''
+        """Saves the interactive viewer to an HTML file, prompting
+        the user for a file path.
+        """
         file_path = asyncio.run(utils.prompt_for_html_path())
         if file_path is None:
             print('Operation cancelled.\n')
@@ -334,9 +349,11 @@ class GeViewer:
 
 
     def save(self, filename):
-        '''
-        Save the meshes to a file.
-        '''
+        """Saves the meshes to a .gev file.
+
+        :param filename: The name of the file to save the session to.
+        :type filename: str
+        """
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpfolder = tmpdir + '/gevfile/'
             os.makedirs(tmpfolder, exist_ok=False)
@@ -377,9 +394,12 @@ class GeViewer:
 
                 
     def load(self, filename):
-        '''
-        Load the meshes from a file.
-        '''
+        """Loads the meshes from a .gev file.
+
+        :param filename: The path to the .gev file.
+        :type filename: str
+        :raises Exception: Invalid file format. Only .gev files are supported.
+        """
         if not filename.endswith('.gev'):
             raise Exception('Invalid file format. Only .gev files are supported.')
         print('Loading session from ' + str(Path(filename).resolve()) + '...')
@@ -423,8 +443,7 @@ class GeViewer:
 
 
     def show(self):
-        '''
-        Show the plotting window.
-        '''
+        """Opens the plotting window.
+        """
         self.plotter.show(cpos=self.initial_camera_pos,\
                           before_close_callback=lambda x: print('\nExiting GeViewer.\n'))

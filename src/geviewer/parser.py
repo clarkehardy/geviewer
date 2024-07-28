@@ -7,9 +7,20 @@ from matplotlib.colors import LinearSegmentedColormap
 
 
 def create_meshes(polyline_blocks, marker_blocks, solid_blocks):
-    '''
-    Create meshes from the polyline, marker, and solid blocks.
-    '''
+    """Creates meshes from the polyline, marker, and solid blocks.
+
+    :param polyline_blocks: The polyline blocks to create meshes from.
+    :type polyline_blocks: list
+    :param marker_blocks: The marker blocks to create meshes from.
+    :type marker_blocks: list
+    :param solid_blocks: The solid blocks to create meshes from.
+    :type solid_blocks: list
+    :return: A tuple containing three elements:
+        - A list of meshes created from the blocks.
+        - An array of scalar values used for coloring the meshes.
+        - A list of color maps corresponding to each type of mesh.
+    :rtype: tuple
+    """
     counts = [len(polyline_blocks), len(marker_blocks), len(solid_blocks)]
     start_inds = np.cumsum([0] + counts)
     total_blocks = start_inds[-1]
@@ -54,9 +65,22 @@ def create_meshes(polyline_blocks, marker_blocks, solid_blocks):
 
 
 def extract_blocks(file_content):
-    '''
-    Extract polyline, marker, and solid blocks from the file content.
-    '''
+    """Extracts polyline, marker, and solid blocks from the given file content.
+
+    This function processes the provided file content, which is expected to
+    be in a text format, and extracts blocks of different types based on
+    specific keywords. It separates the blocks into categories: polyline,
+    marker, and solid blocks, and also identifies the viewpoint block.
+
+    :param file_content: The content of the file as a single string.
+    :type file_content: str
+    :return: A tuple containing four elements:
+        - The viewpoint block (if found) as a string or `None` if not found.
+        - A list of polyline blocks as strings.
+        - A list of marker blocks as strings.
+        - A list of solid blocks as strings.
+    :rtype: tuple
+    """
     polyline_blocks = []
     marker_blocks = []
     solid_blocks = []
@@ -98,9 +122,19 @@ def extract_blocks(file_content):
 
 
 def process_polyline_block(block):
-    '''
-    Process a polyline block to create a polyline mesh.
-    '''
+    """Processes a polyline block to create a polyline mesh.
+
+    This function takes a block of polyline data and converts it into a
+    PyVista`PolyData` object representing the polyline mesh. It also
+    extracts the color information associated with the mesh.
+
+    :param block: The polyline block content as a string.
+    :type block: str
+    :return: A tuple containing:
+        - A `pv.PolyData` object representing the polyline mesh.
+        - The color associated with the polyline mesh as a list or array.
+    :rtype: tuple
+    """
     points, indices, color = parse_polyline_block(block)
     lines = []
     for i in range(len(indices) - 1):
@@ -113,18 +147,38 @@ def process_polyline_block(block):
 
 
 def process_marker_block(block):
-    '''
-    Process a marker block to create a marker mesh.
-    '''
+    """Processes a marker block to create a marker mesh.
+
+    This function takes a block of marker data and creates a spherical
+    marker mesh using PyVista. It also extracts the color information
+    associated with the marker.
+
+    :param block: The marker block content as a string.
+    :type block: str
+    :return: A tuple containing:
+        - A `pv.Sphere` object representing the marker mesh.
+        - The color associated with the marker mesh as a list or array.
+    :rtype: tuple
+    """
     center, radius, color = parse_marker_block(block)
     sphere = pv.Sphere(radius=radius, center=center)
     return sphere, color
 
 
 def process_solid_block(block):
-    '''
-    Process a solid block to create a solid mesh.
-    '''
+    """Processes a solid block to create a solid mesh.
+
+    This function takes a block of solid data and creates a mesh for a
+    solid object using PyVista. It also extracts the color information
+    associated with the solid.
+
+    :param block: The solid block content as a string.
+    :type block: str
+    :return: A tuple containing:
+        - A `pv.PolyData` object representing the solid mesh.
+        - The color associated with the solid mesh as a list or array.
+    :rtype: tuple
+    """
     points, indices, color = parse_solid_block(block)
     faces = []
     current_face = []
@@ -143,9 +197,22 @@ def process_solid_block(block):
 
 
 def parse_viewpoint_block(block):
-    '''
-    Parse the viewpoint block to get the field of view, position, and orientation.
-    '''
+    """Parses the viewpoint block to extract the field of view, position,
+    and orientation.
+
+    This function extracts the field of view (FOV), position, and orientation
+    from a given viewpoint block in a 3D scene description. The FOV is converted
+    from radians to degrees.
+
+    :param block: The viewpoint block content as a string.
+    :type block: str
+    :return: A tuple containing:
+        - The field of view in degrees as a float (or None if not found).
+        - The position as a list of three floats [x, y, z] (or None if not found).
+        - The orientation as a list of four floats [x, y, z, angle] in degrees
+        (or None if not found).
+    :rtype: tuple
+    """
     fov = None
     position = None
     orientation = None
@@ -169,9 +236,25 @@ def parse_viewpoint_block(block):
 
 
 def parse_polyline_block(block):
-    '''
-    Parse a polyline block to get particle track information.
-    '''
+    """Parses a polyline block to extract particle track information, including
+    coordinates, indices, and color.
+
+    This function processes a block of text representing a polyline in a 3D
+    scene description. It extracts the coordinates of the points that define
+    the polyline, the indices that describe the lines between these points, 
+    and the color associated with the polyline.
+
+    :param block: The polyline block content as a string.
+    :type block: str
+    :return: A tuple containing:
+        - `coords`: An array of shape (N, 3) representing the coordinates of the
+        polyline points.
+        - `indices`: An array of integers representing the indices that define
+        the polyline segments.
+        - `color`: An array of four floats representing the RGBA color of the
+        polyline, where the alpha is set to 1.
+    :rtype: tuple
+    """
     coords = []
     coord_inds = []
     color = [1, 1, 1]
@@ -208,9 +291,23 @@ def parse_polyline_block(block):
 
 
 def parse_marker_block(block):
-    '''
-    Parse a marker block to get step information.
-    '''
+    """Parses a marker block to extract the position, radius, and color of a marker.
+
+    This function processes a block of text representing a marker in a 3D scene
+    description. It extracts the position of the marker, the radius of the marker
+    (typically a sphere), and the color of the marker. It also accounts for
+    transparency and adjusts the alpha value of the color accordingly.
+
+    :param block: The marker block content as a string.
+    :type block: str
+    :return: A tuple containing:
+        - `coords`: An array of shape (3,) representing the position of the marker
+        in 3D space.
+        - `radius`: A float representing the radius of the marker.
+        - `color`: An array of four floats representing the RGBA color of the marker,
+        where alpha is adjusted for transparency.
+    :rtype: tuple
+    """
     coords = []
     color = [1, 1, 1]
     transparency = 0
@@ -237,9 +334,26 @@ def parse_marker_block(block):
 
 
 def parse_solid_block(block):
-    '''
-    Parse a solid block to get geometry information.
-    '''
+    """Parses a solid block to extract geometry information for a 3D
+    solid object.
+
+    This function processes a block of text representing a solid object
+    in a 3D scene description. It extracts the vertex coordinates, the face
+    indices that define the geometry of the solid, and the color of the solid.
+    The function also handles transparency by adjusting the alpha value in the
+    color array.
+
+    :param block: The solid block content as a string.
+    :type block: str
+    :return: A tuple containing:
+        - `coords`: An array of shape (N, 3) where N is the number of vertices,
+        representing the vertex coordinates.
+        - `coord_inds`: An array of shape (M,) where M is the number of indices,
+        representing the indices defining the faces of the solid.
+        - `color`: An array of four floats representing the RGBA color of the solid,
+        where the alpha value is adjusted for transparency.
+    :rtype: tuple
+    """
     coords = []
     coord_inds = []
     color = [1, 1, 1, 0]
