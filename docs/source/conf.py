@@ -24,6 +24,7 @@ with open('temp_readme.md', 'w') as file:
     for line in lines:
         file.write(line)
 
+pypandoc.download_pandoc()
 pypandoc.convert_file('temp_readme.md', 'rst', outputfile='README.rst')
 os.remove('temp_readme.md')
 
