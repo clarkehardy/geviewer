@@ -10,23 +10,20 @@ from geviewer import main, geviewer
 class TestGeViewerMain(unittest.TestCase):
 
     def setUp(self):
-        '''
-        Create a GeViewer object.
-        '''
+        """Create a GeViewer object.
+        """
         self.gev = geviewer.GeViewer(['tests/sample.wrl'], off_screen=True)
 
 
     def test_print_instructions(self):
-        '''
-        Test the print_instructions function.
-        '''
+        """Test the print_instructions function.
+        """
         main.print_instructions()
 
 
     def test_key_inputs(self):
-        '''
-        Test the key inputs for the GeViewer object.
-        '''
+        """Test the key inputs for the GeViewer object.
+        """
         for i in range(2):
             with self.subTest():
                 track_status = self.gev.visible[0]
@@ -47,9 +44,8 @@ class TestGeViewerMain(unittest.TestCase):
 
     @mock.patch('geviewer.utils.prompt_for_screenshot_path')
     def test_save_screenshot(self, mocked_input):
-        '''
-        Test the save_graphic method with mocked file name inputs.
-        '''
+        """Test the save_graphic method with mocked file name inputs.
+        """
         file_names = [tempfile.mkstemp(suffix='.png')[1],\
                       tempfile.mkstemp(suffix='.svg')[1],\
                       tempfile.mkstemp(suffix='.eps')[1],\
@@ -67,9 +63,8 @@ class TestGeViewerMain(unittest.TestCase):
 
     @mock.patch('geviewer.utils.prompt_for_window_size')
     def test_set_window_size(self, mocked_input):
-        '''
-        Test the set_window_size method with a mocked window size input.
-        '''
+        """Test the set_window_size method with a mocked window size input.
+        """
         mocked_input.return_value = [800,600]
         self.gev.set_window_size()
         self.assertEqual(self.gev.plotter.window_size,[800,600])
@@ -77,9 +72,8 @@ class TestGeViewerMain(unittest.TestCase):
 
     @mock.patch('geviewer.utils.prompt_for_camera_view')
     def test_set_camera_view(self, mocked_input):
-        '''
-        Test the set_camera_view method with a mocked camera viewpoint input.
-        '''
+        """Test the set_camera_view method with a mocked camera viewpoint input.
+        """
         pos = (1,2,3)
         up_input = (4,5,6)
         focus = (7,8,9)
@@ -94,9 +88,8 @@ class TestGeViewerMain(unittest.TestCase):
 
     @mock.patch('geviewer.utils.prompt_for_html_path')
     def test_export_to_html(self, mocked_input):
-        '''
-        Test the export_to_html method with a mocked file path input.
-        '''
+        """Test the export_to_html method with a mocked file path input.
+        """
         with tempfile.NamedTemporaryFile(suffix='.html') as temp:
             mocked_input.return_value = str(temp.name)
             self.gev.export_to_html()
@@ -104,9 +97,8 @@ class TestGeViewerMain(unittest.TestCase):
 
 
     def test_save_and_load(self):
-        '''
-        Test the save session method.
-        '''
+        """Test the save session method.
+        """
         with tempfile.NamedTemporaryFile(suffix='.gev') as temp:
             with self.subTest():
                 self.gev.save(str(temp.name))

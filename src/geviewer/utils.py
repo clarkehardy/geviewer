@@ -7,9 +7,13 @@ from pathlib import Path
 
 
 def read_files(filenames):
-    '''
-    Read the content of the file.
-    '''
+    """Reads the content of multiple files and concatenates it into a single string.
+
+    :param filenames: A list of file paths to read.
+    :type filenames: list of str
+    :return: A single string containing the concatenated content of all the files.
+    :rtype: str
+    """
     data = ''
     for filename in filenames:
         print('Reading data from ' + str(Path(filename).resolve())+ '...')
@@ -19,10 +23,11 @@ def read_files(filenames):
 
 
 def clear_input_buffer():
-    '''
-    Clear the input buffer to avoid stray keystrokes influencing
-    later inputs.
-    '''
+    """Clears the input buffer to prevent stray keystrokes from influencing
+    subsequent inputs.
+
+    :return: None
+    """
     try:
         # if on Unix
         import termios
@@ -35,9 +40,17 @@ def clear_input_buffer():
 
 
 async def prompt_for_camera_view():
-    '''
-    Asyncronously get camera view input from the terminal.
-    '''
+    """Asynchronously prompts the user for camera view input from the terminal.
+
+    This function prompts the user to enter the camera's position, focal point, and
+    up vector. Each input is expected to be a set of three comma-separated numbers.
+    The function uses asynchronous input handling to avoid blocking other operations.
+
+    :return: A tuple containing the position, up vector, and focal point. Each
+        value is a list of three floating-point numbers or `None` if the user
+        skips the input.
+    :rtype: tuple
+    """
     print('Setting the camera position and orientation.')
     print('Press enter to skip any of the following prompts.')
     clear_input_buffer()
@@ -81,9 +94,16 @@ async def prompt_for_camera_view():
 
 
 async def prompt_for_screenshot_path():
-    '''
-    Asynchronously get file path input from the terminal.
-    '''
+    """Asynchronously prompts the user for a file path to save a screenshot.
+
+    This function prompts the user to enter a file path where the screenshot will be saved.
+    The accepted file formats are `.png`, `.svg`, `.eps`, `.ps`, `.pdf`, and `.tex`. The 
+    function uses asynchronous input handling to avoid blocking other operations.
+
+    :return: The file path as a string if a valid path is provided, or `None` if
+        the input is canceled.
+    :rtype: str or None
+    """
     clear_input_buffer()
     print('Enter the destination file path to save the screenshot,')
     print('or press enter to cancel.')
@@ -104,9 +124,16 @@ async def prompt_for_screenshot_path():
 
 
 async def prompt_for_window_size():
-    '''
-    Asynchronously get window size input from the terminal.
-    '''
+    """Asynchronously prompts the user for the window size.
+
+    This function prompts the user to enter the window size in pixels as two
+    comma-separated integers, representing width and height. The function uses
+    asynchronous input handling to avoid blocking other operations.
+
+    :return: A tuple containing the width and height as integers if valid input is provided,
+        or `(None, None)` if the input is canceled.
+    :rtype: tuple of (int, int) or (None, None)
+    """
     clear_input_buffer()
     while(True):
         try:
@@ -115,17 +142,23 @@ async def prompt_for_window_size():
             if dims == '':
                 return None, None
             dims = list(map(int, ast.literal_eval(dims)))
-            break
+            width, height = dims
+            return width, height
         except ValueError:
             print('Error: invalid input. Please enter an integer.')
-    width, height = dims
-    return width, height
 
 
 def prompt_for_file_path():
-    '''
-    Get file path input from the terminal.
-    '''
+    """Prompts the user for a file path to save the session.
+
+    This function asks the user to enter a file path where the session should be saved.
+    The file path should end with the `.gev` extension to ensure compatibility with
+    GeViewer for later loading of the session.
+
+    :return: The file path as a string if valid input is provided, or `None` if the
+        input is canceled.
+    :rtype: str or None
+    """
     clear_input_buffer()
     print('Enter the destination file path to save the session,')
     print('or press enter to cancel. Use the file extension .gev')
@@ -140,18 +173,25 @@ def prompt_for_file_path():
             if not os.path.isdir('/'.join(str(Path(file_path).resolve()).split('/')[:-1])):
                 raise ValueError
             print()
-            break
+            return file_path
         except ValueError:
             print('Error: invalid input. Please enter a valid file path')
             print('ending in .gev')
-    return file_path
 
 
 def prompt_for_save_session(total_meshes):
-    '''
-    If the user tries to load a large file, ask them if they want
-    to save the session to avoid reloading it again later.
-    '''
+    """Prompts the user to decide whether to save the session before loading
+    a large file.
+
+    This function warns the user if the file they are attempting to view is large,
+    based on the number of meshes (`total_meshes`). The user is given the option
+    to save the current session to avoid reloading the file in the future.
+
+    :param total_meshes: The number of meshes in the large file being loaded.
+    :type total_meshes: int
+    :return: A boolean indicating whether the session will be saved.
+    :rtype: bool
+    """
     clear_input_buffer()
     print('\nWarning: the file you are attempting to view is large')
     print('({} meshes) and may take a while to load. Do you want to save'.format(total_meshes))
@@ -171,9 +211,15 @@ def prompt_for_save_session(total_meshes):
 
 
 async def prompt_for_html_path():
-    '''
-    Get the file path to save the HTML file.
-    '''
+    """Asynchronously prompts the user to input a file path for saving an HTML file.
+
+    This function prompts the user to enter a destination file path to save the viewer
+    as an interactive HTML file.
+
+    :return: The file path provided by the user if valid, or `None` if the user presses
+        enter to cancel.
+    :rtype: str or None
+    """
     clear_input_buffer()
     print('Enter the destination file path to save the HTML file,')
     print('or press enter to cancel. Use the file extension .html')
@@ -187,20 +233,28 @@ async def prompt_for_html_path():
                 raise ValueError
             if not os.path.isdir('/'.join(str(Path(file_path).resolve()).split('/')[:-1])):
                 raise ValueError
-            break
+            return file_path
         except ValueError:
             print('Error: invalid input. Please enter a valid file path')
             print('ending in .html')
-    return file_path
 
 
 def orientation_transform(orientation):
-    '''
-    Get the up and focus vectors from the orientation. The orientation is of the
-    form (x, y, z, theta) where (x, y, z) is the axis of rotation and theta is the
-    angle of rotation. The rotation is applied to the default up vector (0, 1, 0)
-    and the default focus vector (0, 0, -1).
-    '''
+    """Calculate the up and focus vectors based on the orientation.
+
+    The function takes an orientation specified as a tuple or list `(x, y, z, theta)`,
+    where `(x, y, z)` is the axis of rotation and `theta` is the angle of rotation in
+    radians. It applies this rotation to the default up vector `(0, 1, 0)` and the
+    default focus vector `(0, 0, -1)` to compute the new up and focus vectors.
+
+    :param orientation: A tuple or list containing the axis of rotation and angle of rotation.
+        The format is (x, y, z, theta), where (x, y, z) is the axis and theta is the rotation
+        angle in radians.
+    :type orientation: tuple or list of floats
+
+    :return: A tuple containing the transformed up vector and the transformed focus vector.
+    :rtype: tuple of (numpy.ndarray, numpy.ndarray)
+    """
     v = orientation[:3]
     v = np.array(v)/np.linalg.norm(v)
     theta = orientation[3]
@@ -210,5 +264,5 @@ def orientation_transform(orientation):
     focus = -np.array((v[0]*v[2]*(1-np.cos(theta)) + v[1]*np.sin(theta),\
                        v[1]*v[2]*(1-np.cos(theta)) - v[0]*np.sin(theta),\
                        v[2]*v[2]*(1-np.cos(theta)) + np.cos(theta)))
-    return up,focus
+    return up, focus
     

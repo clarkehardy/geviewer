@@ -3,9 +3,8 @@ import argparse
 
 
 def print_instructions():
-    '''
-    Print the instructions for the user.
-    '''
+    """Prints the banner and instructions for the user.
+    """
     print()
     print('###################################################')
     print('#    _____   __      ___                          #')
@@ -37,9 +36,22 @@ def print_instructions():
 
 
 def main():
-    '''
-    Command line interface for GeViewer.
-    '''
+    """Command line interface for GeViewer.
+
+    This function sets up the command-line interface for running the GeViewer application.
+    It uses the argparse module to parse command-line arguments, allowing users to specify
+    the files to be displayed and various options for running the viewer. 
+
+    Command-line options include:
+    - `filenames`: The file or list of files to be displayed. This argument is required.
+    - `-d` or `--destination`: Optional argument specifying the path to save the session.
+    If provided without a value, the default filename is 'viewer.gev'.
+    - `-o` or `--off-screen`: Optional flag to run the viewer in offscreen mode.
+    - `-s` or `--safe-mode`: Optional flag to enable a more robust VRML parsing mode at
+    the expense of some interactive features.
+    - `-w` or `--no-warnings`: Optional flag to suppress warnings and prevent the program
+    from pausing to display them.
+    """
     print_instructions()
 
     parser = argparse.ArgumentParser(description='View Geant4 simulation results.')

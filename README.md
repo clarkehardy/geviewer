@@ -6,26 +6,33 @@
 
 A lightweight, Python-based visualization tool for Geant4. GeViewer provides a convenient way to view detector geometries and particle trajectories, with smooth rendering in an interactive window.
 
-## Features
+### Features
 * 🔬 **Physics visualization:** See color-coded particle trajectories in a 3D-rendered detector
 
 * 🕹️ **Intuitive controls:** Use your mouse to rotate, zoom, and pan to explore the geometry
 
-* 🎨 **Customizable rendering:** Toggle through different viewing options with simple keystroke commands
+* 🎨 **Customizable rendering:** Toggle through different viewing options with simple key commands
 
 * ✨ **High-quality graphics:** Produce publication-quality visuals of detectors and events
 
 * ⚡️ **Fast & smooth:** Efficient handling of large and complex detector geometries
 
-## Getting started
+## Setup
 ### Dependencies
 The following packages are required:
+
 * `numpy`
+
 * `tqdm`
+
 * `pyvista`
+
 * `nest_asyncio`
+
 * `trame`
+
 * `trame_vuetify`
+
 * `trame_vtk`
 
 ### Installation
@@ -44,7 +51,7 @@ GeViewer is intended to be used primarily as a command line tool. To run the pro
 ```bash
 geviewer /path/to/file.wrl
 ```
-This will load the meshes described in `/path/to/file.wrl` and display them in an interactive window. The viewing perspective can be changed by clicking, dragging, and scrolling in the window, while other functions can be activated using keystrokes. More specific instructions for use will print in the terminal window when the program is launched.
+This will load the meshes described in `/path/to/file.wrl` and display them in an interactive window. The viewing perspective can be changed by clicking, dragging, and scrolling in the window, while other functions can be activated using key commands. More specific instructions for use will print in the terminal window when the program is launched.
 
 ### 📜 Instructions for Geant4
 To produce Geant4 outputs that can be read by GeViewer, you must tell Geant4 to save the visualization as a VRML file. You can do this by putting the following in your Macro file:
@@ -163,8 +170,9 @@ geviewer /path/to/file1.wrl /path/to/file2.wrl/ /path/to/file3.wrl
 ```
 This function only works for VRML files; previous GeViewer sessions cannot be opened simultaneously. However, you can always load multiple VRML files, save the session, and revisit it later as you would when viewing a single file.
 
-## License
+## Other
+### License
 Distributed under the MIT License. See [LICENSE](https://github.com/clarkehardy/geviewer/blob/main/LICENSE) for more information.
 
-## Contact
+### Contact
 Clarke Hardy – [cahardy@stanford.edu](mailto:cahardy@stanford.edu)
