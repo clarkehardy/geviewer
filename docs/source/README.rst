@@ -11,20 +11,20 @@ trajectories, with smooth rendering in an interactive window.
 Features
 --------
 
--  🔬 **Physics visualization:** See color-coded particle trajectories
-   in a 3D-rendered detector
+→ **Physics visualization:** See color-coded particle trajectories in a
+3D-rendered detector
 
--  🕹️ **Intuitive controls:** Use your mouse to rotate, zoom, and pan to
-   explore the geometry
+→ **Intuitive controls:** Use your mouse to rotate, zoom, and pan to
+explore the geometry
 
--  🎨 **Customizable rendering:** Toggle through different viewing
-   options with simple key commands
+→ **Customizable rendering:** Toggle through different viewing options
+with simple key commands
 
--  ✨ **High-quality graphics:** Produce publication-quality visuals of
-   detectors and events
+→ **High-quality graphics:** Produce publication-quality visuals of
+detectors and events
 
--  ⚡️ **Fast & smooth:** Efficient handling of large and complex
-   detector geometries
+→ **Fast & smooth:** Efficient handling of large and complex detector
+geometries
 
 Setup
 =====
@@ -66,8 +66,8 @@ To uninstall:
 Usage
 =====
 
-🚀 Quick start
---------------
+Quick start
+-----------
 
 GeViewer is intended to be used primarily as a command line tool. To run
 the program, you should have already produced one or more `VRML
@@ -85,8 +85,8 @@ clicking, dragging, and scrolling in the window, while other functions
 can be activated using key commands. More specific instructions for use
 will print in the terminal window when the program is launched.
 
-📜 Instructions for Geant4
---------------------------
+Instructions for Geant4
+-----------------------
 
 To produce Geant4 outputs that can be read by GeViewer, you must tell
 Geant4 to save the visualization as a VRML file. You can do this by
@@ -159,8 +159,8 @@ on your local computer, or you can add the ``-o`` and ``-d`` flags to
 the command above to save a GeViewer session to disk. This will be
 discussed more later on.
 
-🖱️ Interacting with the viewer
-------------------------------
+Interacting with the viewer
+---------------------------
 
 The following instructions for interacting with the viewer will display
 when the program is launched:
@@ -228,8 +228,8 @@ or geometries from the same perspective. To do this, you could:
 This process will give you two graphics of the desired resolution from
 an identical viewpoint.
 
-⚙️ Additional options
----------------------
+Additional options
+------------------
 
 The full list of command-line options can be displayed using the
 ``--help`` flag:
