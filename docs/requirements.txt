@@ -1,3 +1,4 @@
 pypandoc
 GitPython
 sphinx-rtd-theme
+.
