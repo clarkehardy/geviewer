@@ -8,15 +8,15 @@ A lightweight, Python-based visualization tool for Geant4. GeViewer provides a c
 
 ### Features
 
-→ ***Physics visualization:*** See color-coded particle trajectories in a 3D-rendered detector
+* **Physics visualization:** See color-coded particle trajectories in a 3D-rendered detector
 
-→ ***Intuitive controls:*** Use your mouse to rotate, zoom, and pan to explore the geometry
+* **Intuitive controls:** Use your mouse to rotate, zoom, pan, and interact with the geomery
 
-→ ***Customizable rendering:*** Toggle through different viewing options with simple key commands
+* **Customizable viewing:** Toggle through different viewing options with simple key commands
 
-→ ***High-quality graphics:*** Produce publication-quality visuals of detectors and events
+* **High-quality graphics:** Produce publication-quality visuals of detectors and events
 
-→ ***Fast & smooth:*** Efficient handling of large and complex detector geometries
+* **Fast performance:** Enjoy smooth, responsive rendering even with large and complex detector geometries
 
 ## Setup
 ### Dependencies
