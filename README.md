@@ -95,33 +95,54 @@ Note that this will not work if you are running Geant4 on a remote machine over 
 
 ### 🖱️ Interacting with the viewer
 The following instructions for interacting with the viewer will display when the program is launched:
+
 * Click and drag to rotate the view, `shift` + click
   and drag to pan,  `ctrl` + click and drag to roll,
   and scroll to zoom
+
 * Press `c` to capture a screenshot of the current view
+
 * Press `t` to toggle the trajectories on or off
+
 * Press `m` to toggle the step markers on or off
+
 * Press `b` to toggle the background on or off
+
 * Press `w` to toggle between wireframe and solid modes
+
 * Press `v` to switch to an isometric view
+
 * Press `d` to set the display window size
+
 * Press `i` to set the camera viewpoint
+
 * Press `p` to print the current display settings
+
 * Press `h` to export the viewer to an HTML file
+
 * Press `q` to quit the viewer
 
 While the primary interface is with the viewer window, some commands require text entry in the terminal window. Any saving commands will require the user to enter a file path in the terminal. Some of these functions have been specifically designed to provide more precise control of the viewer than can be achieved using the mouse alone.
 
 #### Saving figures
 The following is an example of how you might use GeViewer to produce figures. Suppose you want to save two figures showing different events or geometries from the same perspective. To do this, you could:
+
 1. Open Geviewer to view one of the files
+
 2. Set the window to the desired resolution by pressing `d` and entering the dimensions in pixels at the prompt
+
 3. Use the mouse to find a good view of the event
+
 4. Export the graphic by pressing `c` and entering a filename (e.g. `event1.eps`)
+
 5. Print the view settings by pressing `p`
+
 6. Close GeViewer and reopen to view the second file
+
 7. Press `d` to set the window to the same resolution as for the first file
+
 8. Press `i` to set the viewpoint and paste in the output from step 5
+
 9. Export the graphic by pressing `c` and entering a filename (e.g. `event2.eps`)
 
 This process will give you two graphics of the desired resolution from an identical viewpoint.
@@ -170,7 +191,7 @@ geviewer /path/to/file1.wrl /path/to/file2.wrl/ /path/to/file3.wrl
 ```
 This function only works for VRML files; previous GeViewer sessions cannot be opened simultaneously. However, you can always load multiple VRML files, save the session, and revisit it later as you would when viewing a single file.
 
-## Other
+## Additional Info
 ### License
 Distributed under the MIT License. See [LICENSE](https://github.com/clarkehardy/geviewer/blob/main/LICENSE) for more information.
 
