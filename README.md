@@ -188,7 +188,7 @@ By default, GeViewer uses its own VRML parser to extract the meshes for plotting
 #### Viewing multiple files
 If you want to view multiple files in the same viewer (e.g. to directly compare two geometries), pass in a list of filenames rather than a single argument.
 ```bash
-geviewer /path/to/file1.wrl /path/to/file2.wrl/ /path/to/file3.wrl
+geviewer /path/to/file1.wrl /path/to/file2.wrl /path/to/file3.wrl
 ```
 This function only works for VRML files; previous GeViewer sessions cannot be opened simultaneously. However, you can always load multiple VRML files, save the session, and revisit it later as you would when viewing a single file.
 

@@ -136,6 +136,7 @@ class GeViewer:
         self.plotter.add_key_event('i', self.set_camera_view)
         self.plotter.add_key_event('p', self.print_view_params)
         self.plotter.add_key_event('h', self.export_to_html)
+        self.plotter.add_key_event('v', self.update_camera_position)
         self.plotter.set_background('lightskyblue',top='midnightblue')
         self.bkg_on = True
         self.wireframe = False
@@ -184,6 +185,16 @@ class GeViewer:
             if not self.off_screen:
                 self.plotter.update()
             print('Camera view set.\n')
+
+
+    def update_camera_position(self):
+        """Updates the camera position. This method's only job is to ensure
+        that the PyVista plotter knows that the camera position has changed
+        on a key event handled by vtk under the hood. This is necessary to
+        avoid a bug where the camera jumps back to the isometric view the next
+        time the user prints the camera position.
+        """
+        self.plotter.camera.GetPosition()
 
 
     def print_view_params(self):
