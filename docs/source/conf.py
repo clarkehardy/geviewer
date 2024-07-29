@@ -9,24 +9,28 @@ sys.path.insert(0, os.path.abspath('../../geviewer/src/'))
 import pypandoc
 import git
 
-# Produce a README.rst file from the README.md file
-lines = []
+# Produce some .rst files from README.md
+sections = ['about', 'setup', 'usage', 'info']
+lines = [[] for i in range(len(sections))]
+section = 0
 with open('../../README.md', 'r') as file:
     for i,line in enumerate(file):
-        if i==0:
-            line = '# About ' + line[1:]
-        if i>1:
-            if line.startswith('#'):
-                line = line[1:]
-        lines.append(line)
+        if i == 0:
+            lines[0].append('## About\n')
+            continue
+        if section < len(sections) - 1 and sections[section + 1] in line.lower() \
+        and line.startswith('#'):
+            section += 1
+        lines[section].append(line)
 
-with open('temp_readme.md', 'w') as file:
-    for line in lines:
-        file.write(line)
+for i,section in enumerate(sections):
+    with open(section + '.md', 'w') as file:
+        for line in lines[i]:
+            file.write(line)
 
-# pypandoc.download_pandoc()
-pypandoc.convert_file('temp_readme.md', 'rst', outputfile='README.rst')
-os.remove('temp_readme.md')
+    # pypandoc.download_pandoc()
+    pypandoc.convert_file(section + '.md', 'rst', outputfile=section + '.rst')
+    os.remove(section + '.md')
 
 # Get the version from the latest git tag
 repo = git.Repo(search_parent_directories=True)

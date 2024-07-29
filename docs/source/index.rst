@@ -12,6 +12,9 @@ Welcome to the GeViewer documentation! GeViewer is a Python-based tool for visua
    :maxdepth: 2
    :caption: Contents
 
-   README.rst
+   about.rst
+   setup.rst
+   usage.rst
+   info.rst
 
    modules.rst

@@ -4,7 +4,7 @@
 ![Last Commit](https://img.shields.io/github/last-commit/clarkehardy/geviewer)
 ![GitHub License](https://img.shields.io/github/license/clarkehardy/geviewer)
 
-A lightweight, Python-based visualization tool for Geant4. GeViewer provides a convenient way to view detector geometries and particle trajectories, with smooth rendering in an interactive window.
+GeViewer is a lightweight, Python-based visualization tool for Geant4. It provides a convenient way to view detector geometries and particle trajectories, with smooth rendering in an interactive window.
 
 ### Features
 

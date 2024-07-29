@@ -1,73 +1,8 @@
-About GeViewer
-==============
-
-|PyPI - Version| |GitHub Actions Workflow Status| |Last Commit| |GitHub
-License|
-
-A lightweight, Python-based visualization tool for Geant4. GeViewer
-provides a convenient way to view detector geometries and particle
-trajectories, with smooth rendering in an interactive window.
-
-Features
---------
-
--  **Physics visualization:** See color-coded particle trajectories in a
-   3D-rendered detector
-
--  **Intuitive controls:** Use your mouse to rotate, zoom, pan, and
-   interact with the geomery
-
--  **Customizable viewing:** Toggle through different viewing options
-   with simple key commands
-
--  **High-quality graphics:** Produce publication-quality visuals of
-   detectors and events
-
--  **Fast performance:** Enjoy smooth, responsive rendering even with
-   large and complex detector geometries
-
-Setup
-=====
-
-Dependencies
-------------
-
-The following packages are required:
-
--  ``numpy``
-
--  ``tqdm``
-
--  ``pyvista``
-
--  ``nest_asyncio``
-
--  ``trame``
-
--  ``trame_vuetify``
-
--  ``trame_vtk``
-
-Installation
-------------
-
-GeViewer can be installed using ``pip`` as follows:
-
-.. code:: bash
-
-   pip install geviewer
-
-To uninstall:
-
-.. code:: bash
-
-   pip uninstall geviewer
-
 Usage
-=====
+-----
 
 Quick start
------------
+~~~~~~~~~~~
 
 GeViewer is intended to be used primarily as a command line tool. To run
 the program, you should have already produced one or more `VRML
@@ -86,7 +21,7 @@ can be activated using key commands. More specific instructions for use
 will print in the terminal window when the program is launched.
 
 Instructions for Geant4
------------------------
+~~~~~~~~~~~~~~~~~~~~~~~
 
 To produce Geant4 outputs that can be read by GeViewer, you must tell
 Geant4 to save the visualization as a VRML file. You can do this by
@@ -94,7 +29,7 @@ putting the following in your Macro file:
 
 ::
 
-    this line should come BEFORE the /run/beamOn command
+   # this line should come BEFORE the /run/beamOn command
    /vis/open VRML2FILE
 
 Following this, you can add the geometry, trajectories, and step
@@ -102,17 +37,17 @@ markers. Any of these can be omitted if they are not needed.
 
 ::
 
-    now ensure that the geometry is displayed
+   # now ensure that the geometry is displayed
    /vis/drawVolume
 
-    add the trajectories
+   # add the trajectories
    /vis/scene/add/trajectories
 
-    add the step markers
+   # add the step markers
    /vis/modeling/trajectories/create/drawByParticleID
    /vis/modeling/trajectories/drawByParticleID-0/default/setDrawStepPts true
 
-    ensure that they are not cleared at the end of the event
+   # ensure that they are not cleared at the end of the event
    /vis/scene/endOfEventAction accumulate
 
 There are many other visualization commands that can be added here as
@@ -126,7 +61,7 @@ of events.
 
 ::
 
-    specify the number of events and start the simulation
+   # specify the number of events and start the simulation
    /run/beamOn 1
 
 Finally, refresh the viewer to ensure that the events generated have
@@ -160,7 +95,7 @@ the command above to save a GeViewer session to disk. This will be
 discussed more later on.
 
 Interacting with the viewer
----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The following instructions for interacting with the viewer will display
 when the program is launched:
@@ -197,7 +132,7 @@ functions have been specifically designed to provide more precise
 control of the viewer than can be achieved using the mouse alone.
 
 Saving figures
-~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^
 
 The following is an example of how you might use GeViewer to produce
 figures. Suppose you want to save two figures showing different events
@@ -229,7 +164,7 @@ This process will give you two graphics of the desired resolution from
 an identical viewpoint.
 
 Additional options
-------------------
+~~~~~~~~~~~~~~~~~~
 
 The full list of command-line options can be displayed using the
 ``--help`` flag:
@@ -256,7 +191,7 @@ The full list of command-line options can be displayed using the
 Detailed descriptions of selected options are provided below.
 
 Saving and loading
-~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^
 
 For particularly large VRML files (>100,000 meshes), the process of
 building the interactive viewer can be time consuming, sometimes taking
@@ -273,7 +208,7 @@ passing the ``.gev`` file as the ``filenames`` argument.
    geviewer viewer.gev
 
 Running offscreen
-~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^
 
 As the process of loading a very large VRML file can take time, it is
 often convenient to run it offscreen and save the resulting session for
@@ -288,7 +223,7 @@ a simulation.
    /control/shell geviewer /name/of/file.wrl -d /output/session/name.gev -o
 
 Safe mode
-~~~~~~~~~
+^^^^^^^^^
 
 By default, GeViewer uses its own VRML parser to extract the meshes for
 plotting. However, this parser has only been tested on a small sample
@@ -302,7 +237,7 @@ for large files the performance may be sluggish due to less efficient
 handling of the mesh data.
 
 Viewing multiple files
-~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^
 
 If you want to view multiple files in the same viewer (e.g. to directly
 compare two geometries), pass in a list of filenames rather than a
@@ -310,29 +245,9 @@ single argument.
 
 .. code:: bash
 
-   geviewer /path/to/file1.wrl /path/to/file2.wrl/ /path/to/file3.wrl
+   geviewer /path/to/file1.wrl /path/to/file2.wrl /path/to/file3.wrl
 
 This function only works for VRML files; previous GeViewer sessions
 cannot be opened simultaneously. However, you can always load multiple
 VRML files, save the session, and revisit it later as you would when
 viewing a single file.
-
-Additional Info
-===============
-
-License
--------
-
-Distributed under the MIT License. See
-`LICENSE <https://github.com/clarkehardy/geviewer/blob/main/LICENSE>`__
-for more information.
-
-Contact
--------
-
-Clarke Hardy – cahardy@stanford.edu
-
-.. |PyPI - Version| image:: https://img.shields.io/pypi/v/geviewer
-.. |GitHub Actions Workflow Status| image:: https://img.shields.io/github/actions/workflow/status/clarkehardy/geviewer/.github%2Fworkflows%2Fpython-package.yml
-.. |Last Commit| image:: https://img.shields.io/github/last-commit/clarkehardy/geviewer
-.. |GitHub License| image:: https://img.shields.io/github/license/clarkehardy/geviewer
