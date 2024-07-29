@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-GeViewer Documentation
-======================
+GeViewer – Visualization for Geant4
+============================================
 
 Welcome to the GeViewer documentation! GeViewer is a Python-based tool for visualizing Geant4 simulations. This documentation will guide you through the installation and usage of GeViewer.
 
