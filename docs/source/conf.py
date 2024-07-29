@@ -24,12 +24,12 @@ with open('temp_readme.md', 'w') as file:
     for line in lines:
         file.write(line)
 
-pypandoc.download_pandoc()
+# pypandoc.download_pandoc()
 pypandoc.convert_file('temp_readme.md', 'rst', outputfile='README.rst')
 os.remove('temp_readme.md')
 
 # Get the version from the latest git tag
-repo = git.Repo('../../../geviewer')
+repo = git.Repo(search_parent_directories=True)
 tags = sorted(repo.tags, key=lambda t: t.commit.committed_datetime)
 latest_tag = str(tags[-1])
 
