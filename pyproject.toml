@@ -42,3 +42,4 @@ geviewer = "geviewer.main:main"
 
 [project.urls]
 repository = "https://github.com/clarkehardy/geviewer.git"
+documentation = "https://geviewer.readthedocs.io/"
