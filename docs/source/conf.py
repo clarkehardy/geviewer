@@ -7,7 +7,8 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('../../geviewer/src/'))
 import pypandoc
-import git
+import geviewer
+
 
 # Produce some .rst files from README.md
 sections = ['about', 'setup', 'usage', 'info']
@@ -32,19 +33,14 @@ for i,section in enumerate(sections):
     pypandoc.convert_file(section + '.md', 'rst', outputfile=section + '.rst')
     os.remove(section + '.md')
 
-# Get the version from the latest git tag
-repo = git.Repo(search_parent_directories=True)
-tags = sorted(repo.tags, key=lambda t: t.commit.committed_datetime)
-latest_tag = str(tags[-1])
-
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'GeViewer'
 copyright = '2024, Clarke Hardy'
 author = 'Clarke Hardy'
-release = latest_tag
-version = latest_tag
+release = geviewer.__version__
+version = geviewer.__version__
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
