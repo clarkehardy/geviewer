@@ -1,5 +1,6 @@
 import pyvista as pv
 
+
 class Plotter(pv.Plotter):
     """
     A custom plotter class that extends `pyvista.Plotter` to provide

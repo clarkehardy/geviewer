@@ -126,27 +126,11 @@ The following instructions for interacting with the viewer will display when the
 While the primary interface is with the viewer window, some commands require text entry in the terminal window. Any saving commands will require the user to enter a file path in the terminal. Some of these functions have been specifically designed to provide more precise control of the viewer than can be achieved using the mouse alone.
 
 #### Saving figures
-The following is an example of how you might use GeViewer to produce figures. Suppose you want to save two figures showing different events or geometries from the same perspective. To do this, you could:
+Producing high-quality figures is a key feature of GeViewer. When creating figures for papers or presentations, it's often important to get a repeatable view to compare multiple geometries or events from the same perspective. Using the `p` and `i` commands, you can print your preferred view and later reset the viewpoint to those exact settings. Or, you can use `v` to go to an isometric view.
 
-1. Open Geviewer to view one of the files
+Additionally, it's frequently necessary to produce figures of a specific resolution. The `d` command allows you to specify the exact resolution of the plotting window before capturing the view with the `c` command.
 
-2. Set the window to the desired resolution by pressing `d` and entering the dimensions in pixels at the prompt
-
-3. Use the mouse to find a good view of the event
-
-4. Export the graphic by pressing `c` and entering a filename (e.g. `event1.eps`)
-
-5. Print the view settings by pressing `p`
-
-6. Close GeViewer and reopen to view the second file
-
-7. Press `d` to set the window to the same resolution as for the first file
-
-8. Press `i` to set the viewpoint and paste in the output from step 5
-
-9. Export the graphic by pressing `c` and entering a filename (e.g. `event2.eps`)
-
-This process will give you two graphics of the desired resolution from an identical viewpoint.
+GeViewer supports saving figures in various file formats. The file format is determined by the extension you provide when entering the filename in the terminal window after pressing `c`. The supported formats are `.png`, `.svg`, `.eps`, `.ps`, `.pdf`, and `.tex`.
 
 ### Additional options
 The full list of command-line options can be displayed using the `--help` flag:
