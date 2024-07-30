@@ -278,17 +278,15 @@ def check_version():
     try:
         import json
         from urllib import request
-        import subprocess
+        import re
+        import geviewer
         url = 'https://pypi.python.org/pypi/geviewer/json'
         releases = json.loads(request.urlopen(url).read())['releases']
         versions = list(releases.keys())
+        versions = [v for v in versions if not re.search('[a-zA-Z]', v)]
         nums = [np.sum(np.array([float(v) for v in ver.split('.')])*np.array((1e6,1e3,1))) for ver in versions]
         latest = versions[np.argmax(nums)]
-        output = subprocess.run(['pip', 'show', 'geviewer'], capture_output=True, text=True)
-        current = output.stdout.split('\n')[1][9:]
-        # don't bother printing anything if using a development version
-        if len(current) > 8:
-            return
+        current = geviewer.__version__
         if current != latest:
             print('You are using GeViewer version {}. The latest version is {}.'.format(current, latest))
             print('Use "pip install --upgrade geviewer" to update to the latest version.\n')
