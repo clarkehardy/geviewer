@@ -44,7 +44,8 @@ class GeViewer:
         self.safe_mode = safe_mode
         self.off_screen = off_screen
         self.no_warnings = no_warnings
-        utils.check_version()
+        if not self.no_warnings:
+            utils.check_version()
 
         # if destination is given, the program will save the session to that file
         if destination is not None:
@@ -301,7 +302,7 @@ class GeViewer:
         """
         if not self.safe_mode:
             self.visible[0] = not self.visible[0]
-            print('Toggling particle tracks ' + ['off.','on.'][self.visible[0]])
+            print('Toggling particle tracks ' + ['off.','on.'][self.visible[0]] + '\n')
             if self.visible[0]:
                 if self.actors[0] is not None:
                     self.actors[0].visibility = True
@@ -319,7 +320,7 @@ class GeViewer:
         """
         if not self.safe_mode:
             self.visible[1] = not self.visible[1]
-            print('Toggling step markers ' + ['off.','on.'][self.visible[1]])
+            print('Toggling step markers ' + ['off.','on.'][self.visible[1]] + '\n')
             if self.visible[1]:
                 if self.actors[1] is not None:
                     self.actors[1].visibility = True
@@ -336,7 +337,7 @@ class GeViewer:
         """Toggles the gradient background on and off.
         """
         self.bkg_on = not self.bkg_on
-        print('Toggling background ' + ['off.','on.'][self.bkg_on])
+        print('Toggling background ' + ['off.','on.'][self.bkg_on] + '\n')
         if self.bkg_on:
             self.plotter.set_background('lightskyblue',top='midnightblue')
         else:
@@ -349,7 +350,7 @@ class GeViewer:
         """Toggles between solid and wireframe display modes.
         """
         self.wireframe = not self.wireframe
-        print('Switching to ' + ['solid','wireframe'][self.wireframe] + ' mode.')
+        print('Switching to ' + ['solid','wireframe'][self.wireframe] + ' mode.\n')
         if self.wireframe:
             self.actors[2].prop.SetRepresentationToWireframe()
         else:
