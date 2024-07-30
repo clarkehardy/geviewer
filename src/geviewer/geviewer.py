@@ -72,7 +72,7 @@ class GeViewer:
         if self.from_gev and len(filenames) > 1:
             print('Loading multiple .gev files at a time is not supported.')
             print('Only the first file will be loaded.\n')
-            filenames = [filenames[0]]
+            self.filenames = [self.filenames[0]]
         if self.from_gev and self.safe_mode:
             print('Safe mode can only be used for VRML files.')
             print('Ignoring the --safe-mode flag.\n')
@@ -91,9 +91,9 @@ class GeViewer:
             self.view_params = (None, None, None)
             self.initial_camera_pos = None
             self.create_plotter()
-            if len(filenames)>1:
+            if len(self.filenames)>1:
                 print('Only the first file will be displayed in safe mode.\n')
-            self.plotter.import_vrml(filenames[0])
+            self.plotter.import_vrml(self.filenames[0])
             self.counts = []
             self.visible = []
             self.meshes = []
@@ -111,8 +111,8 @@ class GeViewer:
                     if self.save_session:
                         destination = utils.prompt_for_file_path()
                 self.meshes, self.scalars, self.cmaps = parser.create_meshes(polyline_blocks, \
-                                                                            marker_blocks, \
-                                                                            solid_blocks)
+                                                                             marker_blocks, \
+                                                                             solid_blocks)
                 self.reduce_meshes()
             self.make_colormaps()
             self.create_plotter()
