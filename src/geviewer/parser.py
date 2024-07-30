@@ -209,7 +209,7 @@ def parse_viewpoint_block(block):
     :return: A tuple containing:
         - The field of view in degrees as a float (or None if not found).
         - The position as a list of three floats [x, y, z] (or None if not found).
-        - The orientation as a list of four floats [x, y, z, angle] in degrees
+        - The orientation as a list of four floats [x, y, z, angle] in radians
         (or None if not found).
     :rtype: tuple
     """
@@ -230,7 +230,7 @@ def parse_viewpoint_block(block):
         orientation_match = re.search(r'orientation\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)', block)
         if orientation_match:
             orientation = [float(orientation_match.group(1)), float(orientation_match.group(2)), \
-                           float(orientation_match.group(3)), float(orientation_match.group(4))*180/np.pi]
+                           float(orientation_match.group(3)), float(orientation_match.group(4))]
     
     return fov, position, orientation
 
@@ -356,7 +356,7 @@ def parse_solid_block(block):
     """
     coords = []
     coord_inds = []
-    color = [1, 1, 1, 0]
+    color = [1, 1, 1]
     transparency = 0
 
     lines = block.split('\n')

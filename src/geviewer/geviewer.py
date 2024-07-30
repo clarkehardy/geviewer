@@ -44,6 +44,7 @@ class GeViewer:
         self.safe_mode = safe_mode
         self.off_screen = off_screen
         self.no_warnings = no_warnings
+        utils.check_version()
 
         # if destination is given, the program will save the session to that file
         if destination is not None:
@@ -87,6 +88,7 @@ class GeViewer:
         if self.safe_mode:
             print('Running in safe mode with some features disabled.\n')
             self.view_params = (None, None, None)
+            self.initial_camera_pos = None
             self.create_plotter()
             if len(filenames)>1:
                 print('Only the first file will be displayed in safe mode.\n')
@@ -114,6 +116,7 @@ class GeViewer:
             self.make_colormaps()
             self.create_plotter()
             self.plot_meshes()
+            self.set_initial_view()
             if self.save_session:
                 self.save(destination)
         if not off_screen:
@@ -140,71 +143,6 @@ class GeViewer:
         self.plotter.set_background('lightskyblue',top='midnightblue')
         self.bkg_on = True
         self.wireframe = False
-        
-        # compute the initial camera position
-        fov = self.view_params[0]
-        position = self.view_params[1]
-        orientation = self.view_params[2]
-        if fov is not None or position is not None or orientation is not None:
-            up = None
-            focus = None
-            if position is not None:
-                up = np.array([0.,1.,0.])
-                focus = np.array([0.,0.,-1.])*np.linalg.norm(position) - np.array(position)
-            if orientation is not None:
-                up,focus = utils.orientation_transform(orientation)
-                if position is not None:
-                    focus = np.array(focus)*np.linalg.norm(position) - np.array(position)
-            self.plotter.reset_camera()
-            self.set_camera_view((fov,position,up,focus))
-            self.initial_camera_pos = self.plotter.camera_position
-        else:
-            self.initial_camera_pos = None
-
-
-    def set_camera_view(self,args=None):
-        """Sets the camera viewpoint.
-
-        :param args: A list of the view parameters, defaults to None
-        :type args: list, optional
-        """
-        if args is None:
-            fov = None
-            position, up, focus = asyncio.run(utils.prompt_for_camera_view())
-        else:
-            fov, position, up, focus = args
-        if fov is not None:
-            self.plotter.camera.view_angle = fov
-        if position is not None:
-            self.plotter.camera.position = position
-        if up is not None:
-            self.plotter.camera.up = up
-        if focus is not None:
-            self.plotter.camera.focal_point = focus
-        if args is None:
-            if not self.off_screen:
-                self.plotter.update()
-            print('Camera view set.\n')
-
-
-    def update_camera_position(self):
-        """Updates the camera position. This method's only job is to ensure
-        that the PyVista plotter knows that the camera position has changed
-        on a key event handled by vtk under the hood. This is necessary to
-        avoid a bug where the camera jumps back to the isometric view the next
-        time the user prints the camera position.
-        """
-        self.plotter.camera.GetPosition()
-
-
-    def print_view_params(self):
-        """Prints the current camera viewpoint parameters.
-        """
-        print('Viewpoint parameters:')
-        print('  Window size: {}x{}'.format(*self.plotter.window_size))
-        print('  Position:    ({}, {}, {})'.format(*self.plotter.camera.position))
-        print('  Focal point: ({}, {}, {})'.format(*self.plotter.camera.focal_point))
-        print('  Up vector:   ({}, {}, {})\n'.format(*self.plotter.camera.up))
 
 
     def make_colormaps(self):
@@ -256,6 +194,79 @@ class GeViewer:
                                                   cmap=self.luts[t], show_scalar_bar=False, point_size=0)
         self.actors = actors
         print('Done.\n')
+
+
+    def set_initial_view(self):
+        """Sets the initial camera viewpoint based on the view parameters
+        provided in the VRML file.
+        """
+        fov = self.view_params[0]
+        position = self.view_params[1]
+        orientation = self.view_params[2]
+        if position is not None and orientation is not None:
+            up, v = utils.orientation_transform(orientation)
+            focus = position + v*np.linalg.norm(position)
+        elif position is not None and orientation is None:
+            up = np.array([0.,1.,0.])
+            focus = position + np.array([0.,0.,-1.])*np.linalg.norm(position)
+        elif position is None and orientation is not None:
+            self.plotter.view_isometric()
+            position = np.linalg.norm(self.plotter.camera.GetPosition())*np.array([0.,0.,1.])
+            up, v = utils.orientation_transform(orientation)
+            focus = position + v*np.linalg.norm(position)
+        else:
+            self.plotter.view_isometric()
+            position = np.linalg.norm(self.plotter.camera.GetPosition())*np.array([0.,0.,1.])
+            up = np.array([0.,1.,0.])
+            focus = position + np.array([0.,0.,-1.])*np.linalg.norm(position)
+        self.plotter.reset_camera()
+        self.set_camera_view((fov,position,up,focus))
+        self.initial_camera_pos = self.plotter.camera_position
+    
+
+    def set_camera_view(self,args=None):
+        """Sets the camera viewpoint.
+
+        :param args: A list of the view parameters, defaults to None
+        :type args: list, optional
+        """
+        if args is None:
+            fov = None
+            position, up, focus = asyncio.run(utils.prompt_for_camera_view())
+        else:
+            fov, position, up, focus = args
+        if fov is not None:
+            self.plotter.camera.view_angle = fov
+        if position is not None:
+            self.plotter.camera.position = position
+        if up is not None:
+            self.plotter.camera.up = up
+        if focus is not None:
+            self.plotter.camera.focal_point = focus
+        if args is None:
+            if not self.off_screen:
+                self.plotter.update()
+            print('Camera view set.\n')
+
+
+    def update_camera_position(self):
+        """Updates the camera position. This method's only job is to ensure
+        that the PyVista plotter knows that the camera position has changed
+        on a key event handled by vtk under the hood. This is necessary to
+        avoid a bug where the camera jumps back to the isometric view the next
+        time the user prints the camera position.
+        """
+        self.plotter.camera.GetPosition()
+
+
+    def print_view_params(self):
+        """Prints the current camera viewpoint parameters.
+        """
+        print('Viewpoint parameters:')
+        print('  Window size: {}x{}'.format(*self.plotter.window_size))
+        print('  Position:    ({}, {}, {})'.format(*self.plotter.camera.position))
+        print('  Focal point: ({}, {}, {})'.format(*self.plotter.camera.focal_point))
+        print('  Up vector:   ({}, {}, {})\n'.format(*self.plotter.camera.up))
 
 
     def save_screenshot(self):

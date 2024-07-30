@@ -14,11 +14,15 @@ def read_files(filenames):
     :return: A single string containing the concatenated content of all the files.
     :rtype: str
     """
-    data = ''
+    data = []
     for filename in filenames:
         print('Reading data from ' + str(Path(filename).resolve())+ '...')
         with open(filename, 'r') as f:
-            data += f.read()
+            for line in f:
+                # don't read comments
+                if not line.strip().startswith('#'):
+                    data.append(line)
+    data = ''.join(data)
     return data
 
 
@@ -240,29 +244,55 @@ async def prompt_for_html_path():
 
 
 def orientation_transform(orientation):
-    """Calculate the up and focus vectors based on the orientation.
+    """Calculate the up and camera direction vectors based on the orientation.
 
     The function takes an orientation specified as a tuple or list `(x, y, z, theta)`,
     where `(x, y, z)` is the axis of rotation and `theta` is the angle of rotation in
     radians. It applies this rotation to the default up vector `(0, 1, 0)` and the
-    default focus vector `(0, 0, -1)` to compute the new up and focus vectors.
+    default direction vector `(0, 0, -1)` to compute the new up and direction vectors.
 
     :param orientation: A tuple or list containing the axis of rotation and angle of rotation.
         The format is (x, y, z, theta), where (x, y, z) is the axis and theta is the rotation
         angle in radians.
     :type orientation: tuple or list of floats
 
-    :return: A tuple containing the transformed up vector and the transformed focus vector.
+    :return: A tuple containing the transformed up vector and the transformed direction vector.
     :rtype: tuple of (numpy.ndarray, numpy.ndarray)
     """
     v = orientation[:3]
     v = np.array(v)/np.linalg.norm(v)
     theta = orientation[3]
-    up = np.array((v[0]*v[1]*(1-np.cos(theta)) - v[2]*np.sin(theta),\
-                   v[1]*v[1]*(1-np.cos(theta)) + np.cos(theta),\
-                   v[1]*v[2]*(1-np.cos(theta)) + v[0]*np.sin(theta)))
-    focus = -np.array((v[0]*v[2]*(1-np.cos(theta)) + v[1]*np.sin(theta),\
-                       v[1]*v[2]*(1-np.cos(theta)) - v[0]*np.sin(theta),\
-                       v[2]*v[2]*(1-np.cos(theta)) + np.cos(theta)))
-    return up, focus
-    
+    up = np.array((v[0]*v[1]*(1 - np.cos(theta)) - v[2]*np.sin(theta),\
+                   v[1]*v[1]*(1 - np.cos(theta)) + np.cos(theta),\
+                   v[1]*v[2]*(1 - np.cos(theta)) + v[0]*np.sin(theta)))
+    vprime = -np.array((v[0]*v[2]*(1 - np.cos(theta)) + v[1]*np.sin(theta),\
+                        v[1]*v[2]*(1 - np.cos(theta)) - v[0]*np.sin(theta),\
+                        v[2]*v[2]*(1 - np.cos(theta)) + np.cos(theta)))
+    return up, vprime
+
+
+def check_version():
+    """"Determine whether the user is using the latest version of GeViewer.
+    If not, print a message to the console to inform the user.
+    """
+    try:
+        import numpy as np
+        import json
+        from urllib import request
+        import subprocess
+        url = 'https://pypi.python.org/pypi/geviewer/json'
+        releases = json.loads(request.urlopen(url).read())['releases']
+        versions = list(releases.keys())
+        nums = [np.sum(np.array([float(v) for v in ver.split('.')])*np.array((1e6,1e3,1))) for ver in versions]
+        latest = versions[np.argmax(nums)]
+        output = subprocess.run(['pip', 'show', 'geviewer'], capture_output=True, text=True)
+        current = output.stdout.split('\n')[1][9:]
+        # don't bother printing anything if using a development version
+        if len(current) > 8:
+            return
+        if current != latest:
+            print('You are using GeViewer version {}. The latest version is {}.'.format(current, latest))
+            print('Use "pip install --upgrade geviewer" to update to the latest version.\n')
+    except:
+        # don't want this to interrupt regular use if there's a problem
+        return
