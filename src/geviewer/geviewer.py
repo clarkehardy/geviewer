@@ -127,7 +127,7 @@ class GeViewer:
     def create_plotter(self):
         """Creates a Plotter object, a subclass of pyvista.Plotter.
         """
-        self.plotter = plotter.Plotter(title='GeViewer — ' + str(Path(self.filenames[0]).resolve()) \
+        self.plotter = plotter.Plotter(title='GeViewer -- ' + str(Path(self.filenames[0]).resolve()) \
                                        + ['',' + {} more'.format(len(self.filenames)-1)]\
                                          [(len(self.filenames)>1) and not self.safe_mode],\
                                        off_screen=self.off_screen)
