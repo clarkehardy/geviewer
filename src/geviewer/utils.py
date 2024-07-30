@@ -272,8 +272,8 @@ def orientation_transform(orientation):
 
 
 def check_version():
-    """Determine whether the user is using the latest version of GeViewer.
-    If not, print a message to the console to inform the user.
+    """Determines whether the user is using the latest version of GeViewer.
+    If not, prints a message to the console to inform the user.
     """
     try:
         import json
