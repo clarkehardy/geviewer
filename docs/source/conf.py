@@ -44,6 +44,7 @@ project = 'GeViewer'
 copyright = '2024, Clarke Hardy'
 author = 'Clarke Hardy'
 release = latest_tag
+version = latest_tag
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
