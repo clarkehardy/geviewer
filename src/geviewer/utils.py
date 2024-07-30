@@ -272,7 +272,7 @@ def orientation_transform(orientation):
 
 
 def check_version():
-    """"Determine whether the user is using the latest version of GeViewer.
+    """Determine whether the user is using the latest version of GeViewer.
     If not, print a message to the console to inform the user.
     """
     try:
