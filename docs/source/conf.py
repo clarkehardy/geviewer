@@ -59,6 +59,7 @@ exclude_patterns = []
 html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 html_context = {
+    'analytics-id': 'G-KMG1S5KJZC', # Google Analytics tracking ID
     'display_github': True, # Integrate GitHub
     'github_user': 'clarkehardy', # Username
     'github_repo': 'geviewer', # Repo name
