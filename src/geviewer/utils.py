@@ -276,7 +276,6 @@ def check_version():
     If not, print a message to the console to inform the user.
     """
     try:
-        import numpy as np
         import json
         from urllib import request
         import subprocess
