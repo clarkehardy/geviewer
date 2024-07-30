@@ -12,13 +12,13 @@ The following packages are required:
 
 -  ``pyvista``
 
--  ``nest_asyncio``
+-  ``nest-asyncio``
 
 -  ``trame``
 
--  ``trame_vuetify``
+-  ``trame-vuetify``
 
--  ``trame_vtk``
+-  ``trame-vtk``
 
 Installation
 ~~~~~~~~~~~~
