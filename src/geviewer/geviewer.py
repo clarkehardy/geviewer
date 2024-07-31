@@ -45,7 +45,7 @@ class GeViewer:
         self.off_screen = off_screen
         self.no_warnings = no_warnings
         if not self.no_warnings:
-            utils.check_version()
+            utils.check_for_updates()
 
         # if destination is given, the program will save the session to that file
         if destination is not None:
