@@ -271,23 +271,22 @@ def orientation_transform(orientation):
     return up, vprime
 
 
-def check_version():
+def check_for_updates():
     """Determines whether the user is using the latest version of GeViewer.
     If not, prints a message to the console to inform the user.
     """
     try:
         import json
         from urllib import request
-        import re
         import geviewer
+        from packaging.version import parse
         url = 'https://pypi.python.org/pypi/geviewer/json'
         releases = json.loads(request.urlopen(url).read())['releases']
         versions = list(releases.keys())
-        versions = [v for v in versions if not re.search('[a-zA-Z]', v)]
-        nums = [np.sum(np.array([float(v) for v in ver.split('.')])*np.array((1e6,1e3,1))) for ver in versions]
-        latest = versions[np.argmax(nums)]
-        current = geviewer.__version__
-        if current != latest:
+        parsed = [parse(v) for v in versions]
+        latest = parsed[parsed.index(max(parsed))]
+        current = parse(geviewer.__version__)
+        if current < latest:
             print('You are using GeViewer version {}. The latest version is {}.'.format(current, latest))
             print('Use "pip install --upgrade geviewer" to update to the latest version.\n')
     except:
