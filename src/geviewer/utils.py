@@ -286,7 +286,7 @@ def check_for_updates():
         parsed = [parse(v) for v in versions]
         latest = parsed[parsed.index(max(parsed))]
         current = parse(geviewer.__version__)
-        if current < latest:
+        if current < latest and not (latest.is_prerelease or latest.is_postrelease or latest.is_devrelease):
             print('You are using GeViewer version {}. The latest version is {}.'.format(current, latest))
             print('Use "pip install --upgrade geviewer" to update to the latest version.\n')
     except:
