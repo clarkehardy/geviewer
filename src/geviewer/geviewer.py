@@ -56,6 +56,10 @@ class GeViewer:
                     print('Error: invalid file extension.')
                     print('Try again, or press enter to continue without saving.\n')
                     destination = utils.prompt_for_file_path()
+            if not os.path.isdir('/'.join(str(Path(destination).resolve()).split('/')[:-1])):
+                print('Error: destination folder does not exist.')
+                print('Try again, or press enter to continue without saving.\n')
+                destination = utils.prompt_for_file_path()
             if destination is None:
                 self.save_session = False
         else:
