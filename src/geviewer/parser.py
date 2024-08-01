@@ -10,16 +10,18 @@ def create_meshes(polyline_blocks, marker_blocks, solid_blocks):
     This function processes blocks of data for polylines, markers, and solids,
     building corresponding meshes for each.
 
-    Parameters:
-    polyline_blocks (list): List of blocks containing polyline data.
-    marker_blocks (list): List of blocks containing marker data.
-    solid_blocks (list): List of blocks containing solid data.
+    :param polyline_blocks: List of blocks containing polyline data.
+    :type polyline_blocks: list
+    :param marker_blocks: List of blocks containing marker data.
+    :type marker_blocks: list
+    :param solid_blocks: List of blocks containing solid data.
+    :type solid_blocks: list
 
-    Returns:
-    tuple: A tuple containing three elements:
-        - polyline_mesh (pyvista.PolyData): Mesh for polylines.
-        - marker_mesh (pyvista.UnstructuredGrid): Mesh for markers.
-        - solid_mesh (pyvista.PolyData): Mesh for solids.
+    :returns: A tuple containing three elements:
+        - polyline_mesh (:class:`pyvista.PolyData`): Mesh for polylines.
+        - marker_mesh (:class:`pyvista.UnstructuredGrid`): Mesh for markers.
+        - solid_mesh (:class:`pyvista.PolyData`): Mesh for solids.
+    :rtype: tuple
     """
     total = len(polyline_blocks) + len(marker_blocks) + len(solid_blocks)
     with tqdm(total=total, desc='Building meshes...') as pbar:
@@ -34,19 +36,23 @@ def combine_mesh_arrays(points, cells, colors, pbar=None):
     """Combines multiple mesh arrays into a single mesh.
 
     This function takes lists of points, indices of faces or line segments
-    (called cells), and colors,and combines them into a single set of points,
+    (called cells), and colors, and combines them into a single set of points,
     cells, and colors, adjusting indices appropriately.
 
-    Parameters:
-    points (list of numpy.ndarray): A list of arrays containing point coordinates.
-    cells (list of list): A list of lists containing cell indices.
-    colors (list of numpy.ndarray): A list of arrays containing color data.
+    :param points: A list of arrays containing point coordinates.
+    :type points: list of numpy.ndarray
+    :param cells: A list of lists containing cell indices.
+    :type cells: list of list
+    :param colors: A list of arrays containing color data.
+    :type colors: list of numpy.ndarray
+    :param pbar: (Optional) A tqdm progress bar instance.
+    :type pbar: tqdm.tqdm, optional
 
-    Returns:
-    tuple: A tuple containing three elements:
+    :returns: A tuple containing three elements:
         - points (numpy.ndarray): Combined array of point coordinates.
         - cells (numpy.ndarray): Combined array of cell indices.
         - colors (numpy.ndarray): Combined array of color data.
+    :rtype: tuple
     """
     offsets = np.cumsum([0] + [len(p) for p in points[:-1]]).astype(int)
     points = np.concatenate(points)
@@ -69,12 +75,15 @@ def build_mesh(blocks, which, pbar=None):
     This function processes blocks of data, creating a mesh based on the specified
     type ('polyline' or 'solid').
 
-    Parameters:
-    blocks (list): List of blocks containing data for the mesh.
-    which (str): Type of mesh to build ('polyline' or 'solid').
+    :param blocks: List of blocks containing data for the mesh.
+    :type blocks: list
+    :param which: Type of mesh to build ('polyline' or 'solid').
+    :type which: str
+    :param pbar: (Optional) A tqdm progress bar instance.
+    :type pbar: tqdm.tqdm, optional
 
-    Returns:
-    pyvista.PolyData: The created mesh with combined points, cells, and colors.
+    :returns: The created mesh with combined points, cells, and colors.
+    :rtype: pyvista.PolyData
     """
     points = [None for i in range(len(blocks))]
     cells = [None for i in range(len(blocks))]
@@ -109,11 +118,13 @@ def build_markers(blocks, pbar=None):
 
     This function processes blocks of marker data, creating a mesh of spheres for each marker.
 
-    Parameters:
-    blocks (list): List of blocks containing marker data.
+    :param blocks: List of blocks containing marker data.
+    :type blocks: list
+    :param pbar: (Optional) A tqdm progress bar instance.
+    :type pbar: tqdm.tqdm, optional
 
-    Returns:
-    pyvista.UnstructuredGrid: The created mesh with combined centers, radii, and colors.
+    :returns: The created mesh with combined centers, radii, and colors.
+    :rtype: pyvista.UnstructuredGrid
     """
     centers = [None for i in range(len(blocks))]
     radii = [None for i in range(len(blocks))]
