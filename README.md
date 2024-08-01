@@ -1,6 +1,7 @@
 # GeViewer
 ![PyPI - Version](https://img.shields.io/pypi/v/geviewer)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/clarkehardy/geviewer/.github%2Fworkflows%2Fpython-package.yml)
+[![Documentation Status](https://readthedocs.org/projects/geviewer/badge/?version=latest)](https://geviewer.readthedocs.io/en/latest/?badge=latest)
 ![Last Commit](https://img.shields.io/github/last-commit/clarkehardy/geviewer)
 ![GitHub License](https://img.shields.io/github/license/clarkehardy/geviewer)
 
