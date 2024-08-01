@@ -92,7 +92,7 @@ machine over ``ssh``, as GeViewer cannot be run using X11 forwarding. If
 that is your use case, you can download the resulting VRML file to open
 on your local computer, or you can add the ``-o`` and ``-d`` flags to
 the command above to save a GeViewer session to disk. This will be
-discussed more later on.
+discussed more in a later section.
 
 Interacting with the viewer
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -181,11 +181,11 @@ Detailed descriptions of selected options are provided below.
 Saving and loading
 ^^^^^^^^^^^^^^^^^^
 
-For particularly large VRML files (>100,000 meshes), the process of
-building the interactive viewer can be time consuming, sometimes taking
-ten minutes or more. Thankfully, this step only needs to be done once,
-and the resulting session can be saved and rapidly reloaded at a later
-time. This is done using the ``--destination`` (or ``-d``) flag,
+Once a VRML file has been parsed and meshes have been built from it, it
+can be saved in a more convenient format for faster loading in the
+future. This is only relevant for very large files (>1 million meshes)
+which take more than a few seconds to load. Saving is done when
+launching GeViewer using the ``--destination`` (or ``-d``) flag,
 optionally followed by the output filename (ending in ``.gev``). If no
 filename is provided, the session will be saved in the working directory
 as ``viewer.gev``. To reload this session, run the program again,
@@ -198,13 +198,12 @@ passing the ``.gev`` file as the ``filenames`` argument.
 Running offscreen
 ^^^^^^^^^^^^^^^^^
 
-As the process of loading a very large VRML file can take time, it is
-often convenient to run it offscreen and save the resulting session for
-later. This can be done using the ``--off-screen`` (or ``-o``) flag.
-This flag must be paired with the ``--destination`` flag in order for
-the session to be saved. As mentioned above, you can add the following
-line to your macro file to automatically run this process at the end of
-a simulation.
+It is often convenient to run the VRML parsing and mesh construction
+routine offscreen and save the resulting session for later. This can be
+done using the ``--off-screen`` (or ``-o``) flag. This flag must be
+paired with the ``--destination`` flag in order for the session to be
+saved. As mentioned above, you can add the following line to your macro
+file to automatically run this process at the end of a simulation.
 
 ::
 
