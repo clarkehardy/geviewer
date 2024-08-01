@@ -51,15 +51,20 @@ class GeViewer:
             if not destination.endswith('.gev'):
                 if self.off_screen:
                     print('Renaming the session file to end in .gev so it can be loaded later.')
-                    destination = destination.split('.')[:-1] + '.gev'
+                    destination = '.'.join(destination.split('.')[:-1]) + '.gev'
                 else:
                     print('Error: invalid file extension.')
                     print('Try again, or press enter to continue without saving.\n')
                     destination = utils.prompt_for_file_path()
             if not os.path.isdir('/'.join(str(Path(destination).resolve()).split('/')[:-1])):
-                print('Error: destination folder does not exist.')
-                print('Try again, or press enter to continue without saving.\n')
-                destination = utils.prompt_for_file_path()
+                if self.off_screen:
+                    print('Destination folder does not exist.')
+                    print('Creating the destination folder.')
+                    os.makedirs('/'.join(str(Path(destination).resolve()).split('/')[:-1]), exist_ok=True)
+                else:
+                    print('Error: destination folder does not exist.')
+                    print('Try again, or press enter to continue without saving.\n')
+                    destination = utils.prompt_for_file_path()
             if destination is None:
                 self.save_session = False
         else:
@@ -287,7 +292,7 @@ class GeViewer:
             if not self.off_screen:
                 self.plotter.update()
         else:
-            print('This feature is disabled in safe mode.')
+            print('This feature is disabled in safe mode.\n')
                 
                 
     def toggle_step_markers(self):
@@ -305,7 +310,7 @@ class GeViewer:
             if not self.off_screen:
                 self.plotter.update()
         else:
-            print('This feature is disabled in safe mode.')
+            print('This feature is disabled in safe mode.\n')
 
 
     def toggle_background(self):
@@ -327,14 +332,30 @@ class GeViewer:
         """
         self.wireframe = not self.wireframe
         print('Switching to ' + ['solid','wireframe'][self.wireframe] + ' mode.\n')
-        if self.wireframe:
-            self.actors[2].prop.SetRepresentationToWireframe()
-            if self.has_transparency:
-                self.plotter.disable_depth_peeling()
+        if not self.safe_mode:
+            if self.wireframe:
+                self.actors[2].prop.SetRepresentationToWireframe()
+                if self.has_transparency:
+                    self.plotter.disable_depth_peeling()
+            else:
+                self.actors[2].prop.SetRepresentationToSurface()
+                if self.has_transparency:
+                    self.plotter.enable_depth_peeling()
         else:
-            self.actors[2].prop.SetRepresentationToSurface()
-            if self.has_transparency:
-                self.plotter.enable_depth_peeling()
+            if self.wireframe:
+                actors = self.plotter.renderer.GetActors()
+                actors.InitTraversal()
+                actor = actors.GetNextActor()
+                while actor:
+                    actor.GetProperty().SetRepresentationToWireframe()
+                    actor = actors.GetNextActor()
+            else:
+                actors = self.plotter.renderer.GetActors()
+                actors.InitTraversal()
+                actor = actors.GetNextActor()
+                while actor:
+                    actor.GetProperty().SetRepresentationToSurface()
+                    actor = actors.GetNextActor()
         if not self.off_screen:
             self.plotter.update()
 
