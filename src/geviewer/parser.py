@@ -2,66 +2,151 @@ import numpy as np
 import pyvista as pv
 from tqdm import tqdm
 import re
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from matplotlib.colors import LinearSegmentedColormap
 
 
 def create_meshes(polyline_blocks, marker_blocks, solid_blocks):
-    """Creates meshes from the polyline, marker, and solid blocks.
+    """Creates and returns meshes for polylines, markers, and solids.
 
-    :param polyline_blocks: The polyline blocks to create meshes from.
+    This function processes blocks of data for polylines, markers, and solids,
+    building corresponding meshes for each.
+
+    :param polyline_blocks: List of blocks containing polyline data.
     :type polyline_blocks: list
-    :param marker_blocks: The marker blocks to create meshes from.
+    :param marker_blocks: List of blocks containing marker data.
     :type marker_blocks: list
-    :param solid_blocks: The solid blocks to create meshes from.
+    :param solid_blocks: List of blocks containing solid data.
     :type solid_blocks: list
-    :return: A tuple containing three elements:
-        - A list of meshes created from the blocks.
-        - An array of scalar values used for coloring the meshes.
-        - A list of color maps corresponding to each type of mesh.
+
+    :returns: A tuple containing three elements:
+        - polyline_mesh (:class:`pyvista.PolyData`): Mesh for polylines.
+        - marker_mesh (:class:`pyvista.UnstructuredGrid`): Mesh for markers.
+        - solid_mesh (:class:`pyvista.PolyData`): Mesh for solids.
     :rtype: tuple
     """
-    counts = [len(polyline_blocks), len(marker_blocks), len(solid_blocks)]
-    start_inds = np.cumsum([0] + counts)
-    total_blocks = start_inds[-1]
-    meshes = [None] * total_blocks
-    colors = [None] * total_blocks
-    
-    def process_block(block, index, func):
-        meshes[index], colors[index] = func(block)
-    
-    with ThreadPoolExecutor() as executor:
-        futures = []
-        
-        for i, block in enumerate(polyline_blocks):
-            futures.append(executor.submit(process_block, block, i, process_polyline_block))
-        
-        for i, block in enumerate(marker_blocks):
-            futures.append(executor.submit(process_block, block, start_inds[1] + i, process_marker_block))
-        
-        for i, block in enumerate(solid_blocks):
-            futures.append(executor.submit(process_block, block, start_inds[2] + i, process_solid_block))
-        
-        for future in tqdm(as_completed(futures), desc='Building meshes', total=total_blocks):
-            future.result()
+    total = len(polyline_blocks) + len(marker_blocks) + len(solid_blocks)
+    with tqdm(total=total, desc='Building meshes...') as pbar:
+        polyline_mesh = build_mesh(polyline_blocks, 'polyline', pbar)
+        marker_mesh = build_markers(marker_blocks, pbar)
+        solid_mesh = build_mesh(solid_blocks, 'solid', pbar)
 
-    colors = np.array(colors)
-    cmaps = []
-    scalars = np.array([])
-    titles = ['trajectories', 'markers', 'solids']
-    for i in range(3):
-        if start_inds[i+1] - start_inds[i] == 0:
-            cmaps.append(None)
-            continue
-        # construct a color map for each type of mesh to be plotted
-        unique_colors,inverse_indices = np.unique(colors[start_inds[i]:start_inds[i+1]], axis=0, return_inverse=True)
-        if unique_colors.shape[0] == 1:
-            unique_colors = np.concatenate((unique_colors, unique_colors))
-        cmaps.append(LinearSegmentedColormap.from_list(titles[i], unique_colors, N=len(unique_colors)))
-        # take the color index for each mesh to be the scalar determining its color
-        scalars = np.concatenate((scalars, inverse_indices.flatten()))
-        
-    return meshes, scalars, cmaps
+    return polyline_mesh, marker_mesh, solid_mesh
+
+
+def combine_mesh_arrays(points, cells, colors, pbar=None):
+    """Combines multiple mesh arrays into a single mesh.
+
+    This function takes lists of points, indices of faces or line segments
+    (called cells), and colors, and combines them into a single set of points,
+    cells, and colors, adjusting indices appropriately.
+
+    :param points: A list of arrays containing point coordinates.
+    :type points: list of numpy.ndarray
+    :param cells: A list of lists containing cell indices.
+    :type cells: list of list
+    :param colors: A list of arrays containing color data.
+    :type colors: list of numpy.ndarray
+    :param pbar: (Optional) A tqdm progress bar instance.
+    :type pbar: tqdm.tqdm, optional
+
+    :returns: A tuple containing three elements:
+        - points (numpy.ndarray): Combined array of point coordinates.
+        - cells (numpy.ndarray): Combined array of cell indices.
+        - colors (numpy.ndarray): Combined array of color data.
+    :rtype: tuple
+    """
+    offsets = np.cumsum([0] + [len(p) for p in points[:-1]]).astype(int)
+    points = np.concatenate(points)
+    for i, cell in enumerate(cells):
+        j = 0
+        while j < len(cell):
+            k = cell[j]
+            cell[j + 1:j + k + 1] = (np.array(cell[j + 1:j + k + 1]) + offsets[i]).tolist()
+            j += k + 1
+    cells = np.concatenate(cells).astype(int)
+    colors = np.concatenate(colors)
+    if pbar:
+        pbar.update(1)
+    return points, cells, colors
+
+
+def build_mesh(blocks, which, pbar=None):
+    """Builds a mesh from given blocks of data.
+
+    This function processes blocks of data, creating a mesh based on the specified
+    type ('polyline' or 'solid').
+
+    :param blocks: List of blocks containing data for the mesh.
+    :type blocks: list
+    :param which: Type of mesh to build ('polyline' or 'solid').
+    :type which: str
+    :param pbar: (Optional) A tqdm progress bar instance.
+    :type pbar: tqdm.tqdm, optional
+
+    :returns: The created mesh with combined points, cells, and colors.
+    :rtype: pyvista.PolyData
+    """
+    points = [None for i in range(len(blocks))]
+    cells = [None for i in range(len(blocks))]
+    colors = [None for i in range(len(blocks))]
+
+    if which == 'polyline':
+        func = process_polyline_block
+    elif which == 'solid':
+        func = process_solid_block
+
+    for i, block in enumerate(blocks):
+        points[i], cells[i], color = func(block)
+        colors[i] = [color]*len(points[i])
+        if pbar:
+            pbar.update(1)
+
+    if len(points) == 0:
+        return None
+    
+    points, cells, colors = combine_mesh_arrays(points, cells, colors)
+    if func==process_polyline_block:
+        mesh = pv.PolyData(points, lines=cells)
+    elif func==process_solid_block:
+        mesh = pv.PolyData(points, faces=cells)
+    mesh.point_data.set_scalars(colors, name='color')
+
+    return mesh
+
+
+def build_markers(blocks, pbar=None):
+    """Builds a mesh for markers from given blocks of data.
+
+    This function processes blocks of marker data, creating a mesh of spheres for each marker.
+
+    :param blocks: List of blocks containing marker data.
+    :type blocks: list
+    :param pbar: (Optional) A tqdm progress bar instance.
+    :type pbar: tqdm.tqdm, optional
+
+    :returns: The created mesh with combined centers, radii, and colors.
+    :rtype: pyvista.UnstructuredGrid
+    """
+    centers = [None for i in range(len(blocks))]
+    radii = [None for i in range(len(blocks))]
+    colors = [None for i in range(len(blocks))]
+    
+    for i, block in enumerate(blocks):
+        centers[i], radii[i], colors[i] = process_marker_block(block)
+    if len(centers) == 0:
+        return None
+    
+    mesh = pv.MultiBlock()
+    for i in range(len(centers)):
+        mesh.append(pv.Sphere(radius=radii[i], center=centers[i]))
+        colors[i] = [colors[i]]*mesh[-1].n_points
+        if pbar:
+            pbar.update(1)
+
+    colors = np.concatenate(colors)
+    mesh = mesh.combine()
+    mesh.point_data.set_scalars(colors, name='color')
+
+    return mesh
 
 
 def extract_blocks(file_content):
@@ -91,7 +176,7 @@ def extract_blocks(file_content):
     inside_block = False
     brace_count = 0
 
-    for line in tqdm(lines, desc='Parsing data...'):
+    for line in tqdm(lines, desc='Parsing data......'):
         stripped_line = line.strip()
 
         if stripped_line.startswith('Shape') or stripped_line.startswith('Anchor')\
@@ -140,10 +225,8 @@ def process_polyline_block(block):
     for i in range(len(indices) - 1):
         if indices[i] != -1 and indices[i + 1] != -1:
             lines.extend([2, indices[i], indices[i + 1]])
-    line_mesh = pv.PolyData(points)
-    if len(lines) > 0:
-        line_mesh.lines = lines
-    return line_mesh, color
+    
+    return points, lines, color
 
 
 def process_marker_block(block):
@@ -161,8 +244,8 @@ def process_marker_block(block):
     :rtype: tuple
     """
     center, radius, color = parse_marker_block(block)
-    sphere = pv.Sphere(radius=radius, center=center)
-    return sphere, color
+
+    return center, radius, color
 
 
 def process_solid_block(block):
@@ -192,8 +275,8 @@ def process_solid_block(block):
         else:
             current_face.append(index)
     faces = np.array(faces)
-    solid_mesh = pv.PolyData(points, faces)
-    return solid_mesh, color
+
+    return points, faces, color
 
 
 def parse_viewpoint_block(block):
@@ -285,7 +368,7 @@ def parse_polyline_block(block):
             indices = line.replace(',', '').split()
             coord_inds.extend(list(map(int, indices)))
 
-    color.append(1)
+    color.append(1.)
 
     return np.array(coords), np.array(coord_inds), np.array(color)
 
@@ -328,7 +411,7 @@ def parse_marker_block(block):
         elif 'radius' in line:
             radius = float(re.findall(r'[-+]?\d*\.?\d+', line)[0])
 
-    color.append(1 - transparency)
+    color.append(1. - transparency)
 
     return np.array(coords), radius, np.array(color)
 
@@ -387,6 +470,6 @@ def parse_solid_block(block):
             indices = line.replace(',', '').split()
             coord_inds.extend(list(map(int, indices)))
 
-    color.append(1 - transparency)
+    color.append(1. - transparency)
 
     return np.array(coords), np.array(coord_inds), np.array(color)
