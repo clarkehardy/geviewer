@@ -2,12 +2,10 @@ import numpy as np
 import pyvista as pv
 import asyncio
 from pathlib import Path
-import json
 import os
 import shutil
 import zipfile
 import tempfile
-from matplotlib.colors import LinearSegmentedColormap
 from geviewer import utils, parser, plotter
 
 
@@ -106,15 +104,11 @@ class GeViewer:
                 viewpoint_block, polyline_blocks, marker_blocks, solid_blocks = parser.extract_blocks(data)
                 self.view_params = parser.parse_viewpoint_block(viewpoint_block)
                 self.counts = [len(polyline_blocks), len(marker_blocks), len(solid_blocks)]
-                if not self.save_session and not no_warnings and sum(self.counts)>1e4:
+                if not self.save_session and not no_warnings and sum(self.counts) > 1e6:
                     self.save_session = utils.prompt_for_save_session(sum(self.counts))
                     if self.save_session:
                         destination = utils.prompt_for_file_path()
-                self.meshes, self.scalars, self.cmaps = parser.create_meshes(polyline_blocks, \
-                                                                             marker_blocks, \
-                                                                             solid_blocks)
-                self.reduce_meshes()
-            self.make_colormaps()
+                self.meshes = parser.create_meshes(polyline_blocks, marker_blocks, solid_blocks)
             self.create_plotter()
             self.plot_meshes()
             self.set_initial_view()
@@ -142,46 +136,20 @@ class GeViewer:
         self.plotter.add_key_event('h', self.export_to_html)
         self.plotter.add_key_event('v', self.update_camera_position)
         self.plotter.set_background('lightskyblue',top='midnightblue')
+        if not self.safe_mode:
+            self.check_transparency()
         self.bkg_on = True
         self.wireframe = False
 
 
-    def make_colormaps(self):
-        """Makes the colormaps used to color the meshes.
+    def check_transparency(self):
+        """Enables depth peeling if any of the meshes have transparency. This prevents issues
+        with rendering order when displaying transparent objects.
         """
-        luts = []
-        for t in range(3):
-            if self.counts[t] > 0:
-                scalar_range = [min(self.scalars[t]), max(self.scalars[t]) + 1]
-                lut = pv.LookupTable(scalar_range=scalar_range)
-                lut.apply_cmap(self.cmaps[t], n_values=self.cmaps[t].N)
-                luts.append(lut)
-            else:
-                luts.append(None)
-        self.luts = luts
-
-
-    def reduce_meshes(self):
-        """Reduces the number of meshes by combining them.
-        """
-        blocks = [pv.MultiBlock() for i in range(3)]
-        scalars = [[] for i in range(3)]
-        for i, mesh in enumerate(self.meshes):
-            if i < self.counts[0]:
-                type_ind = 0
-            elif i < sum(self.counts[:2]):
-                type_ind = 1
-            else:
-                type_ind = 2
-            blocks[type_ind].append(mesh)
-            scalars[type_ind] += [self.scalars[i].astype(int)]*mesh.n_cells
-        for t in range(3):
-            if self.counts[t] > 0:
-                blocks[t] = blocks[t].combine()
-            else:
-                blocks[t] = None
-        self.meshes = blocks
-        self.scalars = scalars
+        transparencies = [mesh.point_data['color'][:,-1] for mesh in self.meshes if mesh is not None]
+        transparencies = np.concatenate(transparencies)
+        if not np.all(transparencies == 1):
+            self.plotter.enable_depth_peeling()
 
 
     def plot_meshes(self):
@@ -189,10 +157,9 @@ class GeViewer:
         """
         print('Plotting meshes...')
         actors = [None for i in range(3)]
-        for t in range(3):
-            if self.counts[t] > 0:
-                actors[t] = self.plotter.add_mesh(self.meshes[t], scalars=np.array(self.scalars[t]) + 0.5,\
-                                                  cmap=self.luts[t], show_scalar_bar=False, point_size=0)
+        for i in range(3):
+            if self.counts[i] > 0:
+                actors[i] = self.plotter.add_mesh(self.meshes[i], scalars='color', rgba=True)
         self.actors = actors
         print('Done.\n')
 
@@ -383,13 +350,6 @@ class GeViewer:
             for i,mesh in enumerate(self.meshes):
                 if mesh is not None:
                     mesh.save(tmpfolder + 'mesh{}.vtk'.format(i))
-                    np.save(tmpfolder + 'scalars{}.npy'.format(i),self.scalars[i],allow_pickle=False)
-                    with open(tmpfolder + 'cmap{}.json'.format(i), 'w') as f:
-                        cmap_dict = self.cmaps[i]._segmentdata
-                        cmap_dict['N'] = self.cmaps[i].N
-                        for c in ['red', 'green', 'blue', 'alpha']:
-                            cmap_dict[c] = [val.item() for val in cmap_dict[c][:,-1]]
-                        json.dump(cmap_dict, f)
             fov, pos, ori = self.view_params
             if fov is None:
                 fov = 'None'
@@ -432,27 +392,14 @@ class GeViewer:
             with zipfile.ZipFile(filename, 'r') as archive:
                 archive.extractall(tmpfolder)
             meshes = []
-            scalars = []
-            cmaps = []
             counts = []
             mesh_files = [file[-5] for file in os.listdir(tmpfolder) if file.endswith('.vtk')]
             for i in range(3):
                 if str(i) not in mesh_files:
                     meshes.append(None)
-                    scalars.append(None)
-                    cmaps.append(None)
                     counts.append(0)
                     continue
                 meshes.append(pv.read(tmpfolder + 'mesh{}.vtk'.format(i)))
-                scalars.append(np.load(tmpfolder + 'scalars{}.npy'.format(i)))
-                with open(tmpfolder + 'cmap{}.json'.format(i), 'r') as f:
-                    cmap_dict = json.load(f)
-                cmap_list = [np.array((cmap_dict['red'][i],\
-                                       cmap_dict['green'][i],\
-                                       cmap_dict['blue'][i],\
-                                       cmap_dict['alpha'][i]))\
-                             for i in range(len(cmap_dict['red']))]
-                cmaps.append(LinearSegmentedColormap.from_list("my_colormap", cmap_list, N=cmap_dict['N']))
                 counts.append(1)
             viewpoint = np.load(tmpfolder + 'viewpoint.npy')
             fov = float(viewpoint[0]) if viewpoint[0] != 'None' else None
@@ -460,8 +407,6 @@ class GeViewer:
             ori = [float(o) for o in viewpoint[4:]] if viewpoint[4] != 'None' else None
             self.view_params = (fov, pos, ori)
             self.meshes = meshes
-            self.scalars = scalars
-            self.cmaps = cmaps
             self.counts = counts
 
 
