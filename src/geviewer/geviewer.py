@@ -88,6 +88,7 @@ class GeViewer:
             print('Running in safe mode with some features disabled.\n')
             self.view_params = (None, None, None)
             self.initial_camera_pos = None
+            self.has_transparency = False
             self.create_plotter()
             if len(self.filenames)>1:
                 print('Only the first file will be displayed in safe mode.\n')
@@ -150,6 +151,9 @@ class GeViewer:
         transparencies = np.concatenate(transparencies)
         if not np.all(transparencies == 1):
             self.plotter.enable_depth_peeling()
+            self.has_transparency = True
+        else:
+            self.has_transparency = False
 
 
     def plot_meshes(self):
@@ -314,14 +318,19 @@ class GeViewer:
 
 
     def toggle_wireframe(self):
-        """Toggles between solid and wireframe display modes.
+        """Toggles between solid and wireframe display modes. Disables depth
+        peeling if wireframe mode is enabled to improve responsiveness.
         """
         self.wireframe = not self.wireframe
         print('Switching to ' + ['solid','wireframe'][self.wireframe] + ' mode.\n')
         if self.wireframe:
             self.actors[2].prop.SetRepresentationToWireframe()
+            if self.has_transparency:
+                self.plotter.disable_depth_peeling()
         else:
             self.actors[2].prop.SetRepresentationToSurface()
+            if self.has_transparency:
+                self.plotter.enable_depth_peeling()
         if not self.off_screen:
             self.plotter.update()
 
