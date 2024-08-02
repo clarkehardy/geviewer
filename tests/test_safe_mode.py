@@ -34,19 +34,18 @@ class TestGeViewerSafe(unittest.TestCase):
     def test_save_screenshot(self,mocked_input):
         """Test the save_graphic method with mocked file name inputs.
         """
-        file_names = [tempfile.mkstemp(suffix='.png')[1],\
-                      tempfile.mkstemp(suffix='.svg')[1],\
-                      tempfile.mkstemp(suffix='.eps')[1],\
-                      tempfile.mkstemp(suffix='.ps')[1],\
-                      tempfile.mkstemp(suffix='.pdf')[1],\
-                      tempfile.mkstemp(suffix='.tex')[1]]
-        mocked_input.side_effect = file_names
-        for i in file_names:
-            self.gev.save_screenshot()
-            with self.subTest():
-                self.assertTrue(isfile(i))
-        for file in file_names:
-            remove(file)
+        with tempfile.TemporaryDirectory() as temp:
+            file_names = [temp + '/file.png',\
+                          temp + '/file.svg',\
+                          temp + '/file.eps',\
+                          temp + '/file.ps',\
+                          temp + '/file.pdf',\
+                          temp + '/file.tex']
+            mocked_input.side_effect = file_names
+            for i in file_names:
+                self.gev.save_screenshot()
+                with self.subTest():
+                    self.assertTrue(isfile(i))
 
 
     @mock.patch('geviewer.utils.prompt_for_window_size')
@@ -78,8 +77,8 @@ class TestGeViewerSafe(unittest.TestCase):
     def test_export_to_html(self, mocked_input):
         """Test the export_to_html method with a mocked file path input.
         """
-        with tempfile.NamedTemporaryFile(suffix='.html') as temp:
-            mocked_input.return_value = str(temp.name)
+        with tempfile.TemporaryDirectory() as temp:
+            mocked_input.return_value = temp + '/file.html'
             self.gev.export_to_html()
             self.assertTrue(isfile(mocked_input.return_value))
     
