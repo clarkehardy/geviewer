@@ -371,7 +371,8 @@ class GeViewer:
             import trame_vtk
         except ImportError:
             print('Error: to export to HTML, you need to install the optional')
-            print('dependencies. Run "pip install geviewer[extras]" to install them.\n')
+            print('optional dependencies. Run "pip install geviewer[extras]"')
+            print('to install them.\n')
             return
         file_path = asyncio.run(utils.prompt_for_html_path())
         if file_path is None:
