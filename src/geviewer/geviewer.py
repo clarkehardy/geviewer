@@ -364,6 +364,15 @@ class GeViewer:
         """Saves the interactive viewer to an HTML file, prompting
         the user for a file path.
         """
+        try:
+            import nest_asyncio
+            import trame
+            import trame_vuetify
+            import trame_vtk
+        except ImportError:
+            print('Error: to export to HTML, you need to install the optional')
+            print('dependencies. Run "pip install geviewer[extras]" to install them.\n')
+            return
         file_path = asyncio.run(utils.prompt_for_html_path())
         if file_path is None:
             print('Operation cancelled.\n')
