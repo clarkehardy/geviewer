@@ -1,8 +1,8 @@
 About
 -----
 
-|PyPI - Version| |GitHub Actions Workflow Status| |Last Commit| |GitHub
-License|
+|PyPI - Version| |GitHub Actions Workflow Status| |Read the Docs|
+|GitHub last commit| |GitHub License|
 
 GeViewer is a lightweight, Python-based visualization tool for Geant4.
 It provides a convenient way to view detector geometries and particle
@@ -26,7 +26,8 @@ Features
 -  **Fast performance:** Enjoy smooth, responsive rendering even with
    large and complex detector geometries
 
-.. |PyPI - Version| image:: https://img.shields.io/pypi/v/geviewer
-.. |GitHub Actions Workflow Status| image:: https://img.shields.io/github/actions/workflow/status/clarkehardy/geviewer/.github%2Fworkflows%2Fpython-package.yml
-.. |Last Commit| image:: https://img.shields.io/github/last-commit/clarkehardy/geviewer
+.. |PyPI - Version| image:: https://img.shields.io/pypi/v/geviewer?logo=pypi
+.. |GitHub Actions Workflow Status| image:: https://img.shields.io/github/actions/workflow/status/clarkehardy/geviewer/.github%2Fworkflows%2Fpython-package.yml?logo=GitHub
+.. |Read the Docs| image:: https://img.shields.io/readthedocs/geviewer?logo=readthedocs
+.. |GitHub last commit| image:: https://img.shields.io/github/last-commit/clarkehardy/geviewer?logo=GitHub
 .. |GitHub License| image:: https://img.shields.io/github/license/clarkehardy/geviewer

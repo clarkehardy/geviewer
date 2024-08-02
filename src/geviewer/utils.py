@@ -226,8 +226,7 @@ async def prompt_for_html_path():
     """
     clear_input_buffer()
     print('Enter the destination file path to save the HTML file,')
-    print('or press enter to cancel. Use the file extension .html')
-    print('to save the viewer as an interactive HTML file.')
+    print('or press enter to cancel. Use the file extension .html.')
     while(True):
         try:
             file_path = await asyncio.to_thread(input, 'Save as (e.g. /path/to/file.html): ')

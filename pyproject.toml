@@ -18,11 +18,7 @@ readme = "README.md"
 requires-python = ">=3.8"
 dependencies = ["numpy",
                 "pyvista",
-                "tqdm",
-                "nest_asyncio",
-                "trame",
-                "trame_vuetify",
-                "trame_vtk"]
+                "tqdm"]
 keywords = ["geant4",
             "viewer",
             "visualizer",
@@ -36,6 +32,12 @@ keywords = ["geant4",
             "detector",
             "geometry",
             "vrml"]
+
+[project.optional-dependencies]
+extras = ["nest_asyncio",
+          "trame",
+          "trame_vuetify",
+          "trame_vtk"]
 
 [project.scripts]
 geviewer = "geviewer.main:main"
