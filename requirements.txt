@@ -1,3 +1,7 @@
 numpy
 pyvista
 tqdm
+nest_asyncio[extras]
+trame[extras]
+trame_vuetify[extras]
+trame_vtk[extras]

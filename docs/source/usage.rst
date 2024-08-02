@@ -151,6 +151,28 @@ filename in the terminal window after pressing ``c``. The supported
 formats are ``.png``, ``.svg``, ``.eps``, ``.ps``, ``.pdf``, and
 ``.tex``.
 
+Exporting to HTML
+^^^^^^^^^^^^^^^^^
+
+Once a file has been loaded with GeViewer, the interactive session can
+be saved to an HTML file, allowing for later viewing in a web browser
+(with some features missing). Saving to HTML requires some additional
+packages:
+
+-  ``nest-asyncio``
+
+-  ``trame``
+
+-  ``trame-vuetify``
+
+-  ``trame-vtk``
+
+These packages can be installed automatically using:
+
+::
+
+   pip install geviewer[extras]
+
 Additional options
 ~~~~~~~~~~~~~~~~~~
 
