@@ -29,14 +29,6 @@ The following packages are required:
 
 * `pyvista`
 
-* `nest-asyncio`
-
-* `trame`
-
-* `trame-vuetify`
-
-* `trame-vtk`
-
 ### Installation
 GeViewer can be installed using `pip` as follows:
 ```bash
@@ -132,6 +124,22 @@ Producing high-quality figures is a key feature of GeViewer. When creating figur
 Additionally, it's frequently necessary to produce figures of a specific resolution. The `d` command allows you to specify the exact resolution of the plotting window before capturing the view with the `c` command.
 
 GeViewer supports saving figures in various file formats. The file format is determined by the extension you provide when entering the filename in the terminal window after pressing `c`. The supported formats are `.png`, `.svg`, `.eps`, `.ps`, `.pdf`, and `.tex`.
+
+#### Exporting to HTML
+Once a file has been loaded with GeViewer, the interactive session can be saved to an HTML file, allowing for later viewing in a web browser (with some features missing). Saving to HTML requires some additional packages:
+
+* `nest-asyncio`
+
+* `trame`
+
+* `trame-vuetify`
+
+* `trame-vtk`
+
+These packages can be installed automatically using:
+```
+pip install geviewer[extras]
+```
 
 ### Additional options
 The full list of command-line options can be displayed using the `--help` flag:
