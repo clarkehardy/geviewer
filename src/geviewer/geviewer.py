@@ -6,7 +6,7 @@ import os
 import shutil
 import zipfile
 import tempfile
-from geviewer import utils, parser, plotter
+from geviewer import utils, parsers, plotter
 
 
 class GeViewer:
@@ -33,123 +33,99 @@ class GeViewer:
     :raises Exception: If .gev and .wrl files are mixed, or if multiple .gev files are provided.
     :raises Exception: If attempting to save a session using an invalid file extension.
     """
+    def __init__(self, plotter_widget=None):
+        self.filenames = ['No file loaded']
+        self.safe_mode = False
+        self.off_screen = False
+        self.no_warnings = False
+        self.from_gev = False
+        self.save_session = False
+        self.view_params = (None, None, None)
+        self.initial_camera_pos = None
+        self.has_transparency = False
+        if plotter_widget:
+            self.plotter = plotter.Plotter(plotter_widget)
+        else:
+            self.plotter = pv.Plotter()
+        self.counts = [0, 0, 0]
+        self.visible = [True, True, True]
+        self.meshes = []
+        self.actors = []
+        self.wireframe = False
+        self.bkg_colors = ['lightskyblue', 'midnightblue']
+        self.plotter.set_background(self.bkg_colors[0],top=self.bkg_colors[1])
+        self.bkg_on = True
+        self.gradient = True
 
-    def __init__(self, filenames, destination=None, off_screen=False,\
-                 safe_mode=False, no_warnings=False):
+
+    def load_files(self, filename, off_screen=False,\
+                   no_warnings=False, progress_obj=None):
         """Constructor method for the GeViewer object.
         """
-        self.filenames = filenames
-        self.safe_mode = safe_mode
+        self.filename = filename
         self.off_screen = off_screen
         self.no_warnings = no_warnings
         if not self.no_warnings:
             utils.check_for_updates()
 
-        # if destination is given, the program will save the session to that file
-        if destination is not None:
-            self.save_session = True
-            if not destination.endswith('.gev'):
-                if self.off_screen:
-                    print('Renaming the session file to end in .gev so it can be loaded later.')
-                    destination = '.'.join(destination.split('.')[:-1]) + '.gev'
-                else:
-                    print('Error: invalid file extension.')
-                    print('Try again, or press enter to continue without saving.\n')
-                    destination = utils.prompt_for_file_path()
-            if not os.path.isdir('/'.join(str(Path(destination).resolve()).split('/')[:-1])):
-                if self.off_screen:
-                    print('Destination folder does not exist.')
-                    print('Creating the destination folder.')
-                    os.makedirs('/'.join(str(Path(destination).resolve()).split('/')[:-1]), exist_ok=True)
-                else:
-                    print('Error: destination folder does not exist.')
-                    print('Try again, or press enter to continue without saving.\n')
-                    destination = utils.prompt_for_file_path()
-            if destination is None:
-                self.save_session = False
-        else:
-            self.save_session = False
 
         # ensure the input arguments are valid
-        self.from_gev = True if filenames[0].endswith('.gev') else False
-        if len(filenames) > 1:
-            extensions = [Path(f).suffix for f in filenames]
-            if not all([e == extensions[0] for e in extensions]):
-                raise Exception('Cannot load .wrl and .gev files together.')
-        if self.from_gev and len(filenames) > 1:
-            print('Loading multiple .gev files at a time is not supported.')
-            print('Only the first file will be loaded.\n')
-            self.filenames = [self.filenames[0]]
-        if self.from_gev and self.safe_mode:
-            print('Safe mode can only be used for VRML files.')
-            print('Ignoring the --safe-mode flag.\n')
-            self.safe_mode = False
-        if self.from_gev and self.save_session:
-            print('This session has already been saved.')
-            print('Ignoring the --destination flag.\n')
-            self.save_session = False
-        if destination is not None and self.safe_mode:
-            print('Cannot save a session in safe mode.')
-            print('Ignoring the --destination flag.\n')
-            self.save_session = False
+        self.from_gev = True if filename.endswith('.gev') else False
+        # if len(filenames) > 1:
+        #     extensions = [Path(f).suffix for f in filenames]
+        #     if not all([e == extensions[0] for e in extensions]):
+        #         raise Exception('Cannot load .wrl and .gev files together.')
+        # if self.from_gev and len(filenames) > 1:
+        #     print('Loading multiple .gev files at a time is not supported.')
+        #     print('Only the first file will be loaded.\n')
+        #     self.filenames = [self.filenames[0]]
 
-        if self.safe_mode:
-            print('Running in safe mode with some features disabled.\n')
-            self.view_params = (None, None, None)
-            self.initial_camera_pos = None
-            self.has_transparency = False
-            self.create_plotter()
-            if len(self.filenames)>1:
-                print('Only the first file will be displayed in safe mode.\n')
-            self.plotter.import_vrml(self.filenames[0])
-            self.counts = []
-            self.visible = []
-            self.meshes = []
-        else:
-            self.visible = [True, True, True]
-            if self.from_gev:
-                self.load(filenames[0])
-            else:
-                data = utils.read_files(filenames)
-                viewpoint_block, polyline_blocks, marker_blocks, solid_blocks = parser.extract_blocks(data)
-                self.view_params = parser.parse_viewpoint_block(viewpoint_block)
-                self.counts = [len(polyline_blocks), len(marker_blocks), len(solid_blocks)]
-                if not self.save_session and not no_warnings and sum(self.counts) > 1e6:
-                    self.save_session = utils.prompt_for_save_session(sum(self.counts))
-                    if self.save_session:
-                        destination = utils.prompt_for_file_path()
-                self.meshes = parser.create_meshes(polyline_blocks, marker_blocks, solid_blocks)
-            self.create_plotter()
-            self.plot_meshes()
-            self.set_initial_view()
-            if self.save_session:
-                self.save(destination)
-        if not off_screen:
-            self.show()
-
+        self.visible = [True, True, True]
+        if self.from_gev:
+            self.load(filename)
+        elif filename.endswith('.wrl'):
+            parser = parsers.VRMLParser(filename)
+            parser.parse_file()
+            self.view_params = parser.viewpoint_block
+            # self.counts = [len(polyline_blocks), len(marker_blocks), len(solid_blocks)]
+            # if not self.save_session and not no_warnings and sum(self.counts) > 1e6:
+            #     self.save_session = utils.prompt_for_save_session(sum(self.counts))
+            #     if self.save_session:
+            #         destination = utils.prompt_for_file_path()
+            self.components = [parser.components]
+        elif filename.endswith('heprep'):
+            parser = parsers.HepRepParser(filename)
+            parser.parse_file()
+            self.components = parser.components
+    
     
     def create_plotter(self):
         """Creates a Plotter object, a subclass of pyvista.Plotter.
         """
-        self.plotter = plotter.Plotter(title='GeViewer -- ' + str(Path(self.filenames[0]).resolve()) \
-                                       + ['',' + {} more'.format(len(self.filenames)-1)]\
-                                         [(len(self.filenames)>1) and not self.safe_mode],\
-                                       off_screen=self.off_screen)
-        self.plotter.add_key_event('c', self.save_screenshot)
-        self.plotter.add_key_event('t', self.toggle_tracks)
-        self.plotter.add_key_event('m', self.toggle_step_markers)
-        self.plotter.add_key_event('b', self.toggle_background)
-        self.plotter.add_key_event('w', self.toggle_wireframe)
-        self.plotter.add_key_event('d', self.set_window_size)
-        self.plotter.add_key_event('i', self.set_camera_view)
-        self.plotter.add_key_event('p', self.print_view_params)
-        self.plotter.add_key_event('h', self.export_to_html)
-        self.plotter.add_key_event('v', self.update_camera_position)
-        self.plotter.set_background('lightskyblue',top='midnightblue')
-        if not self.safe_mode:
-            self.check_transparency()
+        self.plot_meshes(self.components)
+        # self.set_initial_view()
+        # self.plotter.add_key_event('c', self.save_screenshot)
+        # self.plotter.add_key_event('t', self.toggle_tracks)
+        # self.plotter.add_key_event('m', self.toggle_step_markers)
+        # self.plotter.add_key_event('b', self.toggle_background)
+        # self.plotter.add_key_event('w', self.toggle_wireframe)
+        # self.plotter.add_key_event('d', self.set_window_size)
+        # self.plotter.add_key_event('i', self.set_camera_view)
+        # self.plotter.add_key_event('p', self.print_view_params)
+        # self.plotter.add_key_event('h', self.export_to_html)
+        # self.plotter.add_key_event('v', self.update_camera_position)
+        # # if not self.safe_mode:
+        #     self.check_transparency()
         self.bkg_on = True
         self.wireframe = False
+        self.enable_depth_peeling = True
+
+
+    def set_background_color(self):
+        if self.gradient:
+            self.plotter.set_background(self.bkg_colors[0],top=self.bkg_colors[1])
+        else:
+            self.plotter.set_background(self.bkg_colors[0])
 
 
     def check_transparency(self):
@@ -165,16 +141,21 @@ class GeViewer:
             self.has_transparency = False
 
 
-    def plot_meshes(self):
+    def plot_meshes(self, components, level=-1):
         """Adds the meshes to the plot.
         """
-        print('Plotting meshes...')
-        actors = [None for i in range(3)]
-        for i in range(3):
-            if self.counts[i] > 0:
-                actors[i] = self.plotter.add_mesh(self.meshes[i], scalars='color', rgba=True)
-        self.actors = actors
-        print('Done.\n')
+        # print('Plotting meshes...')
+        for comp in components:
+            print('...'*level + 'Plotting ' + comp['name'] + '...')
+            if comp['mesh'] is not None:
+                try:
+                    comp['actor'] = self.plotter.add_mesh(comp['mesh'], scalars='color', rgb=True)
+                except:
+                    comp['actor'] = self.plotter.add_mesh(comp['mesh'])
+            if len(comp['children']) > 0:
+                self.plot_meshes(comp['children'], level + 1)
+        if level == -1:
+            print('Done.\n')
 
 
     def set_initial_view(self):
@@ -319,7 +300,7 @@ class GeViewer:
         self.bkg_on = not self.bkg_on
         print('Toggling background ' + ['off.','on.'][self.bkg_on] + '\n')
         if self.bkg_on:
-            self.plotter.set_background('lightskyblue',top='midnightblue')
+            self.plotter.set_background(self.bkg_colors[0],top=self.bkg_colors[1])
         else:
             self.plotter.set_background('white')
         if not self.off_screen:

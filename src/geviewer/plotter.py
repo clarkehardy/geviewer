@@ -1,7 +1,8 @@
 import pyvista as pv
+from pyvistaqt import QtInteractor, BackgroundPlotter
 
 
-class Plotter(pv.Plotter):
+class Plotter(QtInteractor):
     """
     A custom plotter class that extends `pyvista.Plotter` to provide
     enhanced key event handling.

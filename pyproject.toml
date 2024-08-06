@@ -18,7 +18,9 @@ readme = "README.md"
 requires-python = ">=3.8"
 dependencies = ["numpy",
                 "pyvista",
-                "tqdm"]
+                "tqdm",
+                "PyQt5",
+                "pyvistaqt"]
 keywords = ["geant4",
             "viewer",
             "visualizer",
@@ -41,6 +43,7 @@ extras = ["nest_asyncio",
 
 [project.scripts]
 geviewer = "geviewer.main:main"
+geviewer-gui = "geviewer.main:launch"
 
 [project.urls]
 repository = "https://github.com/clarkehardy/geviewer.git"

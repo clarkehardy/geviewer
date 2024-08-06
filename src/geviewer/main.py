@@ -1,4 +1,5 @@
 from geviewer.geviewer import GeViewer
+from geviewer.gui import launch_app
 import argparse
 
 
@@ -70,8 +71,15 @@ def main():
     safe_mode = args.safe_mode
     no_warnings = args.no_warnings
 
-    GeViewer(filenames, destination=destination, off_screen=off_screen,\
-             safe_mode=safe_mode, no_warnings=no_warnings)
+    gev = GeViewer()
+    gev.load_files(filenames[0])
+    gev.create_plotter()
+    gev.show()
+    
+    
+
+def launch():
+    launch_app()
 
 
 if __name__ == '__main__':

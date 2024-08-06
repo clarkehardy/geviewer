@@ -6,7 +6,7 @@ import asyncio
 from pathlib import Path
 
 
-def read_files(filenames):
+def read_file(filename):
     """Reads the content of multiple files and concatenates it into a single string.
 
     :param filenames: A list of file paths to read.
@@ -14,14 +14,13 @@ def read_files(filenames):
     :return: A single string containing the concatenated content of all the files.
     :rtype: str
     """
+    print('Reading data from ' + str(Path(filename).resolve())+ '...')
     data = []
-    for filename in filenames:
-        print('Reading data from ' + str(Path(filename).resolve())+ '...')
-        with open(filename, 'r') as f:
-            for line in f:
-                # don't read comments
-                if not line.strip().startswith('#'):
-                    data.append(line)
+    with open(filename, 'r') as f:
+        for line in f:
+            # don't read comments
+            if not line.strip().startswith('#'):
+                data.append(line)
     data = ''.join(data)
     return data
 
