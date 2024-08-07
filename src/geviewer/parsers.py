@@ -3,6 +3,7 @@ import pyvista as pv
 import xml.etree.ElementTree as ET
 from tqdm import tqdm
 import re
+import uuid
 from geviewer import utils
 
 
@@ -14,9 +15,9 @@ class Parser:
 
 
     def initialize_template(self, name):
-        return {'name': name, 'shape': [], 'points': [], 'mesh_points': [],\
-                'mesh_inds': [], 'colors': [], 'visible': [], 'mesh': None,\
-                'actor': None, 'children': []}
+        return  {'name': name, 'id': str(uuid.uuid4()), 'shape': [], 'points': [], 'mesh_points': [],\
+                 'mesh_inds': [], 'colors': [], 'visible': [], 'scalars': [],\
+                 'is_dot': None, 'mesh': None, 'actor': None, 'children': []}
     
     
     def combine_mesh_arrays(self, points, cells, colors, progress_obj=None):
@@ -551,8 +552,13 @@ class HepRepParser(Parser):
                 components[index]['shape'] = child.attrib['value']
             elif child.tag.endswith('attvalue') and child.attrib['name'] == 'LineColor':
                 color_str = child.attrib['value']
-                color = [float(i) for i in color_str.split(',')]
+                color = [float(i)/255. for i in color_str.split(',')]
                 components[index]['colors'] = [np.array(color)]
+            elif child.tag.endswith('attvalue') and child.attrib['name'] == 'MarkColor':
+                color_str = child.attrib['value']
+                color = [float(i)/255. for i in color_str.split(',')]
+                components[index]['colors'] = [np.array(color)]
+                components[index]['is_dot'] = True
             elif child.tag.endswith('attvalue') and child.attrib['name'] == 'Visibility':
                 components[index]['visible'] = child.attrib['value'] == 'True'
             elif child.tag.endswith('primitive'):
@@ -560,8 +566,8 @@ class HepRepParser(Parser):
                 for grandchild in child:
                     if grandchild.tag.endswith('point'):
                         points.append([float(grandchild.attrib['x']), \
-                                    float(grandchild.attrib['y']), \
-                                    float(grandchild.attrib['z'])])
+                                       float(grandchild.attrib['y']), \
+                                       float(grandchild.attrib['z'])])
                     elif grandchild.tag.endswith('attvalue') and grandchild.attrib['name'].startswith('Radius'):
                         points.append(float(grandchild.attrib['value']))
                 components[index]['points'].append(points)
@@ -585,22 +591,26 @@ class HepRepParser(Parser):
             if comp['shape'] == 'Prism':
                 comp['mesh_points'] = np.array(comp['points'])
                 comp['mesh_inds'] = [[4, 0, 1, 2, 3,\
-                                    4, 4, 5, 1, 0,\
-                                    4, 7, 4, 0, 3,\
-                                    4, 6, 7, 3, 2,\
-                                    4, 5, 6, 2, 1,\
-                                    4, 7, 6, 5, 4]]
+                                      4, 4, 5, 1, 0,\
+                                      4, 7, 4, 0, 3,\
+                                      4, 6, 7, 3, 2,\
+                                      4, 5, 6, 2, 1,\
+                                      4, 7, 6, 5, 4]]
+                comp['scalars'] = [comp['colors']*len(comp['points'][0])]
                 
             elif comp['shape'] == 'Cylinder':
                 points = []
                 inds = []
+                scalars = []
                 for point_set in comp['points']:
                     pt, ind = create_cylinder_mesh(point_set[2], point_set[3], \
-                                                    point_set[0], point_set[1])
+                                                   point_set[0], point_set[1])
                     points.append(pt)
                     inds.append(ind)
+                    scalars.append(comp['colors']*len(pt))
                 comp['mesh_points'] = points
                 comp['mesh_inds'] = inds
+                comp['scalars'] = scalars
 
             elif comp['shape'] == 'Polygon':
                 comp['mesh_points'] = [np.concatenate(comp['points'])]
@@ -613,10 +623,12 @@ class HepRepParser(Parser):
                     this_ind += len(point)
                     inds.append(ind)
                 comp['mesh_inds'] = [np.concatenate(inds)]
+                comp['scalars'] = [comp['colors']*len(comp['mesh_points'][0])]
 
             elif comp['shape'] == 'Point':
                 comp['mesh_points'] = np.array(comp['points'])
-                comp['mesh_inds'] = [np.array(())]
+                comp['mesh_inds'] = [np.array(())]*len(comp['mesh_points'])
+                comp['scalars'] = [comp['colors']*len(m) for m in comp['mesh_points']]
 
             elif comp['shape'] == 'Line':
                 comp['mesh_points'] = [np.concatenate(comp['points'])]
@@ -629,6 +641,7 @@ class HepRepParser(Parser):
                     this_ind += len(point)
                     inds.append(ind)
                 comp['mesh_inds'] = [np.concatenate(inds)]
+                comp['scalars'] = [comp['colors']*len(comp['mesh_points'][0])]
 
 
     def draw_mesh(self, components):
@@ -638,54 +651,59 @@ class HepRepParser(Parser):
             if comp['shape'] == 'Prism' and len(comp['mesh_points']) > 0 and comp['visible']:
                 for i, points in enumerate(comp['mesh_points']):
                     shape = pv.PolyData(points, faces=comp['mesh_inds'][i])
-                    color = np.array(comp['colors'][0])/255.
-                    shape.point_data.set_scalars([color]*len(points), name='color')
+                    shape.point_data.set_scalars(comp['scalars'][i], name='color')
                     comp['mesh'] = shape
 
             elif comp['shape'] == 'Cylinder' and comp['visible']:
                 for i, points in enumerate(comp['mesh_points']):
                     shape = pv.PolyData(points, faces=comp['mesh_inds'][i])
-                    color = np.array(comp['colors'][0])/255.
-                    shape.point_data.set_scalars([color]*len(points), name='color')
+                    shape.point_data.set_scalars(comp['scalars'][i], name='color')
                     comp['mesh'] = shape
 
             elif comp['shape'] == 'Polygon' and comp['visible']:
                 for i, points in enumerate(comp['mesh_points']):
                     shape = pv.PolyData(points, faces=comp['mesh_inds'][i])
-                    color = np.array(comp['colors'][0])/255.
-                    shape.point_data.set_scalars([color]*len(points), name='color')
+                    shape.point_data.set_scalars(comp['scalars'][i], name='color')
                     comp['mesh'] = shape
 
             elif comp['shape'] == 'Point' and comp['visible']:
                 for i, points in enumerate(comp['mesh_points']):
                     shape = pv.PolyData(points)
-                    # color = np.array(comp['colors'])/255.
-                    # shape.point_data.set_scalars([color]*len(points), name='color')
+                    shape.point_data.set_scalars(comp['scalars'][i], name='color')
                     comp['mesh'] = shape
 
             elif comp['shape'] == 'Line' and comp['visible']:
                 for i, points in enumerate(comp['mesh_points']):
                     shape = pv.PolyData(points, lines=comp['mesh_inds'][i])
-                    # color = np.array(comp['colors'])/255.
-                    # shape.point_data.set_scalars([color]*len(points), name='color')
+                    shape.point_data.set_scalars(comp['scalars'][i], name='color')
                     comp['mesh'] = shape
 
 
     def combine_dicts(self, dicts):
-        if len(dicts) <2:
+        if len(dicts) < 2:
             return dicts[0]
         result = self.initialize_template(dicts[0]['name'])
-        # result['name'] = dicts[0]['name']
         result['shape'] = dicts[0]['shape']
-        result['points'] = []
-        result['colors'] = dicts[0]['colors']
-        colors = [dicts[i]['colors']*len(dicts[i]['mesh_inds']) for i in range(len(dicts))]
+        result['visible'] = dicts[0]['visible']
+        result['is_dot'] = dicts[0]['is_dot']
+
+        # combine elements in a single dictionary first
+        for j in range(len(dicts)):
+            if len(dicts[j]['mesh_points']) > 1:
+                points, cells, colors = self.combine_mesh_arrays([dicts[j]['mesh_points'][i] for i in range(len(dicts[j]['mesh_points']))],\
+                                                                 [dicts[j]['mesh_inds'][i] for i in range(len(dicts[j]['mesh_points']))],\
+                                                                 [dicts[j]['scalars'][i] for i in range(len(dicts[j]['mesh_points']))])
+                dicts[j]['mesh_points'] = [points]
+                dicts[j]['mesh_inds'] = [cells]
+                dicts[j]['scalars'] = [colors]
+
+        # then combine the dictionaries
         points, cells, colors = self.combine_mesh_arrays([dicts[i]['mesh_points'][0] for i in range(len(dicts))],\
-                                                    [dicts[i]['mesh_inds'][0] for i in range(len(dicts))],\
-                                                    colors)
+                                                         [dicts[i]['mesh_inds'][0] for i in range(len(dicts))],\
+                                                         [dicts[i]['scalars'][0] for i in range(len(dicts))])
         result['mesh_points'] = [points]
         result['mesh_inds'] = [cells]
-        result['visible'] = dicts[0]['visible']
+        result['scalars'] = [colors]
         children = []
         for d in dicts:
             children.extend(d['children'])

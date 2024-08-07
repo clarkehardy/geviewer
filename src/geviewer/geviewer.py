@@ -56,6 +56,10 @@ class GeViewer:
         self.plotter.set_background(self.bkg_colors[0],top=self.bkg_colors[1])
         self.bkg_on = True
         self.gradient = True
+        self.parallel = False
+        self.plotter.enable_depth_peeling()
+        self.components = []
+        self.plotted = []
 
 
     def load_files(self, filename, off_screen=False,\
@@ -96,7 +100,7 @@ class GeViewer:
         elif filename.endswith('heprep'):
             parser = parsers.HepRepParser(filename)
             parser.parse_file()
-            self.components = parser.components
+            self.components.extend(parser.components)
     
     
     def create_plotter(self):
@@ -141,20 +145,22 @@ class GeViewer:
             self.has_transparency = False
 
 
-    def plot_meshes(self, components, level=-1):
+    def plot_meshes(self, components, level=0):
         """Adds the meshes to the plot.
         """
         # print('Plotting meshes...')
         for comp in components:
             print('...'*level + 'Plotting ' + comp['name'] + '...')
-            if comp['mesh'] is not None:
-                try:
-                    comp['actor'] = self.plotter.add_mesh(comp['mesh'], scalars='color', rgb=True)
-                except:
-                    comp['actor'] = self.plotter.add_mesh(comp['mesh'])
+            if comp['mesh'] is not None and comp['id'] not in self.plotted:
+                # try:
+                comp['actor'] = self.plotter.add_mesh(comp['mesh'], scalars='color', rgb=True, \
+                                                      render_points_as_spheres=comp['is_dot'])
+                self.plotted.append(comp['id'])
+                # except:
+                #     comp['actor'] = self.plotter.add_mesh(comp['mesh'])
             if len(comp['children']) > 0:
                 self.plot_meshes(comp['children'], level + 1)
-        if level == -1:
+        if level == 0:
             print('Done.\n')
 
 
@@ -294,6 +300,14 @@ class GeViewer:
             print('This feature is disabled in safe mode.\n')
 
 
+    def toggle_parallel_projection(self):
+        if not self.parallel:
+            self.plotter.enable_parallel_projection()
+        else:
+            self.plotter.disable_parallel_projection()
+        self.parallel = not self.parallel
+
+
     def toggle_background(self):
         """Toggles the gradient background on and off.
         """
@@ -311,34 +325,26 @@ class GeViewer:
         """Toggles between solid and wireframe display modes. Disables depth
         peeling if wireframe mode is enabled to improve responsiveness.
         """
-        self.wireframe = not self.wireframe
         print('Switching to ' + ['solid','wireframe'][self.wireframe] + ' mode.\n')
-        if not self.safe_mode:
-            if self.wireframe:
-                self.actors[2].prop.SetRepresentationToWireframe()
-                if self.has_transparency:
-                    self.plotter.disable_depth_peeling()
-            else:
-                self.actors[2].prop.SetRepresentationToSurface()
-                if self.has_transparency:
-                    self.plotter.enable_depth_peeling()
+        self.wireframe = not self.wireframe
+        actors = self.plotter.renderer.GetActors()
+        actors.InitTraversal()
+        actor = actors.GetNextActor()
+        if self.wireframe:
+            while actor:
+                actor.GetProperty().SetRepresentationToWireframe()
+                actor = actors.GetNextActor()
         else:
-            if self.wireframe:
-                actors = self.plotter.renderer.GetActors()
-                actors.InitTraversal()
+            actors = self.plotter.renderer.GetActors()
+            actors.InitTraversal()
+            actor = actors.GetNextActor()
+            while actor:
+                actor.GetProperty().SetRepresentationToSurface()
                 actor = actors.GetNextActor()
-                while actor:
-                    actor.GetProperty().SetRepresentationToWireframe()
-                    actor = actors.GetNextActor()
-            else:
-                actors = self.plotter.renderer.GetActors()
-                actors.InitTraversal()
-                actor = actors.GetNextActor()
-                while actor:
-                    actor.GetProperty().SetRepresentationToSurface()
-                    actor = actors.GetNextActor()
         if not self.off_screen:
             self.plotter.update()
+
+
 
 
     def export_to_html(self):

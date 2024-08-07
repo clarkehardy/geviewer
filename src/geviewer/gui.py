@@ -1,5 +1,6 @@
 import sys
 import io
+import time
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QVBoxLayout
 from PyQt5.QtWidgets import QHBoxLayout
@@ -25,6 +26,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtCore import QThread
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtCore import QTimer
 from geviewer.geviewer import GeViewer
 from pyvistaqt import MainWindow
 
@@ -109,6 +111,9 @@ class Window(MainWindow):
         self.plotter_layout.addWidget(self.heading)
         self.viewer = GeViewer(self.plotter_widget)
         self.plotter = self.viewer.plotter
+        self.add_key_events()
+
+        # self.plotter_layout.setContentsMargins(0, 0, 0, 0)
 
         self.add_object_panel()
         self.add_control_panel()
@@ -130,11 +135,6 @@ class Window(MainWindow):
 
         self.plotter_layout.addWidget(self.plotter.interactor)
 
-        # self.collapse_right_button = QToolButton()
-        # self.collapse_right_button.setText('>')
-        # self.collapse_right_button.clicked.connect(self.toggle_right_panel)
-        # self.plotter_layout.addWidget(self.collapse_right_button)
-
         self.showMaximized()
         print('Finished initializing')
 
@@ -146,16 +146,17 @@ class Window(MainWindow):
 
     def generate_checkboxes(self, components, level):
         for comp in components:
-            checkbox = QCheckBox(comp['name'])
-            checkbox.setChecked(True)
-            checkbox.stateChanged.connect(lambda state, comp=comp: self.toggle_visibility(state, comp))
-            self.checkboxes_layout.addWidget(checkbox)
-            # Indent based on the level
-            checkbox.setStyleSheet(f"padding-left: {20 * level}px")
-            self.checkbox_mapping[comp['name']] = checkbox
-            # Recursively add children
-            if 'children' in comp and comp['children']:
-                self.generate_checkboxes(comp['children'], level + 1)
+            if comp['id'] not in self.checkbox_mapping:
+                checkbox = QCheckBox(comp['name'])
+                checkbox.setChecked(True)
+                checkbox.stateChanged.connect(lambda state, comp=comp: self.toggle_visibility(state, comp))
+                self.checkboxes_layout.addWidget(checkbox)
+                # Indent based on the level
+                checkbox.setStyleSheet(f"padding-left: {20 * level}px")
+                self.checkbox_mapping[comp['id']] = checkbox
+                # Recursively add children
+                if 'children' in comp and comp['children']:
+                    self.generate_checkboxes(comp['children'], level + 1)
     
 
     def toggle_visibility(self, state, comp):
@@ -174,7 +175,7 @@ class Window(MainWindow):
     def set_visibility_recursive(self, comp, visibility):
         if comp['actor']:
             comp['actor'].SetVisibility(visibility)
-        self.checkbox_mapping[comp['name']].setChecked(visibility)
+        self.checkbox_mapping[comp['id']].setChecked(visibility)
         if 'children' in comp and comp['children']:
             for child in comp['children']:
                 self.set_visibility_recursive(child, visibility)
@@ -202,17 +203,6 @@ class Window(MainWindow):
         self.checkboxes_layout = QVBoxLayout(self.checkboxes_widget)
         self.checkboxes_layout.setAlignment(Qt.AlignTop)  # Ensure checkboxes stay at the top
 
-        # Add checkboxes to the layout
-        # self.trajectories_checkbox = QCheckBox('Show trajectories')
-        # self.trajectories_checkbox.setChecked(self.viewer.visible[0])
-        # self.trajectories_checkbox.stateChanged.connect(self.toggle_tracks)
-        # self.checkboxes_layout.addWidget(self.trajectories_checkbox)
-
-        # self.step_markers_checkbox = QCheckBox('Show step markers')
-        # self.step_markers_checkbox.setChecked(self.viewer.visible[1])
-        # self.step_markers_checkbox.stateChanged.connect(self.toggle_step_markers)
-        # self.checkboxes_layout.addWidget(self.step_markers_checkbox)
-
         # Set the widget for the scroll area
         self.scroll_area.setWidget(self.checkboxes_widget)
 
@@ -237,6 +227,30 @@ class Window(MainWindow):
         heading_font.setBold(True)
         heading.setFont(heading_font)
         self.control_layout.addWidget(heading)
+
+        # Create the text box to display the camera position
+        self.camera_position_label = QLabel("Camera Position:")
+        self.camera_position_text = QTextEdit()
+        self.camera_position_text.setReadOnly(True)
+        self.control_layout.addWidget(self.camera_position_label)
+        self.control_layout.addWidget(self.camera_position_text)
+
+        # Timer to delay updates
+        self.update_timer = QTimer()
+        self.update_timer.setInterval(200)  # Update after 500ms of inactivity
+        self.update_timer.setSingleShot(True)
+        self.update_timer.timeout.connect(self.update_camera_position)
+
+        # Store the last known camera position
+        self.last_camera_position = None
+
+        # Start the event loop to monitor the camera position
+        try:
+            self.monitor_camera_position()
+        except Exception as e:
+            print(e)
+
+        self.add_toolbar()
 
         # self.background_checkbox = QCheckBox('Show background')
         # self.background_checkbox.setChecked(self.viewer.bkg_on)
@@ -300,6 +314,28 @@ class Window(MainWindow):
         self.control_layout.addWidget(self.progress_bar)
 
 
+    def monitor_camera_position(self):
+        try:
+            camera_position = self.plotter.camera_position
+            if camera_position != self.last_camera_position:
+                self.last_camera_position = camera_position
+                self.update_timer.start()
+            QTimer.singleShot(100, self.monitor_camera_position)
+        except Exception as e:
+            print(e)
+
+
+    def update_camera_position(self):
+        try:
+            camera_pos = self.viewer.plotter.camera_position
+        except Exception as e:
+            print(e)
+        try:
+            self.camera_position_text.setPlainText(str(camera_pos))
+        except Exception as e:
+            print(e)
+
+
     def add_dropdown(self):
         # Add a dropdown menu for loading files
         dropdown_label = QLabel("Load File:")
@@ -318,9 +354,12 @@ class Window(MainWindow):
         # Create the menu bar
         menubar = self.menuBar()
         file_menu = menubar.addMenu('File')
-        db_action = file_menu.addAction("Open File")
-        db_action.setStatusTip("Select a file to use as a database")
-        db_action.triggered.connect(self.open_file_dialog)
+        open_action = file_menu.addAction('Open File...')
+        open_action.triggered.connect(self.open_file_dialog)
+        save_action = file_menu.addAction('Save As...')
+        save_action.triggered.connect(self.save_file)
+        clear_action = file_menu.addAction('Clear Meshes')
+        clear_action.triggered.connect(self.clear_meshes)
 
         edit_menu = menubar.addMenu('Edit')
         edit_action = edit_menu.addAction('Preferences')
@@ -331,9 +370,28 @@ class Window(MainWindow):
         edit_action3.triggered.connect(self.terminal.selectAll)
         edit_action3.triggered.connect(self.terminal.copy)
 
+
         view_menu = menubar.addMenu('View')
-        view_action = view_menu.addAction('Enter Fullscreen')
-        view_action.triggered.connect(self.showFullScreen)
+
+        # self.collapse_right_button = QToolButton()
+        # self.collapse_right_button.setText('>')
+        show_components_action = QAction('Show Components Panel', self, checkable=True)
+        show_components_action.setChecked(True)
+        show_components_action.triggered.connect(self.toggle_left_panel)
+        view_menu.addAction(show_components_action)
+
+        show_controls_action = QAction('Show Control Panel', self, checkable=True)
+        show_controls_action.setChecked(True)
+        show_controls_action.triggered.connect(self.toggle_right_panel)
+        view_menu.addAction(show_controls_action)
+
+        show_background_action = QAction('Show Background', self, checkable=True)
+        show_background_action.setChecked(True)
+        show_background_action.triggered.connect(self.toggle_background)
+        view_menu.addAction(show_background_action)
+
+        # self.collapse_right_button.clicked.connect(self.toggle_right_panel)
+        # self.plotter_layout.addWidget(self.collapse_right_button)
 
         window_menu = menubar.addMenu('Window')
         window_action = window_menu.addAction('Close')
@@ -347,19 +405,39 @@ class Window(MainWindow):
     def toggle_left_panel(self):
         if self.object_panel.isVisible():
             self.object_panel.hide()
-            self.collapse_left_button.setText('>')
         else:
             self.object_panel.show()
-            self.collapse_left_button.setText('<')
+
+    def add_key_events(self):
+        """This is the simplest way to have the buttons synchronize
+        with whatever key inputs the user provides.
+        """
+        self.plotter.add_key_event('w', lambda: self.synchronize_toolbar(True))
+        self.plotter.add_key_event('s', lambda: self.synchronize_toolbar(False))
+
+
+    def synchronize_toolbar(self, wireframe=True):
+        self.viewer.wireframe = wireframe
+        self.update_wireframe_button()
+
+    
+    def clear_meshes(self):
+        # need to clear meshes individually to avoid removing plotter properties
+        self.plotter.clear()
+        self.checkbox_mapping = {}
+        while self.checkboxes_layout.count() > 0:
+            item = self.checkboxes_layout.takeAt(0)  # Take the first item
+            item.widget().deleteLater()
+        # this should be a GeViewer method
+        self.viewer.components = []
+        self.viewer.plotted = []
 
 
     def toggle_right_panel(self):
         if self.control_panel.isVisible():
             self.control_panel.hide()
-            self.collapse_right_button.setText('<')
         else:
             self.control_panel.show()
-            self.collapse_right_button.setText('>')
 
 
     def show_license(self):
@@ -377,34 +455,111 @@ class Window(MainWindow):
     def add_toolbar(self):
         # Create a toolbar
         self.toolbar = QToolBar('Main Toolbar')
-        self.addToolBar(Qt.TopToolBarArea, self.toolbar)
-        self.toolbar.setMovable(False)
+        self.plotter_layout.addWidget(self.toolbar)
+        # self.addToolBar(Qt.TopToolBarArea, self.toolbar)
+        self.toolbar.setMovable(True)
 
-        # Add actions to the toolbar
-        open_action = QAction('Open', self)
-        # self.set_action_font(open_action, 14)
+        self.toolbar.setStyleSheet(
+            "QToolButton {"
+            "    min-width: 80px;"  # Set the minimum width
+            "    max-width: 80px;"  # Set the maximum width
+            "}"
+        )
+
         font = QFont()
         font.setPointSize(14)
-        open_action.setFont(font)
-        open_action.triggered.connect(self.open_file_dialog)
-        self.toolbar.addAction(open_action)
+        # Add actions to the toolbar
+
+        self.wireframe_action = QAction('Wireframe', self)
+        # self.wireframe_action.setFixedWidth(100)
+        self.wireframe_action.setFont(font)
+        self.wireframe_action.triggered.connect(self.toggle_wireframe)
+        self.toolbar.addAction(self.wireframe_action)
+        self.toolbar.addSeparator()
+
+        isometric_action = QAction('Isometric', self)
+        isometric_action.setFont(font)
+        isometric_action.triggered.connect(self.plotter.view_isometric)
+        self.toolbar.addAction(isometric_action)
+        self.toolbar.addSeparator()
+
+        top_action = QAction('Top', self)
+        top_action.setFont(font)
+        top_action.triggered.connect(self.plotter.view_xy)
+        self.toolbar.addAction(top_action)
+        self.toolbar.addSeparator()
+
+        bottom_action = QAction('Bottom', self)
+        bottom_action.setFont(font)
+        bottom_action.triggered.connect(lambda: self.plotter.view_xy(negative=True))
+        self.toolbar.addAction(bottom_action)
+        self.toolbar.addSeparator()
+
+        front_action = QAction('Front', self)
+        front_action.setFont(font)
+        front_action.triggered.connect(self.plotter.view_yz)
+        self.toolbar.addAction(front_action)
+        self.toolbar.addSeparator()
+
+        back_action = QAction('Back', self)
+        back_action.setFont(font)
+        back_action.triggered.connect(lambda: self.plotter.view_yz(negative=True))
+        self.toolbar.addAction(back_action)
+        self.toolbar.addSeparator()
+
+        left_action = QAction('Left', self)
+        left_action.setFont(font)
+        left_action.triggered.connect(self.plotter.view_xz)
+        self.toolbar.addAction(left_action)
+        self.toolbar.addSeparator()
+
+        right_action = QAction('Right', self)
+        right_action.setFont(font)
+        right_action.triggered.connect(lambda: self.plotter.view_xz(negative=True))
+        self.toolbar.addAction(right_action)
+        self.toolbar.addSeparator()
+
+        self.parallel_action = QAction('Parallel', self)
+        self.parallel_action.setFont(font)
+        self.parallel_action.triggered.connect(self.toggle_parallel)
+        self.toolbar.addAction(self.parallel_action)
+        self.toolbar.addSeparator()
+
+
+        # Add a separator
+
+        # isometric_action = QAction('Isometric', self)
+        # isometric_action.setFont(font)
+        # isometric_action.triggered.connect(self.plotter.view_isometric)
+        # self.toolbar.addAction(isometric_action)
 
         # Add more actions to the toolbar as needed
         # Example: Add a separator
         # self.toolbar.addSeparator()
 
-        save_action = QAction('Save', self)
-        font = QFont()
-        font.setPointSize(14)
-        save_action.setFont(font)
-        save_action.triggered.connect(self.save_file)
-        self.toolbar.addAction(save_action)
+    def toggle_parallel(self):
+        try:
+            self.viewer.toggle_parallel_projection()
+            self.parallel_action.setText('Perspective' if self.viewer.parallel else 'Parallel')
+        except Exception as e:
+            print(e)
+
+    def toggle_wireframe(self):
+        self.viewer.toggle_wireframe()
+        self.update_wireframe_button()
+
+
+    def update_wireframe_button(self):
+        self.wireframe_action.setText('Solid' if self.viewer.wireframe else 'Wireframe')
 
 
     # Function to open a file dialog and load the selected file
     def open_file_dialog(self):
         options = QFileDialog.Options()
-        file_path, _ = QFileDialog.getOpenFileName(None, "Open File", "", "All Files (*);;VRML Files (*.wrl);;GEV Files (*.gev)", options=options)
+        file_path, _ = QFileDialog.getOpenFileName(None, 'Open File', '', \
+                                                   'All Supported Files (*.wrl *.heprep *.gev);;' +\
+                                                   'VRML Files (*.wrl);;HepRep Files (*.heprep);;' +\
+                                                   'GEV Files (*.gev)', options=options)
         if file_path:
             self.progress_bar.setValue(0)
             try:
