@@ -176,7 +176,7 @@ It is often convenient to run the VRML parsing and mesh construction routine off
 ```
 
 #### Safe mode
-By default, GeViewer uses its own VRML parser to extract the meshes for plotting. However, this parser has only been tested on a small sample set of Geant4 simulation results. If you encounter file parsing errors, try using the `--safe-mode` command line argument (and create an issue to report the problem). This will use a VRML parsing tool from [`vtk`](https://vtk.org) which should provide more robustness at the expense of some features. In safe mode, the program will be unable to distinguish trajectories, step markers, and detector components, and for large files the performance may be sluggish due to less efficient handling of the mesh data.
+By default, GeViewer uses its own VRML parser to extract the meshes for plotting. However, this parser has only been tested on a small sample set of Geant4 simulation results. If you encounter file parsing errors, try using the `--safe-mode` command line argument (and create an issue to report the problem). This will use a VRML parsing tool from [VTK](https://vtk.org) which should provide more robustness at the expense of some features. In safe mode, the program will be unable to distinguish trajectories, step markers, and detector components, and for large files the performance may be sluggish due to less efficient handling of the mesh data.
 
 #### Viewing multiple files
 If you want to view multiple files in the same viewer (e.g. to directly compare two geometries), pass in a list of filenames rather than a single argument.
