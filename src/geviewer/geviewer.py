@@ -282,7 +282,10 @@ class GeViewer:
         """
         if not self.safe_mode:
             self.visible[0] = not self.visible[0]
-            print('Toggling particle tracks ' + ['off.','on.'][self.visible[0]] + '\n')
+            if self.actors[0] is None:
+                print('No particle trajectories included in this file.\n')
+                return
+            print('Toggling particle trajectories ' + ['off.','on.'][self.visible[0]] + '\n')
             if self.visible[0]:
                 if self.actors[0] is not None:
                     self.actors[0].visibility = True
@@ -300,6 +303,9 @@ class GeViewer:
         """
         if not self.safe_mode:
             self.visible[1] = not self.visible[1]
+            if self.actors[1] is None:
+                print('No step markers included in this file.\n')
+                return
             print('Toggling step markers ' + ['off.','on.'][self.visible[1]] + '\n')
             if self.visible[1]:
                 if self.actors[1] is not None:
