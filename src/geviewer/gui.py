@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import QSplitter
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtWidgets import QTextEdit
+from PyQt5.QtWidgets import QLineEdit
 from PyQt5.QtWidgets import QProgressBar
 from PyQt5.QtWidgets import QColorDialog
 from PyQt5.QtWidgets import QAction
@@ -19,9 +20,11 @@ from PyQt5.QtWidgets import QToolBar
 from PyQt5.QtWidgets import QToolButton
 from PyQt5.QtWidgets import QGroupBox
 from PyQt5.QtWidgets import QScrollArea
+from PyQt5.QtWidgets import QDockWidget
 from PyQt5.QtGui import QFont
 from PyQt5.QtGui import QColor
 from PyQt5.QtGui import QPalette
+from PyQt5.QtGui import QKeySequence
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import QThread
 from PyQt5.QtCore import pyqtSignal
@@ -29,6 +32,7 @@ from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtCore import QTimer
 from geviewer.geviewer import GeViewer
 from pyvistaqt import MainWindow
+import pyvista as pv
 
 
 class OutputRedirect(io.StringIO):
@@ -97,23 +101,26 @@ class Window(MainWindow):
         self.setCentralWidget(self.central_widget)
         self.main_layout = QHBoxLayout(self.central_widget)
         self.checkbox_mapping = {}
+        self.figure_size = [1920, 1440]
 
         self.splitter = QSplitter(Qt.Horizontal)
 
-        self.plotter_widget = QWidget()
-        self.plotter_layout = QVBoxLayout(self.plotter_widget)
+        self.viewer_panel = QWidget()
+        self.viewer_panel.setMinimumWidth(500)
+        self.viewer_panel.setMinimumHeight(500)
+        self.viewer_layout = QVBoxLayout(self.viewer_panel)
         # Add a heading
         self.heading = QLabel('Viewing: ' + self.current_file)
         self.heading_font = QFont()
         self.heading_font.setPointSize(14)
         self.heading_font.setBold(True)
         self.heading.setFont(self.heading_font)
-        self.plotter_layout.addWidget(self.heading)
-        self.viewer = GeViewer(self.plotter_widget)
+        self.viewer_layout.addWidget(self.heading)
+        self.viewer = GeViewer(self.viewer_panel)
         self.plotter = self.viewer.plotter
         self.add_key_events()
 
-        # self.plotter_layout.setContentsMargins(0, 0, 0, 0)
+        # self.viewer_layout.setContentsMargins(0, 0, 0, 0)
 
         self.add_object_panel()
         self.add_control_panel()
@@ -121,7 +128,7 @@ class Window(MainWindow):
         self.add_menu_bar()
 
         self.splitter.addWidget(self.object_panel)
-        self.splitter.addWidget(self.plotter_widget)
+        self.splitter.addWidget(self.viewer_panel)
         self.splitter.addWidget(self.control_panel)
 
         # Add the splitter to the layout
@@ -131,9 +138,9 @@ class Window(MainWindow):
         # self.collapse_left_button = QToolButton()
         # self.collapse_left_button.setText('<')
         # self.collapse_left_button.clicked.connect(self.toggle_left_panel)
-        # self.plotter_layout.addWidget(self.collapse_left_button)
+        # self.viewer_layout.addWidget(self.collapse_left_button)
 
-        self.plotter_layout.addWidget(self.plotter.interactor)
+        self.viewer_layout.addWidget(self.plotter.interactor)
 
         self.showMaximized()
         print('Finished initializing')
@@ -183,7 +190,11 @@ class Window(MainWindow):
 
     def add_object_panel(self):
         # Create a control panel with checkboxes
+        # self.object_panel = QDockWidget("Panel", self)
+        # self.object_panel.setFeatures(QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetFloatable)
+
         self.object_panel = QWidget()
+        self.object_panel.setMinimumWidth(250)
         self.object_layout = QVBoxLayout(self.object_panel)
 
         # Add a heading
@@ -218,10 +229,11 @@ class Window(MainWindow):
     def add_control_panel(self):
         # Create a control panel with checkboxes
         self.control_panel = QWidget()
+        self.control_panel.setMinimumWidth(250)
         self.control_layout = QVBoxLayout(self.control_panel)
 
         # Add a heading
-        heading = QLabel('Viewing Options')
+        heading = QLabel('Camera Options')
         heading_font = QFont()
         heading_font.setPointSize(14)
         heading_font.setBold(True)
@@ -229,66 +241,76 @@ class Window(MainWindow):
         self.control_layout.addWidget(heading)
 
         # Create the text box to display the camera position
-        self.camera_position_label = QLabel("Camera Position:")
-        self.camera_position_text = QTextEdit()
-        self.camera_position_text.setReadOnly(True)
-        self.control_layout.addWidget(self.camera_position_label)
-        self.control_layout.addWidget(self.camera_position_text)
+        self.camera_position_layout = QHBoxLayout()
+        self.camera_position_label = QLabel('Position (x, y, z):')
+        self.camera_position_text = QLineEdit()
+        self.camera_position_text.setReadOnly(False)
+        self.camera_position_text.editingFinished.connect(self.handle_camera_position_change)
+        self.camera_position_layout.addWidget(self.camera_position_label)
+        self.camera_position_layout.addWidget(self.camera_position_text)
+        self.control_layout.addLayout(self.camera_position_layout)
+
+        self.camera_focal_layout = QHBoxLayout()
+        self.camera_focal_label = QLabel('Focal Point (x, y, z):')
+        self.camera_focal_text = QLineEdit()
+        self.camera_focal_text.setReadOnly(False)
+        self.camera_focal_text.editingFinished.connect(self.handle_camera_focal_change)
+        self.camera_focal_layout.addWidget(self.camera_focal_label)
+        self.camera_focal_layout.addWidget(self.camera_focal_text)
+        self.control_layout.addLayout(self.camera_focal_layout)
+
+        self.camera_up_layout = QHBoxLayout()
+        self.camera_up_label = QLabel('Up Vector (x, y, z):')
+        self.camera_up_text = QLineEdit()
+        self.camera_up_text.setReadOnly(False)
+        self.camera_up_text.editingFinished.connect(self.handle_camera_up_change)
+        self.camera_up_layout.addWidget(self.camera_up_label)
+        self.camera_up_layout.addWidget(self.camera_up_text)
+        self.control_layout.addLayout(self.camera_up_layout)
+
+        figure_heading = QLabel('Figure Options')
+        figure_heading_font = QFont()
+        figure_heading_font.setPointSize(14)
+        figure_heading_font.setBold(True)
+        figure_heading.setFont(figure_heading_font)
+        self.control_layout.addWidget(figure_heading)
+
+        self.figure_size_layout = QHBoxLayout()
+        self.figure_size_label = QLabel('Size [px] (width, height):')
+        self.figure_size_text = QLineEdit()
+        self.figure_size_text.setText('{}, {}'.format(*self.figure_size))
+        self.figure_size_text.setReadOnly(False)
+        self.figure_size_text.editingFinished.connect(self.handle_figure_size_change)
+        self.figure_size_layout.addWidget(self.figure_size_label)
+        self.figure_size_layout.addWidget(self.figure_size_text)
+        self.control_layout.addLayout(self.figure_size_layout)
+
+        # Create a button
+        self.save_button = QPushButton('Export Figure', self)
+        self.save_button.clicked.connect(self.save_file_dialog)
+        
+        # Add the button to the layout
+        self.control_layout.addWidget(self.save_button)
 
         # Timer to delay updates
         self.update_timer = QTimer()
         self.update_timer.setInterval(200)  # Update after 500ms of inactivity
         self.update_timer.setSingleShot(True)
-        self.update_timer.timeout.connect(self.update_camera_position)
+        self.update_timer.timeout.connect(self.update_view_params)
 
         # Store the last known camera position
         self.last_camera_position = None
+        self.last_figure_size = None
 
         # Start the event loop to monitor the camera position
-        try:
-            self.monitor_camera_position()
-        except Exception as e:
-            print(e)
+        self.monitor_camera_position()
 
         self.add_toolbar()
 
-        # self.background_checkbox = QCheckBox('Show background')
-        # self.background_checkbox.setChecked(self.viewer.bkg_on)
-        # self.background_checkbox.stateChanged.connect(self.toggle_background)
-        # self.control_layout.addWidget(self.background_checkbox)
+        # self.camera_position_text.visibilityChanged = self.update_menu_action
+        # self.control_panel.showEvent = self.panel_shown
 
-        # # Nested layout for the color picker button
-        # self.color_layout = QHBoxLayout()
-        # self.color_button_1 = QPushButton('Color 1')
-        # self.color_button_1.setFixedWidth(100)
-        # self.color_button_1.setEnabled(self.background_checkbox.isChecked())
-        # self.color_button_1.clicked.connect(lambda: self.open_color_picker(0))
-        # self.color_layout.addWidget(self.color_button_1, alignment=Qt.AlignLeft)
-
-        # self.gradient_checkbox = QCheckBox('Show gradient')
-        # self.gradient_checkbox.setChecked(True)
-        # self.gradient_checkbox.stateChanged.connect(self.toggle_gradient)
-        # self.color_layout.addWidget(self.gradient_checkbox, alignment=Qt.AlignLeft)
-
-        # self.color_button_2 = QPushButton('Color 2')
-        # self.color_button_2.setFixedWidth(100)
-        # self.color_button_2.setEnabled(self.background_checkbox.isChecked())
-        # self.color_button_2.clicked.connect(lambda: self.open_color_picker(1))
-        # self.color_layout.addWidget(self.color_button_2, alignment=Qt.AlignLeft)
-
-        # self.color_button_3 = QPushButton('Reset')
-        # self.color_button_3.setFixedWidth(100)
-        # self.color_button_3.clicked.connect(lambda: self.open_color_picker(2))
-        # self.color_layout.addWidget(self.color_button_3, alignment=Qt.AlignLeft)
-        # self.color_layout.setSpacing(0)
-        # self.control_layout.addLayout(self.color_layout)
-
-        
-        # # Add a label to display the selected color
-        # self.color_label = QLabel('Selected Color: None')
-        # self.control_layout.addWidget(self.color_label)
-
-        heading = QLabel('Console Output')
+        heading = QLabel('Console')
         heading_font = QFont()
         heading_font.setPointSize(14)
         heading_font.setBold(True)
@@ -297,6 +319,8 @@ class Window(MainWindow):
 
         self.terminal = QTextEdit()
         self.terminal.setReadOnly(True)  # Make it read-only
+        self.terminal.setLineWrapMode(QTextEdit.NoWrap)
+        self.terminal.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         # self.terminal.setFont(QFont('DejaVu Sans Mono', 12))  # Set monospace font
 
         # Set terminal-like colors using Qt API
@@ -313,36 +337,187 @@ class Window(MainWindow):
         self.progress_bar.setRange(0, 100)
         self.control_layout.addWidget(self.progress_bar)
 
+    def update_view_params(self):
+        self.update_camera_position()
 
-    def monitor_camera_position(self):
+
+    def handle_camera_position_change(self):
+        # Validate and set the new camera position
+        new_position = self.camera_position_text.text()
+        if self.validate_camera_position(new_position):
+            self.set_camera_position(new_position)
+            self.clear_position_error_state()
+        else:
+            self.set_position_error_state()
+
+    def handle_camera_focal_change(self):
+        # Validate and set the new camera focal point
+        new_focal = self.camera_focal_text.text()
+        if self.validate_camera_focal(new_focal):
+            self.set_camera_focal(new_focal)
+            self.clear_focal_error_state()
+        else:
+            self.set_focal_error_state()
+
+    def handle_camera_up_change(self):
+        # Validate and set the new camera up vector
+        new_up = self.camera_up_text.text()
+        if self.validate_camera_up(new_up):
+            self.set_camera_up(new_up)
+            self.clear_up_error_state()
+        else:
+            self.set_up_error_state()
+
+    def handle_figure_size_change(self):
+        # Set the window size
+        new_size = self.figure_size_text.text()
+        if self.validate_figure_size(new_size):
+            self.set_figure_size(new_size)
+            self.clear_window_error_state()
+        else:
+            self.set_window_error_state()
+
+    def validate_camera_position(self, position):
+        # Validate the camera position
         try:
-            camera_position = self.plotter.camera_position
-            if camera_position != self.last_camera_position:
-                self.last_camera_position = camera_position
-                self.update_timer.start()
-            QTimer.singleShot(100, self.monitor_camera_position)
+            position = [float(x) for x in position.split(',')]
+            if len(position) != 3:
+                raise ValueError('Invalid camera position')
+            return True
+        except ValueError:
+            print('Invalid camera position. Please enter three comma-separated floats.')
+            return False
+        
+
+    def validate_camera_focal(self, focal_point):
+        # Validate the camera focal point
+        try:
+            focal_point = [float(x) for x in focal_point.split(',')]
+            if len(focal_point) != 3:
+                raise ValueError('Invalid camera focal point')
+            return True
+        except ValueError:
+            print('Invalid camera focal point. Please enter three comma-separated floats.')
+            return False
+        
+    def validate_camera_up(self, up_vector):
+        # Validate the camera up vector
+        try:
+            up_vector = [float(x) for x in up_vector.split(',')]
+            if len(up_vector) != 3:
+                raise ValueError('Invalid camera up vector')
+            return True
+        except ValueError:
+            print('Invalid camera up vector. Please enter three comma-separated floats.')
+            return False
+        
+    def validate_figure_size(self, figure_size):
+        # Validate the window size
+        try:
+            figure_size = [int(x) for x in figure_size.split(',')]
+            if len(figure_size) != 2:
+                raise ValueError('Invalid window size')
+            return True
+        except ValueError:
+            print('Invalid window size. Please enter two comma-separated integers.')
+            return False
+
+    def set_camera_position(self, position):
+        # Set the camera position
+        position = [float(x) for x in position.split(',')]
+        self.plotter.camera.position = position
+        self.plotter.update()
+
+    def set_camera_focal(self, focal_point):
+        # Set the camera focal point
+        focal_point = [float(x) for x in focal_point.split(',')]
+        self.plotter.camera.focal_point = focal_point
+        self.plotter.update()
+
+    def set_camera_up(self, up_vector):
+        # Set the camera up vector
+        up_vector = [float(x) for x in up_vector.split(',')]
+        self.plotter.camera.up = up_vector
+        self.plotter.update()
+
+    def set_figure_size(self, figure_size):
+        # Set the window size
+        figure_size = [int(x) for x in figure_size.split(',')]
+        try:
+            self.figure_size = figure_size
         except Exception as e:
             print(e)
+
+
+    def clear_position_error_state(self):
+        # Reset the background color of the text box
+        self.camera_position_text.setPalette(QApplication.palette())
+
+    def clear_focal_error_state(self):
+        # Reset the background color of the text box
+        self.camera_focal_text.setPalette(QApplication.palette())
+
+    def clear_up_error_state(self):
+        # Reset the background color of the text box
+        self.camera_up_text.setPalette(QApplication.palette())
+
+
+    def clear_window_error_state(self):
+        # Reset the background color of the text box
+        self.figure_size_text.setPalette(QApplication.palette())
+
+    def set_position_error_state(self):
+        # Set the background color of the text box to red
+        palette = self.camera_position_text.palette()
+        palette.setColor(QPalette.Base, QColor(255, 192, 192))  # Light red color
+        self.camera_position_text.setPalette(palette)
+
+    def set_focal_error_state(self):
+        # Set the background color of the text box to red
+        palette = self.camera_focal_text.palette()
+        palette.setColor(QPalette.Base, QColor(255, 192, 192))
+        self.camera_focal_text.setPalette(palette)
+
+
+    def set_up_error_state(self):
+        # Set the background color of the text box to red
+        palette = self.camera_up_text.palette()
+        palette.setColor(QPalette.Base, QColor(255, 192, 192))
+        self.camera_up_text.setPalette(palette)
+
+    def set_window_error_state(self):
+        # Set the background color of the text box to red
+        palette = self.figure_size_text.palette()
+        palette.setColor(QPalette.Base, QColor(255, 192, 192))
+        self.figure_size_text.setPalette(palette)
+
+
+    def toggle_panel_visibility(self, checked):
+        if checked:
+            self.control_panel.show()
+        else:
+            self.control_panel.hide()
+
+    def update_menu_action(self, visible):
+        self.show_controls_action.setChecked(visible)
+
+
+    def monitor_camera_position(self):
+        camera_position = self.plotter.camera_position
+        if camera_position != self.last_camera_position:
+            self.last_camera_position = camera_position
+            self.update_timer.start()
+        QTimer.singleShot(100, self.monitor_camera_position)
 
 
     def update_camera_position(self):
-        try:
-            camera_pos = self.viewer.plotter.camera_position
-        except Exception as e:
-            print(e)
-        try:
-            self.camera_position_text.setPlainText(str(camera_pos))
-        except Exception as e:
-            print(e)
-
-
-    def add_dropdown(self):
-        # Add a dropdown menu for loading files
-        dropdown_label = QLabel("Load File:")
-        self.control_layout.addWidget(dropdown_label)
-        load_button = QPushButton("Open File")
-        load_button.clicked.connect(lambda: self.open_file_dialog())
-        self.control_layout.addWidget(load_button)
+        camera_pos = self.plotter.camera_position
+        self.camera_position_text.setText('{:.3f}, {:.3f}, {:.3f}'.format(*camera_pos[0]))
+        self.camera_focal_text.setText('{:.3f}, {:.3f}, {:.3f}'.format(*camera_pos[1]))
+        self.camera_up_text.setText('{:.3f}, {:.3f}, {:.3f}'.format(*camera_pos[2]))
+        self.clear_position_error_state()
+        self.clear_focal_error_state()
+        self.clear_up_error_state()
 
 
     def toggle_gradient(self):
@@ -356,19 +531,22 @@ class Window(MainWindow):
         file_menu = menubar.addMenu('File')
         open_action = file_menu.addAction('Open File...')
         open_action.triggered.connect(self.open_file_dialog)
+        open_action.setShortcut(QKeySequence.Open)
         save_action = file_menu.addAction('Save As...')
+        save_action.setShortcut(QKeySequence.Save)
         save_action.triggered.connect(self.save_file)
-        clear_action = file_menu.addAction('Clear Meshes')
-        clear_action.triggered.connect(self.clear_meshes)
+        close_window_action = file_menu.addAction('Close Window')
+        close_window_action.triggered.connect(self.close)
+        close_window_action.setShortcut(QKeySequence.Close)
 
         edit_menu = menubar.addMenu('Edit')
-        edit_action = edit_menu.addAction('Preferences')
-        edit_action.triggered.connect(self.open_preferences)
-        edit_action2 = edit_menu.addAction('Clear Console')
-        edit_action2.triggered.connect(self.terminal.clear)
-        edit_action3 = edit_menu.addAction('Copy Console')
-        edit_action3.triggered.connect(self.terminal.selectAll)
-        edit_action3.triggered.connect(self.terminal.copy)
+        clear_console_action = edit_menu.addAction('Clear Console')
+        clear_console_action.triggered.connect(self.terminal.clear)
+        copy_console_action = edit_menu.addAction('Copy Console')
+        copy_console_action.triggered.connect(self.terminal.selectAll)
+        copy_console_action.triggered.connect(self.terminal.copy)
+        clear_action = edit_menu.addAction('Clear Meshes')
+        clear_action.triggered.connect(self.clear_meshes)
 
 
         view_menu = menubar.addMenu('View')
@@ -380,18 +558,43 @@ class Window(MainWindow):
         show_components_action.triggered.connect(self.toggle_left_panel)
         view_menu.addAction(show_components_action)
 
-        show_controls_action = QAction('Show Control Panel', self, checkable=True)
-        show_controls_action.setChecked(True)
-        show_controls_action.triggered.connect(self.toggle_right_panel)
-        view_menu.addAction(show_controls_action)
+        self.show_controls_action = QAction('Show Control Panel', self, checkable=True)
+        self.show_controls_action.setChecked(True)
+        self.show_controls_action.triggered.connect(self.toggle_right_panel)
+        view_menu.addAction(self.show_controls_action)
 
         show_background_action = QAction('Show Background', self, checkable=True)
         show_background_action.setChecked(True)
         show_background_action.triggered.connect(self.toggle_background)
         view_menu.addAction(show_background_action)
 
+        gradient_action = QAction('Show Gradient', self, checkable=True)
+        gradient_action.setChecked(True)
+        gradient_action.triggered.connect(self.toggle_gradient)
+        view_menu.addAction(gradient_action)
+
+        color_menu = QMenu('Background Colors', self)
+
+        # Create actions for the submenu
+        color_action_1 = QAction('Set Primary Color...', self)
+        color_action_2 = QAction('Set Secondary Color...', self)
+
+        # Connect actions to slots
+        color_action_1.triggered.connect(lambda: self.open_color_picker(0))
+        color_action_2.triggered.connect(lambda: self.open_color_picker(1))
+
+        # Add actions to the submenu
+        color_menu.addAction(color_action_1)
+        color_menu.addAction(color_action_2)
+
+        view_menu.addMenu(color_menu)
+
+        reset_background_action = QAction('Reset Background', self)
+        reset_background_action.triggered.connect(lambda: self.open_color_picker(2))
+        view_menu.addAction(reset_background_action)
+
         # self.collapse_right_button.clicked.connect(self.toggle_right_panel)
-        # self.plotter_layout.addWidget(self.collapse_right_button)
+        # self.viewer_layout.addWidget(self.collapse_right_button)
 
         window_menu = menubar.addMenu('Window')
         window_action = window_menu.addAction('Close')
@@ -422,8 +625,8 @@ class Window(MainWindow):
 
     
     def clear_meshes(self):
-        # need to clear meshes individually to avoid removing plotter properties
-        self.plotter.clear()
+        for actor in list(self.plotter.renderer.actors.values()):
+            self.plotter.remove_actor(actor)
         self.checkbox_mapping = {}
         while self.checkboxes_layout.count() > 0:
             item = self.checkboxes_layout.takeAt(0)  # Take the first item
@@ -455,14 +658,14 @@ class Window(MainWindow):
     def add_toolbar(self):
         # Create a toolbar
         self.toolbar = QToolBar('Main Toolbar')
-        self.plotter_layout.addWidget(self.toolbar)
+        self.viewer_layout.addWidget(self.toolbar)
         # self.addToolBar(Qt.TopToolBarArea, self.toolbar)
         self.toolbar.setMovable(True)
 
         self.toolbar.setStyleSheet(
             "QToolButton {"
-            "    min-width: 80px;"  # Set the minimum width
-            "    max-width: 80px;"  # Set the maximum width
+            "    min-width: 70px;"  # Set the minimum width
+            "    max-width: 70px;"  # Set the maximum width
             "}"
         )
 
@@ -575,6 +778,48 @@ class Window(MainWindow):
                 self.worker.start()
             except Exception as e:
                 print(e)
+
+
+    def save_file_dialog(self):
+        options = QFileDialog.Options()
+        # options |= QFileDialog.DontUseNativeDialog
+        file_types = 'Supported File Types(*.png *.svg *.eps *.ps *.pdf *.tex);; '\
+                     + 'PNG (*.png);;SVG (*.svg);;EPS (*.eps);;PS (*.ps);;PDF (*.pdf);;TEX (*.tex)'
+        file_name, _ = QFileDialog.getSaveFileName(self, 'Save Figure', '', file_types, options=options)
+        
+        if file_name:
+            print(f'Selected file: {file_name}')
+            print(self.figure_size)
+            try:
+                self.save_figure(file_name.split('.')[0]+'a.png', *self.figure_size)
+                self.plotter.screenshot(file_name)
+            except Exception as e:
+                print(e)
+                
+    def save_figure(self, file_name, width, height):
+        try:
+            # Create an off-screen plotter with the desired size
+            off_screen_plotter = pv.Plotter(off_screen=True, window_size=[width, height])
+            off_screen_plotter.set_background(*self.viewer.bkg_colors)
+            
+            # Copy the mesh and camera settings to the off-screen plotter
+            for actor in self.plotter.renderer.actors.values():
+                off_screen_plotter.add_actor(actor)
+            
+            # Copy camera position
+            off_screen_plotter.camera_position = self.plotter.camera_position
+
+
+            off_screen_plotter.enable_anti_aliasing('msaa', multi_samples=16)
+            if file_name.endswith('.png'):
+                off_screen_plotter.screenshot(file_name)
+            else:
+                off_screen_plotter.save_graphic(file_name, title='GeViewer Figure')
+
+            del off_screen_plotter
+            print(f"Saved screenshot to {file_name}")
+        except Exception as e:
+            print(e)
 
 
     def open_color_picker(self, button):

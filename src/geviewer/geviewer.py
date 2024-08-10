@@ -53,8 +53,9 @@ class GeViewer:
         self.actors = []
         self.wireframe = False
         self.bkg_colors = ['lightskyblue', 'midnightblue']
-        self.plotter.set_background(self.bkg_colors[0],top=self.bkg_colors[1])
+        self.plotter.set_background(*self.bkg_colors)
         self.bkg_on = True
+        self.wireframe = False
         self.gradient = True
         self.parallel = False
         self.plotter.enable_depth_peeling()
@@ -120,8 +121,6 @@ class GeViewer:
         # self.plotter.add_key_event('v', self.update_camera_position)
         # # if not self.safe_mode:
         #     self.check_transparency()
-        self.bkg_on = True
-        self.wireframe = False
         self.enable_depth_peeling = True
 
 
@@ -149,12 +148,14 @@ class GeViewer:
         """Adds the meshes to the plot.
         """
         # print('Plotting meshes...')
+        style = 'wireframe' if self.wireframe else 'surface'
         for comp in components:
             print('...'*level + 'Plotting ' + comp['name'] + '...')
             if comp['mesh'] is not None and comp['id'] not in self.plotted:
                 # try:
                 comp['actor'] = self.plotter.add_mesh(comp['mesh'], scalars='color', rgb=True, \
-                                                      render_points_as_spheres=comp['is_dot'])
+                                                      render_points_as_spheres=comp['is_dot'], \
+                                                      style=style)
                 self.plotted.append(comp['id'])
                 # except:
                 #     comp['actor'] = self.plotter.add_mesh(comp['mesh'])
@@ -325,7 +326,7 @@ class GeViewer:
         """Toggles between solid and wireframe display modes. Disables depth
         peeling if wireframe mode is enabled to improve responsiveness.
         """
-        print('Switching to ' + ['solid','wireframe'][self.wireframe] + ' mode.\n')
+        print('Switching to ' + ['wireframe', 'solid'][self.wireframe] + ' mode.\n')
         self.wireframe = not self.wireframe
         actors = self.plotter.renderer.GetActors()
         actors.InitTraversal()
@@ -343,8 +344,6 @@ class GeViewer:
                 actor = actors.GetNextActor()
         if not self.off_screen:
             self.plotter.update()
-
-
 
 
     def export_to_html(self):

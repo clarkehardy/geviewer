@@ -602,9 +602,16 @@ class HepRepParser(Parser):
                 points = []
                 inds = []
                 scalars = []
-                for point_set in comp['points']:
-                    pt, ind = create_cylinder_mesh(point_set[2], point_set[3], \
-                                                   point_set[0], point_set[1])
+                if len(comp['points']) == 1:
+                    pt, ind = create_cylinder_mesh(comp['points'][0][2], comp['points'][0][3], \
+                                                   comp['points'][0][0], comp['points'][0][1])
+                    points.append(pt)
+                    inds.append(ind)
+                    scalars.append(comp['colors']*len(pt))
+                elif len(comp['points']) == 2:
+                    pt, ind = create_annular_cylinder_mesh(comp['points'][0][2], comp['points'][0][3], \
+                                                           comp['points'][0][0], comp['points'][0][1],\
+                                                           comp['points'][1][0], comp['points'][1][1])
                     points.append(pt)
                     inds.append(ind)
                     scalars.append(comp['colors']*len(pt))
@@ -732,7 +739,7 @@ class HepRepParser(Parser):
         return components
 
 
-def create_cylinder_mesh(p1, p2, r1, r2, num_segments=20):
+def create_cylinder_mesh(p1, p2, r1, r2, num_segments=25):
     """
     Create a mesh for a cylinder-like object defined by two endpoints and two radii.
     
@@ -789,14 +796,107 @@ def create_cylinder_mesh(p1, p2, r1, r2, num_segments=20):
         next_i = (i + 1) % num_segments
         indices.extend([4, i, next_i, next_i + num_segments, i + num_segments])
     
-    # # Indices for the end caps (triangles)
-    # center1 = len(points)
-    # center2 = center1 + 1
-    # points.append(p1)
-    # points.append(p2)
-    # for i in range(num_segments):
-    #     next_i = (i + 1) % num_segments
-    #     indices.extend([3, i, next_i, center1])
-    #     indices.extend([3, i + num_segments, next_i + num_segments, center2])
+    # Indices for the end caps (triangles)
+    center1 = len(points)
+    center2 = center1 + 1
+    points.append(p1)
+    points.append(p2)
+    for i in range(num_segments):
+        next_i = (i + 1) % num_segments
+        indices.extend([3, i, next_i, center1])
+        indices.extend([3, i + num_segments, next_i + num_segments, center2])
     
+    return points, indices
+
+
+def create_annular_cylinder_mesh(p1, p2, r1_outer, r2_outer, r1_inner, r2_inner, num_segments=25):
+    """
+    Create a mesh for an annular cylinder-like object defined by two endpoints and two sets of radii.
+    
+    Parameters:
+    - p1: tuple (x, y, z) for the first endpoint
+    - p2: tuple (x, y, z) for the second endpoint
+    - r1_outer: outer radius at the first endpoint
+    - r2_outer: outer radius at the second endpoint
+    - r1_inner: inner radius at the first endpoint
+    - r2_inner: inner radius at the second endpoint
+    - num_segments: number of segments to discretize the circles
+    
+    Returns:
+    - points: list of (x, y, z) coordinates
+    - indices: list of indices defining the quadrilateral faces
+    """
+    # Convert endpoints to numpy arrays
+    p1 = np.array(p1)
+    p2 = np.array(p2)
+    
+    # Vector along the cylinder axis
+    axis = p2 - p1
+    length = np.linalg.norm(axis)
+    axis = axis / length
+    
+    # Arbitrary vector not parallel to axis
+    if axis[0] != 0 or axis[1] != 0:
+        not_axis = np.array([axis[1], -axis[0], 0])
+    else:
+        not_axis = np.array([0, axis[2], -axis[1]])
+    
+    # Orthonormal basis vectors perpendicular to axis
+    v = np.cross(axis, not_axis)
+    u = np.cross(v, axis)
+
+    def generate_circle_points(center, radius_u, radius_v, num_segments):
+        """ Helper function to generate points on a circle. """
+        circle_points = []
+        for i in range(num_segments):
+            angle = 2 * np.pi * i / num_segments
+            point = center + np.cos(angle) * radius_u + np.sin(angle) * radius_v
+            circle_points.append(point)
+        return circle_points
+
+    # Outer points on the first end cap
+    u_outer = u / np.linalg.norm(u) * r1_outer
+    v_outer = v / np.linalg.norm(v) * r1_outer
+    outer_points_1 = generate_circle_points(p1, u_outer, v_outer, num_segments)
+
+    # Outer points on the second end cap
+    u_outer = u / np.linalg.norm(u) * r2_outer
+    v_outer = v / np.linalg.norm(v) * r2_outer
+    outer_points_2 = generate_circle_points(p2, u_outer, v_outer, num_segments)
+
+    # Inner points on the first end cap
+    u_inner = u / np.linalg.norm(u) * r1_inner
+    v_inner = v / np.linalg.norm(v) * r1_inner
+    inner_points_1 = generate_circle_points(p1, u_inner, v_inner, num_segments)
+
+    # Inner points on the second end cap
+    u_inner = u / np.linalg.norm(u) * r2_inner
+    v_inner = v / np.linalg.norm(v) * r2_inner
+    inner_points_2 = generate_circle_points(p2, u_inner, v_inner, num_segments)
+
+    # Combine all points
+    points = outer_points_1 + outer_points_2 + inner_points_1 + inner_points_2
+
+    # Indices for the side faces using quadrilaterals
+    indices = []
+    for i in range(num_segments):
+        next_i = (i + 1) % num_segments
+        
+        # Outer surface
+        indices.extend([4, i, next_i, next_i + num_segments, i + num_segments])
+        
+        # Inner surface
+        indices.extend([4, i + 2*num_segments, next_i + 2*num_segments, 
+                        next_i + 3*num_segments, i + 3*num_segments])
+
+    # Indices for the end caps (outer to inner ring, using triangles)
+    for i in range(num_segments):
+        next_i = (i + 1) % num_segments
+        
+        # First end cap
+        indices.extend([4, i, i + 2*num_segments, next_i + 2*num_segments, next_i])
+        
+        # Second end cap
+        indices.extend([4, i + num_segments, i + 3*num_segments, next_i + 3*num_segments, next_i + num_segments])
+
     return points, indices
