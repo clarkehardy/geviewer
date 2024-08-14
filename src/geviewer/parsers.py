@@ -6,6 +6,8 @@ import re
 import uuid
 from geviewer import utils
 
+import time
+
 
 class Parser:
 
@@ -15,12 +17,12 @@ class Parser:
 
 
     def initialize_template(self, name):
-        return  {'name': name, 'id': str(uuid.uuid4()), 'shape': [], 'points': [], 'mesh_points': [],\
-                 'mesh_inds': [], 'colors': [], 'visible': [], 'scalars': [],\
-                 'is_dot': None, 'mesh': None, 'actor': None, 'children': []}
+        return  {'name': name, 'id': str(uuid.uuid4())[-12:], 'shape': '', 'points': [], 'mesh_points': [],\
+                 'mesh_inds': [], 'colors': [], 'visible': True, 'scalars': [], 'is_dot': False, \
+                 'is_event': False, 'mesh': None, 'has_actor': False, 'children': []}
     
     
-    def combine_mesh_arrays(self, points, cells, colors, progress_obj=None):
+    def combine_mesh_arrays(self, points, cells, colors):
         """Combines multiple mesh arrays into a single mesh.
 
         This function takes lists of points, indices of faces or line segments
@@ -52,21 +54,20 @@ class Parser:
                 j += k + 1
         cells = np.concatenate(cells).astype(int)
         colors = np.concatenate(colors)
-        if progress_obj:
-            progress_obj.value += 1
-            if progress_obj.value % 10== 0:
-                progress_obj.progress.emit(progress_obj.value)
+
         return points, cells, colors
     
 
 
 class VRMLParser(Parser):
 
-    def parse_file(self):
+    def parse_file(self, progress_obj=None):
         data = utils.read_file(self.filename)
-        viewpoint_block, polyline_blocks, marker_blocks, solid_blocks = self.extract_blocks(data)
+        viewpoint_block, polyline_blocks, marker_blocks, solid_blocks = self.extract_blocks(data, progress_obj=progress_obj)
         self.viewpoint_block = viewpoint_block
-        polyline_mesh, marker_mesh, solid_mesh = self.create_meshes(polyline_blocks, marker_blocks, solid_blocks)
+        now = time.time()
+        polyline_mesh, marker_mesh, solid_mesh = self.create_meshes(polyline_blocks, marker_blocks, solid_blocks, progress_obj=progress_obj)
+        print('time to create meshes:', time.time() - now)
         component_name = self.filename.split('/')[-1].split('.')[0]
         component = self.initialize_template(component_name)
         names = ['Trajectories', 'Step Markers', 'Geometry']
@@ -97,13 +98,18 @@ class VRMLParser(Parser):
             - solid_mesh (:class:`pyvista.PolyData`): Mesh for solids.
         :rtype: tuple
         """
+
+        print('Building meshes...')
+
         total = len(polyline_blocks) + len(marker_blocks) + len(solid_blocks)
         if progress_obj:
-            progress_obj.max_range.emit(total)
-            progress_obj.progress.emit(0)
+            progress_obj.reset_progress()
+            progress_obj.set_maximum_value(total)
         polyline_mesh = self.build_mesh(polyline_blocks, 'polyline', progress_obj)
         marker_mesh = self.build_markers(marker_blocks, progress_obj)
         solid_mesh = self.build_mesh(solid_blocks, 'solid', progress_obj)
+        if progress_obj:
+            progress_obj.signal_finished()
 
         return polyline_mesh, marker_mesh, solid_mesh
 
@@ -137,9 +143,7 @@ class VRMLParser(Parser):
             points[i], cells[i], color = func(block)
             colors[i] = [color]*len(points[i])
             if progress_obj:
-                progress_obj.value += 1
-                if progress_obj.value % 10== 0:
-                    progress_obj.progress.emit(progress_obj.value)
+                progress_obj.increment_progress()
 
         if len(points) == 0:
             return None
@@ -181,9 +185,7 @@ class VRMLParser(Parser):
             mesh.append(pv.Sphere(radius=radii[i], center=centers[i]))
             colors[i] = [colors[i]]*mesh[-1].n_points
             if progress_obj:
-                progress_obj.value += 1
-                if progress_obj.value % 10== 0:
-                    progress_obj.progress.emit(progress_obj.value)
+                progress_obj.increment_progress()
 
         colors = np.concatenate(colors)
         mesh = mesh.combine()
@@ -209,6 +211,9 @@ class VRMLParser(Parser):
             - A list of solid blocks as strings.
         :rtype: tuple
         """
+
+        print('Parsing data...')
+
         polyline_blocks = []
         marker_blocks = []
         solid_blocks = []
@@ -220,7 +225,8 @@ class VRMLParser(Parser):
         brace_count = 0
 
         if progress_obj:
-            progress_obj.max_range.emit(len(lines))
+            progress_obj.reset_progress()
+            progress_obj.set_maximum_value(len(lines))
 
         for i, line in enumerate(lines):
             stripped_line = line.strip()
@@ -248,10 +254,12 @@ class VRMLParser(Parser):
 
                     block = []
                     inside_block = False
+
             if progress_obj:
-                progress_obj.value += 1
-                if progress_obj.value % 10== 0:
-                    progress_obj.progress.emit(progress_obj.value)
+                progress_obj.increment_progress()
+
+        if progress_obj:
+            progress_obj.signal_finished()
 
         return viewpoint_block, polyline_blocks, marker_blocks, solid_blocks
 
@@ -531,6 +539,7 @@ class HepRepParser(Parser):
         self.root = self.parse_geometry(self.filename)
         component_name = self.filename.split('/')[-1].split('.')[0]
         self.components = [self.initialize_template(component_name)]
+        self.event_number = 0
         self.populate_meshes(self.root, self.components)
         self.create_meshes(self.components)
         self.reduce_components(self.components)
@@ -553,11 +562,11 @@ class HepRepParser(Parser):
             elif child.tag.endswith('attvalue') and child.attrib['name'] == 'LineColor':
                 color_str = child.attrib['value']
                 color = [float(i)/255. for i in color_str.split(',')]
-                components[index]['colors'] = [np.array(color)]
+                components[index]['colors'].append(color)
             elif child.tag.endswith('attvalue') and child.attrib['name'] == 'MarkColor':
                 color_str = child.attrib['value']
                 color = [float(i)/255. for i in color_str.split(',')]
-                components[index]['colors'] = [np.array(color)]
+                components[index]['colors'].append(color)
                 components[index]['is_dot'] = True
             elif child.tag.endswith('attvalue') and child.attrib['name'] == 'Visibility':
                 components[index]['visible'] = child.attrib['value'] == 'True'
@@ -572,12 +581,25 @@ class HepRepParser(Parser):
                         points.append(float(grandchild.attrib['value']))
                 components[index]['points'].append(points)
             elif child.tag.endswith('type'):
+                is_event = False
                 name_split = child.attrib['name'].split('_')
                 if name_split[-1].isnumeric():
                     name = '_'.join(name_split[:-1])
                 else:
                     name = child.attrib['name']
+                if name == 'Event Data':
+                    self.event_number += 1
+                if self.event_number > 0 and (name == 'TransientPolylines' or \
+                                              name == 'Hits'):
+                    # these seem to contain the same information as trajectories
+                    # so skip them for now
+                    continue
+                elif self.event_number > 0 and name == 'Trajectories':
+                    name = 'Event {} '.format(self.event_number) + name
+                    is_event = True
+                    self.event_number += 1
                 child_component = self.initialize_template(name)
+                child_component['is_event'] = is_event
                 self.populate_meshes(child, [child_component], level + 1)
                 components[index]['children'].append(child_component)
                     
@@ -621,16 +643,24 @@ class HepRepParser(Parser):
 
             elif comp['shape'] == 'Polygon':
                 comp['mesh_points'] = [np.concatenate(comp['points'])]
-                point_inds = np.arange(len(comp['mesh_points'][0]))
+                unique_points, indices, inverse = np.unique(comp['mesh_points'][0], axis=0,
+                                                            return_index=True, return_inverse=True)
+                comp['mesh_points'] = [unique_points]
+
                 inds = []
                 this_ind = 0
                 for point in comp['points']:
                     ind = [len(point)]
-                    ind.extend(point_inds[this_ind:this_ind + len(point)])
+                    ind.extend(inverse[this_ind:this_ind + len(point)])
                     this_ind += len(point)
                     inds.append(ind)
-                comp['mesh_inds'] = [np.concatenate(inds)]
-                comp['scalars'] = [comp['colors']*len(comp['mesh_points'][0])]
+
+                quad_faces = [face for face in inds if len(face) == 5]
+                tri_faces = [face for face in inds if len(face) == 4]
+                quad_faces = np.unique(np.array(quad_faces), axis=0)
+                tri_faces = np.unique(np.array(tri_faces), axis=0)
+                comp['mesh_inds'] = [np.concatenate([quad_faces.flatten(), tri_faces.flatten()])]
+                comp['scalars'] = [comp['colors'] * len(comp['mesh_points'][0])]
 
             elif comp['shape'] == 'Point':
                 comp['mesh_points'] = np.array(comp['points'])
@@ -648,7 +678,8 @@ class HepRepParser(Parser):
                     this_ind += len(point)
                     inds.append(ind)
                 comp['mesh_inds'] = [np.concatenate(inds)]
-                comp['scalars'] = [comp['colors']*len(comp['mesh_points'][0])]
+                comp['scalars'] = [np.concatenate([[color]*len(point) for color, point in \
+                                                   zip(comp['colors'], comp['points'])])]
 
 
     def draw_mesh(self, components):
@@ -658,32 +689,30 @@ class HepRepParser(Parser):
             if comp['shape'] == 'Prism' and len(comp['mesh_points']) > 0 and comp['visible']:
                 for i, points in enumerate(comp['mesh_points']):
                     shape = pv.PolyData(points, faces=comp['mesh_inds'][i])
-                    shape.point_data.set_scalars(comp['scalars'][i], name='color')
-                    comp['mesh'] = shape
 
             elif comp['shape'] == 'Cylinder' and comp['visible']:
                 for i, points in enumerate(comp['mesh_points']):
                     shape = pv.PolyData(points, faces=comp['mesh_inds'][i])
-                    shape.point_data.set_scalars(comp['scalars'][i], name='color')
-                    comp['mesh'] = shape
 
             elif comp['shape'] == 'Polygon' and comp['visible']:
                 for i, points in enumerate(comp['mesh_points']):
                     shape = pv.PolyData(points, faces=comp['mesh_inds'][i])
-                    shape.point_data.set_scalars(comp['scalars'][i], name='color')
-                    comp['mesh'] = shape
 
             elif comp['shape'] == 'Point' and comp['visible']:
                 for i, points in enumerate(comp['mesh_points']):
                     shape = pv.PolyData(points)
-                    shape.point_data.set_scalars(comp['scalars'][i], name='color')
-                    comp['mesh'] = shape
 
             elif comp['shape'] == 'Line' and comp['visible']:
                 for i, points in enumerate(comp['mesh_points']):
                     shape = pv.PolyData(points, lines=comp['mesh_inds'][i])
-                    shape.point_data.set_scalars(comp['scalars'][i], name='color')
-                    comp['mesh'] = shape
+            else:
+                continue
+            
+            shape.point_data.set_scalars(comp['scalars'][i], name='color')
+            shape = shape.clean()
+            if not shape.is_manifold:
+                print('Warning: {} is not a manifold object'.format(comp['name']))
+            comp['mesh'] = shape
 
 
     def combine_dicts(self, dicts):
