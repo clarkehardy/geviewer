@@ -30,7 +30,8 @@ keywords = ["geant4",
             "track",
             "detector",
             "geometry",
-            "vrml"]
+            "vrml",
+            "heprep"]
 
 [project.optional-dependencies]
 extras = ["nest_asyncio",

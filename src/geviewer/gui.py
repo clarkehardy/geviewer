@@ -618,7 +618,7 @@ class GeWindow(MainWindow):
         for comp in components:
             if comp['id'] not in self.checkbox_mapping:
                 checkbox = QCheckBox(comp['name'])
-                checkbox.setChecked(True)
+                checkbox.setCheckState(Qt.CheckState.Checked)
                 checkbox.stateChanged.connect(lambda state, comp=comp: self.toggle_visibility(state, comp))
                 self.checkboxes_layout.addWidget(checkbox)
                 checkbox.setStyleSheet(f"padding-left: {20 * level}px")
@@ -634,14 +634,14 @@ class GeWindow(MainWindow):
     def show_single_event(self, event_index):
         for i, event in enumerate(self.events_list):
             if i == event_index - 1:
-                self.checkbox_mapping[event].setChecked(True)
+                self.checkbox_mapping[event].setCheckState(Qt.CheckState.Checked)
             else:
-                self.checkbox_mapping[event].setChecked(False)
+                self.checkbox_mapping[event].setCheckState(Qt.CheckState.Unchecked)
     
 
     def toggle_visibility(self, state, comp):
         try:
-            visibility = state == Qt.Checked
+            visibility = state > 0
             if comp['has_actor']:
                 self.viewer.actors[comp['id']].SetVisibility(visibility)
             if 'children' in comp and comp['children']:
@@ -652,9 +652,10 @@ class GeWindow(MainWindow):
     
 
     def set_visibility_recursive(self, comp, visibility):
+        state = Qt.CheckState.Checked if visibility else Qt.CheckState.Unchecked
         if comp['has_actor']:
             self.viewer.actors[comp['id']].SetVisibility(visibility)
-        self.checkbox_mapping[comp['id']].setChecked(visibility)
+        self.checkbox_mapping[comp['id']].setCheckState(state)
         if 'children' in comp and comp['children']:
             for child in comp['children']:
                 self.set_visibility_recursive(child, visibility)
@@ -807,7 +808,8 @@ class GeWindow(MainWindow):
 
 
     def update_menu_action(self, visible):
-        self.show_controls_action.setChecked(visible)
+        state = Qt.CheckState.Checked if visible else Qt.CheckState.Unchecked
+        self.show_controls_action.setCheckState(state)
 
 
     def monitor_camera_position(self):
@@ -1026,9 +1028,9 @@ class GeWindow(MainWindow):
 
     def show_overlaps(self, overlapping_meshes):
         for checkbox in self.checkbox_mapping.values():
-            checkbox.setChecked(False)
+            checkbox.setCheckState(Qt.CheckState.Unchecked)
         for mesh_id in overlapping_meshes:
-            self.checkbox_mapping[mesh_id].setChecked(True)
+            self.checkbox_mapping[mesh_id].setCheckState(Qt.CheckState.Checked)
         if not self.viewer.transparent:
             self.toggle_transparent()
         self.plotter.view_isometric()
