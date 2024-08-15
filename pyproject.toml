@@ -16,10 +16,7 @@ authors = [{ name = "Clarke Hardy", email = "cahardy@stanford.edu" }]
 license = {file = 'LICENSE'}
 readme = "README.md"
 requires-python = ">=3.8"
-dependencies = ["numpy",
-                "pyvista",
-                "tqdm",
-                "PyQt5",
+dependencies = ["PyQt6",
                 "pyvistaqt"]
 keywords = ["geant4",
             "viewer",

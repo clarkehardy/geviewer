@@ -1,7 +1,6 @@
 import numpy as np
 import pyvista as pv
 import xml.etree.ElementTree as ET
-from tqdm import tqdm
 import re
 import uuid
 from geviewer import utils

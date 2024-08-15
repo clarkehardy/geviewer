@@ -2,44 +2,44 @@ import sys
 import io
 import time
 from datetime import datetime
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtWidgets import QVBoxLayout
-from PyQt5.QtWidgets import QHBoxLayout
-from PyQt5.QtWidgets import QPushButton
-from PyQt5.QtWidgets import QWidget
-from PyQt5.QtWidgets import QCheckBox
-from PyQt5.QtWidgets import QSplitter
-from PyQt5.QtWidgets import QFileDialog
-from PyQt5.QtWidgets import QLabel
-from PyQt5.QtWidgets import QTextEdit
-from PyQt5.QtWidgets import QLineEdit
-from PyQt5.QtWidgets import QProgressBar
-from PyQt5.QtWidgets import QColorDialog
-from PyQt5.QtWidgets import QAction
-from PyQt5.QtWidgets import QMenu
-from PyQt5.QtWidgets import QToolBar
-from PyQt5.QtWidgets import QToolButton
-from PyQt5.QtWidgets import QGroupBox
-from PyQt5.QtWidgets import QScrollArea
-from PyQt5.QtWidgets import QDockWidget
-from PyQt5.QtWidgets import QSpinBox
-from PyQt5.QtWidgets import QDoubleSpinBox
-from PyQt5.QtWidgets import QFrame
-from PyQt5.QtGui import QFont
-from PyQt5.QtGui import QColor
-from PyQt5.QtGui import QPalette
-from PyQt5.QtGui import QKeySequence
-from PyQt5.QtGui import QTextCursor
-from PyQt5.QtGui import QDoubleValidator
-from PyQt5.QtGui import QIntValidator
-from PyQt5.QtGui import QTextBlockFormat
-from PyQt5.QtGui import QTextCharFormat
-from PyQt5.QtCore import Qt
-from PyQt5.QtCore import QThread
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtCore import QTimer
-from PyQt5.QtCore import QDateTime
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QVBoxLayout
+from PyQt6.QtWidgets import QHBoxLayout
+from PyQt6.QtWidgets import QPushButton
+from PyQt6.QtWidgets import QWidget
+from PyQt6.QtWidgets import QCheckBox
+from PyQt6.QtWidgets import QSplitter
+from PyQt6.QtWidgets import QFileDialog
+from PyQt6.QtWidgets import QLabel
+from PyQt6.QtWidgets import QTextEdit
+from PyQt6.QtWidgets import QLineEdit
+from PyQt6.QtWidgets import QProgressBar
+from PyQt6.QtWidgets import QColorDialog
+from PyQt6.QtWidgets import QMenu
+from PyQt6.QtWidgets import QToolBar
+from PyQt6.QtWidgets import QToolButton
+from PyQt6.QtWidgets import QGroupBox
+from PyQt6.QtWidgets import QScrollArea
+from PyQt6.QtWidgets import QDockWidget
+from PyQt6.QtWidgets import QSpinBox
+from PyQt6.QtWidgets import QDoubleSpinBox
+from PyQt6.QtWidgets import QFrame
+from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QPalette
+from PyQt6.QtGui import QKeySequence
+from PyQt6.QtGui import QTextCursor
+from PyQt6.QtGui import QDoubleValidator
+from PyQt6.QtGui import QIntValidator
+from PyQt6.QtGui import QTextBlockFormat
+from PyQt6.QtGui import QTextCharFormat
+from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QThread
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import pyqtSlot
+from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import QDateTime
 from geviewer.geviewer import GeViewer
 import geviewer.utils as utils
 from pyvistaqt import MainWindow
@@ -1060,6 +1060,7 @@ class GeWindow(MainWindow):
 
 def launch_app():
     app = QApplication([])
+    app.setStyle('Fusion')
     window = GeWindow()
     window.show()
     sys.exit(app.exec_())

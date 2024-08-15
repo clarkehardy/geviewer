@@ -67,10 +67,14 @@ class GeViewer:
         if filename.endswith('.gev'):
             new_components = self.load(filename)
         elif filename.endswith('.wrl'):
-            parser = parsers.VRMLParser(filename)
-            parser.parse_file(progress_callback)
-            self.view_params = parser.viewpoint_block
-            new_components = [parser.components]
+            try:
+                parser = parsers.VRMLParser(filename)
+                parser.parse_file(progress_callback)
+                self.view_params = parser.viewpoint_block
+                new_components = [parser.components]
+            except Exception as e:
+                print(e)
+                return
         elif filename.endswith('heprep'):
             parser = parsers.HepRepParser(filename)
             parser.parse_file()
