@@ -36,11 +36,7 @@ class GeViewer:
     """
     def __init__(self, plotter_widget=None):
         self.filename = 'No file loaded'
-        self.safe_mode = False
         self.off_screen = False
-        self.no_warnings = False
-        self.from_gev = False
-        self.save_session = False
         self.view_params = (None, None, None)
         self.initial_camera_pos = None
         self.has_transparency = False
@@ -48,8 +44,6 @@ class GeViewer:
             self.plotter = plotter.Plotter(plotter_widget)
         else:
             self.plotter = pv.Plotter()
-        self.counts = [0, 0, 0]
-        self.visible = [True, True, True]
         self.bkg_colors = ['lightskyblue', 'midnightblue']
         self.plotter.set_background(*self.bkg_colors)
         self.bkg_on = True
@@ -60,19 +54,17 @@ class GeViewer:
         self.plotter.enable_depth_peeling()
         self.components = []
         self.intersections = []
+        self.event_ids = []
         self.actors = {}
 
 
     def load_files(self, filename, off_screen=False,\
-                   no_warnings=False, progress_callback=None):
+                   progress_callback=None):
         """Constructor method for the GeViewer object.
         """
         self.filename = filename
         self.off_screen = off_screen
-        self.no_warnings = no_warnings
-        self.from_gev = True if filename.endswith('.gev') else False
-        self.visible = [True, True, True]
-        if self.from_gev:
+        if filename.endswith('.gev'):
             new_components = self.load(filename)
         elif filename.endswith('.wrl'):
             parser = parsers.VRMLParser(filename)
@@ -130,20 +122,23 @@ class GeViewer:
         """
         # print('Plotting meshes...')
         style = 'wireframe' if self.wireframe else 'surface'
-        opacity = 0.3 if self.transparent else 1
+        opacity = 0.3 if self.transparent else 1.
         for comp in components:
             print('...'*level + 'Plotting ' + comp['name'] + '...')
             if comp['mesh'] is not None and not comp['has_actor']:
-                # try:
+                if comp['is_event']:
+                    self.event_ids.append(comp['id'])
+                    this_opacity = 1
+                else:
+                    this_opacity = opacity
                 actor = self.plotter.add_mesh(comp['mesh'], scalars='color', rgb=True, \
-                                                      render_points_as_spheres=comp['is_dot'], \
-                                                      style=style, opacity=opacity)
+                                              render_points_as_spheres=comp['is_dot'], \
+                                              point_size=5*comp['is_dot'], style=style, \
+                                              opacity=this_opacity, name=comp['id'])
                 self.actors[comp['id']] = actor
                 comp['has_actor'] = True
                 if progress_obj:
                     progress_obj.increment_progress()
-                # except:
-                #     comp['actor'] = self.plotter.add_mesh(comp['mesh'])
             if len(comp['children']) > 0:
                 self.plot_meshes(comp['children'], level + 1)
         if level == 0:
@@ -151,57 +146,57 @@ class GeViewer:
             self.num_to_plot = 0
 
 
-    def set_initial_view(self):
-        """Sets the initial camera viewpoint based on the view parameters
-        provided in the VRML file.
-        """
-        fov = self.view_params[0]
-        position = self.view_params[1]
-        orientation = self.view_params[2]
-        if position is not None and orientation is not None:
-            up, v = utils.orientation_transform(orientation)
-            focus = position + v*np.linalg.norm(position)
-        elif position is not None and orientation is None:
-            up = np.array([0.,1.,0.])
-            focus = position + np.array([0.,0.,-1.])*np.linalg.norm(position)
-        elif position is None and orientation is not None:
-            self.plotter.view_isometric()
-            position = np.linalg.norm(self.plotter.camera.GetPosition())*np.array([0.,0.,1.])
-            up, v = utils.orientation_transform(orientation)
-            focus = position + v*np.linalg.norm(position)
-        else:
-            self.plotter.view_isometric()
-            position = np.linalg.norm(self.plotter.camera.GetPosition())*np.array([0.,0.,1.])
-            up = np.array([0.,1.,0.])
-            focus = position + np.array([0.,0.,-1.])*np.linalg.norm(position)
-        self.plotter.reset_camera()
-        self.set_camera_view((fov,position,up,focus))
-        self.initial_camera_pos = self.plotter.camera_position
+    # def set_initial_view(self):
+    #     """Sets the initial camera viewpoint based on the view parameters
+    #     provided in the VRML file.
+    #     """
+    #     fov = self.view_params[0]
+    #     position = self.view_params[1]
+    #     orientation = self.view_params[2]
+    #     if position is not None and orientation is not None:
+    #         up, v = utils.orientation_transform(orientation)
+    #         focus = position + v*np.linalg.norm(position)
+    #     elif position is not None and orientation is None:
+    #         up = np.array([0.,1.,0.])
+    #         focus = position + np.array([0.,0.,-1.])*np.linalg.norm(position)
+    #     elif position is None and orientation is not None:
+    #         self.plotter.view_isometric()
+    #         position = np.linalg.norm(self.plotter.camera.GetPosition())*np.array([0.,0.,1.])
+    #         up, v = utils.orientation_transform(orientation)
+    #         focus = position + v*np.linalg.norm(position)
+    #     else:
+    #         self.plotter.view_isometric()
+    #         position = np.linalg.norm(self.plotter.camera.GetPosition())*np.array([0.,0.,1.])
+    #         up = np.array([0.,1.,0.])
+    #         focus = position + np.array([0.,0.,-1.])*np.linalg.norm(position)
+    #     self.plotter.reset_camera()
+    #     self.set_camera_view((fov,position,up,focus))
+    #     self.initial_camera_pos = self.plotter.camera_position
     
 
-    def set_camera_view(self,args=None):
-        """Sets the camera viewpoint.
+    # def set_camera_view(self,args=None):
+    #     """Sets the camera viewpoint.
 
-        :param args: A list of the view parameters, defaults to None
-        :type args: list, optional
-        """
-        if args is None:
-            fov = None
-            position, up, focus = asyncio.run(utils.prompt_for_camera_view())
-        else:
-            fov, position, up, focus = args
-        if fov is not None:
-            self.plotter.camera.view_angle = fov
-        if position is not None:
-            self.plotter.camera.position = position
-        if up is not None:
-            self.plotter.camera.up = up
-        if focus is not None:
-            self.plotter.camera.focal_point = focus
-        if args is None:
-            if not self.off_screen:
-                self.plotter.update()
-            print('Camera view set.\n')
+    #     :param args: A list of the view parameters, defaults to None
+    #     :type args: list, optional
+    #     """
+    #     if args is None:
+    #         fov = None
+    #         position, up, focus = asyncio.run(utils.prompt_for_camera_view())
+    #     else:
+    #         fov, position, up, focus = args
+    #     if fov is not None:
+    #         self.plotter.camera.view_angle = fov
+    #     if position is not None:
+    #         self.plotter.camera.position = position
+    #     if up is not None:
+    #         self.plotter.camera.up = up
+    #     if focus is not None:
+    #         self.plotter.camera.focal_point = focus
+    #     if args is None:
+    #         if not self.off_screen:
+    #             self.plotter.update()
+    #         print('Camera view set.\n')
 
 
     def toggle_parallel_projection(self):
@@ -248,7 +243,9 @@ class GeViewer:
         self.transparent = not self.transparent
         if self.transparent:
             self.plotter.enable_depth_peeling()
-            for actor in self.actors.values():
+            for id, actor in self.actors.items():
+                if id in self.event_ids:
+                    continue
                 actor.GetProperty().SetOpacity(0.3)
         else:
             self.plotter.disable_depth_peeling()
@@ -375,54 +372,58 @@ class GeViewer:
             return components
         
         
+    def is_mesh_inside(self, mesh1, mesh2):
+        bounds1 = mesh1.bounds
+        bounds2 = mesh2.bounds
+        if bounds1[0] >= bounds2[0] and bounds1[1] <= bounds2[1] and \
+            bounds1[2] >= bounds2[2] and bounds1[3] <= bounds2[3] and \
+            bounds1[4] >= bounds2[4] and bounds1[5] <= bounds2[5]:
+            return True
+        return False
+    
+
+    def do_bounds_intersect(self, mesh1, mesh2):
+        bounds1 = mesh1.bounds
+        bounds2 = mesh2.bounds
+        if bounds1[0] >= bounds2[1] or bounds1[1] <= bounds2[0] or \
+            bounds1[2] >= bounds2[3] or bounds1[3] <= bounds2[2] or \
+            bounds1[4] >= bounds2[5] or bounds1[5] <= bounds2[4]:
+            return False
+        return True
+    
+    
+    def get_intersection(self, mesh1, mesh2, tolerance=0.001, n_samples=100000):
+        points = np.random.uniform(low=mesh1.bounds[::2], \
+                                    high=mesh1.bounds[1::2], \
+                                    size=(n_samples, 3))
+        
+        points = pv.PolyData(points)
+        select = points.select_enclosed_points(mesh1, tolerance=1e-6)
+        points = select.points[select['SelectedPoints']>0.5]
+        n_surviving = points.shape[0]
+        points = pv.PolyData(points)
+
+        select = points.select_enclosed_points(mesh2, tolerance=1e-6)
+        points = select.points[select['SelectedPoints']>0.5]
+        points = pv.PolyData(points)
+        select = points.compute_implicit_distance(mesh2)
+        bounds = mesh2.bounds
+        dimensions = np.array([bounds[1]-bounds[0], bounds[3]-bounds[2], bounds[5]-bounds[4]])
+        points = select.points[np.abs(select['implicit_distance'])>tolerance*np.linalg.norm(dimensions)]
+        points = pv.PolyData(points)
+
+        overlap_fraction = points.n_points/n_surviving
+
+        return points, overlap_fraction
+        
+        
     def find_intersections(self, tolerance=0.001, n_samples=100000):
         for actor in self.intersections:
             self.plotter.remove_actor(actor)
         self.intersections = []
-        self.overlapping_meshes = []
+        overlapping_meshes = []
         checked = []
 
-        def is_mesh_inside(mesh1, mesh2):
-            bounds1 = mesh1.bounds
-            bounds2 = mesh2.bounds
-            if bounds1[0] >= bounds2[0] and bounds1[1] <= bounds2[1] and \
-               bounds1[2] >= bounds2[2] and bounds1[3] <= bounds2[3] and \
-               bounds1[4] >= bounds2[4] and bounds1[5] <= bounds2[5]:
-                return True
-            return False
-
-        def do_bounds_intersect(mesh1, mesh2):
-            bounds1 = mesh1.bounds
-            bounds2 = mesh2.bounds
-            if bounds1[0] >= bounds2[1] or bounds1[1] <= bounds2[0] or \
-               bounds1[2] >= bounds2[3] or bounds1[3] <= bounds2[2] or \
-               bounds1[4] >= bounds2[5] or bounds1[5] <= bounds2[4]:
-                return False
-            return True
-
-        def get_intersection(mesh1, mesh2, tolerance=0.001, n_samples=100000):
-            points = np.random.uniform(low=mesh1.bounds[::2], \
-                                        high=mesh1.bounds[1::2], \
-                                        size=(n_samples, 3))
-            
-            points = pv.PolyData(points)
-            select = points.select_enclosed_points(mesh1, tolerance=1e-6)
-            points = select.points[select['SelectedPoints']>0.5]
-            n_surviving = points.shape[0]
-            points = pv.PolyData(points)
-
-            select = points.select_enclosed_points(mesh2, tolerance=1e-6)
-            points = select.points[select['SelectedPoints']>0.5]
-            points = pv.PolyData(points)
-            select = points.compute_implicit_distance(mesh2)
-            bounds = mesh2.bounds
-            dimensions = np.array([bounds[1]-bounds[0], bounds[3]-bounds[2], bounds[5]-bounds[4]])
-            points = select.points[np.abs(select['implicit_distance'])>tolerance*np.linalg.norm(dimensions)]
-            points = pv.PolyData(points)
-
-            overlap_fraction = points.n_points/n_surviving
-
-            return points, overlap_fraction
 
         def find_intersections_recursive(components, level=0):
             for comp in components:
@@ -444,11 +445,11 @@ class GeViewer:
                         mesh1 = mesh1.triangulate()
                     if not mesh2.is_all_triangles:
                         mesh2 = mesh2.triangulate()
-                    if is_mesh_inside(mesh1, mesh2):
+                    if self.is_mesh_inside(mesh1, mesh2):
                         continue
-                    if is_mesh_inside(mesh2, mesh1):
+                    if self.is_mesh_inside(mesh2, mesh1):
                         continue
-                    if not do_bounds_intersect(mesh1, mesh2):
+                    if not self.do_bounds_intersect(mesh1, mesh2):
                         continue
                     if mesh1.n_open_edges + mesh2.n_open_edges > 0:
                         print('Warning: unable to check for intersection between ' + comp1['name'] + ' and ' + comp2['name'])
@@ -458,12 +459,12 @@ class GeViewer:
                             print('-> {} has {} open edges.'.format(comp2['name'], mesh2.n_open_edges))
                         continue
 
-                    points, overlap_fraction = get_intersection(mesh1, mesh2, tolerance, n_samples)
+                    points, overlap_fraction = self.get_intersection(mesh1, mesh2, tolerance, n_samples)
                     threshold = n_samples * tolerance
 
                     if points.n_points > threshold:
-                        self.overlapping_meshes.append(comp1['id'])
-                        self.overlapping_meshes.append(comp2['id'])
+                        overlapping_meshes.append(comp1['id'])
+                        overlapping_meshes.append(comp2['id'])
                         actor = self.plotter.add_mesh(points, color='red', style='points_gaussian', show_edges=False)
                         self.intersections.append(actor)
                         print('Warning: {} may intersect {} by {:.3f} percent'\
@@ -471,26 +472,9 @@ class GeViewer:
                 if len(comp2['children']) > 0:
                     check_for_intersections(comp1, comp2['children'])
 
-        def show_overlaps():
-            self.overlapping_meshes = np.unique(self.overlapping_meshes)
-            for actor in self.actors.values():
-                actor.SetVisibility(False)
-            for mesh in self.overlapping_meshes:
-                self.actors[mesh].SetVisibility(True)
-            if not self.transparent:
-                self.toggle_transparent()
-            self.plotter.view_isometric()
-
-        if not len(self.components):
-            print('Error: no components loaded.')
-            return
-        print('Checking {} for intersections...'.format(self.components[0]['name']))
         find_intersections_recursive(self.components)
-        if len(self.intersections) == 0:
-            print('No intersections found.')
-        else:
-            show_overlaps()
-            print('Done.')
+        return np.unique(overlapping_meshes)
+
 
     def show(self):
         """Opens the plotting window.

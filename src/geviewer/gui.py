@@ -624,7 +624,7 @@ class GeWindow(MainWindow):
                 checkbox.setStyleSheet(f"padding-left: {20 * level}px")
                 self.checkbox_mapping[comp['id']] = checkbox
                 self.progress_bar.increment_progress()
-                if comp['is_event']:
+                if comp['is_event'] and 'Event' in comp['name']:
                     self.events_list.append(comp['id'])
                 if 'children' in comp and comp['children']:
                     self.generate_checkboxes(comp['children'], level + 1)
@@ -851,10 +851,12 @@ class GeWindow(MainWindow):
             self.plotter.remove_actor(actor)
         self.checkbox_mapping = {}
         while self.checkboxes_layout.count() > 0:
-            item = self.checkboxes_layout.takeAt(0)  # Take the first item
+            item = self.checkboxes_layout.takeAt(0)
             item.widget().deleteLater()
         # this should be a GeViewer method
         self.viewer.components = []
+        self.viewer.event_ids = []
+        self.viewer.intersections = []
         self.viewer.actors = {}
         self.events_list = []
         self.current_file = []
@@ -1006,18 +1008,31 @@ class GeWindow(MainWindow):
             print(e)
 
     def check_geometry(self, tolerance, samples):
-        if tolerance:
-           tolerance = float(tolerance)
-        else:
-            tolerance = 0.001
-        if samples:
-            samples = int(samples)
-        else:
-            samples = 10000
+        tolerance = float(tolerance) if tolerance else 0.001
+        samples = int(samples) if samples else 10000
         try:
-            self.viewer.find_intersections(tolerance, samples)
+            if not len(self.viewer.components):
+                self.print_to_console('Error: no components loaded.')
+                return
+            self.print_to_console('Checking {} for intersections...'.format(self.viewer.components[0]['name']))
+            overlapping_meshes = self.viewer.find_intersections(tolerance, samples)
+            if len(overlapping_meshes) == 0:
+                self.print_to_console('Success: no intersections found.')
+            else:
+                self.show_overlaps(overlapping_meshes)
+                self.print_to_console('Done.')
         except Exception as e:
             print(e)
+
+    def show_overlaps(self, overlapping_meshes):
+        for checkbox in self.checkbox_mapping.values():
+            checkbox.setChecked(False)
+        for mesh_id in overlapping_meshes:
+            self.checkbox_mapping[mesh_id].setChecked(True)
+        if not self.viewer.transparent:
+            self.toggle_transparent()
+        self.plotter.view_isometric()
+
 
     def clear_intersections(self):
         for actor in self.viewer.intersections:

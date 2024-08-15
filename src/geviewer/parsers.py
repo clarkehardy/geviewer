@@ -590,7 +590,7 @@ class HepRepParser(Parser):
                 if name == 'Event Data':
                     self.event_number += 1
                 if self.event_number > 0 and (name == 'TransientPolylines' or \
-                                              name == 'Hits'):
+                                            name == 'Hits'):
                     # these seem to contain the same information as trajectories
                     # so skip them for now
                     continue
@@ -598,6 +598,8 @@ class HepRepParser(Parser):
                     name = 'Event {} '.format(self.event_number) + name
                     is_event = True
                     self.event_number += 1
+                elif self.event_number > 0 and name == 'Trajectory Step Points':
+                    is_event = True
                 child_component = self.initialize_template(name)
                 child_component['is_event'] = is_event
                 self.populate_meshes(child, [child_component], level + 1)
@@ -722,6 +724,7 @@ class HepRepParser(Parser):
         result['shape'] = dicts[0]['shape']
         result['visible'] = dicts[0]['visible']
         result['is_dot'] = dicts[0]['is_dot']
+        result['is_event'] = dicts[0]['is_event']
 
         # combine elements in a single dictionary first
         for j in range(len(dicts)):
