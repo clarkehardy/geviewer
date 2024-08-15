@@ -70,17 +70,7 @@ class GeViewer:
         self.filename = filename
         self.off_screen = off_screen
         self.no_warnings = no_warnings
-        # ensure the input arguments are valid
         self.from_gev = True if filename.endswith('.gev') else False
-        # if len(filenames) > 1:
-        #     extensions = [Path(f).suffix for f in filenames]
-        #     if not all([e == extensions[0] for e in extensions]):
-        #         raise Exception('Cannot load .wrl and .gev files together.')
-        # if self.from_gev and len(filenames) > 1:
-        #     print('Loading multiple .gev files at a time is not supported.')
-        #     print('Only the first file will be loaded.\n')
-        #     self.filenames = [self.filenames[0]]
-
         self.visible = [True, True, True]
         if self.from_gev:
             new_components = self.load(filename)
@@ -88,11 +78,6 @@ class GeViewer:
             parser = parsers.VRMLParser(filename)
             parser.parse_file(progress_callback)
             self.view_params = parser.viewpoint_block
-            # self.counts = [len(polyline_blocks), len(marker_blocks), len(solid_blocks)]
-            # if not self.save_session and not no_warnings and sum(self.counts) > 1e6:
-            #     self.save_session = utils.prompt_for_save_session(sum(self.counts))
-            #     if self.save_session:
-            #         destination = utils.prompt_for_file_path()
             new_components = [parser.components]
         elif filename.endswith('heprep'):
             parser = parsers.HepRepParser(filename)
@@ -131,21 +116,6 @@ class GeViewer:
                 progress_obj.signal_finished()
         except Exception as e:
             print(e)
-        # self.set_initial_view()
-        self.plotter.add_key_event('m', self.find_intersections)
-        # self.plotter.add_key_event('c', self.save_screenshot)
-        # self.plotter.add_key_event('t', self.toggle_tracks)
-        # self.plotter.add_key_event('m', self.toggle_step_markers)
-        # self.plotter.add_key_event('b', self.toggle_background)
-        # self.plotter.add_key_event('w', self.toggle_wireframe)
-        # self.plotter.add_key_event('d', self.set_window_size)
-        # self.plotter.add_key_event('i', self.set_camera_view)
-        # self.plotter.add_key_event('p', self.print_view_params)
-        # self.plotter.add_key_event('h', self.export_to_html)
-        # self.plotter.add_key_event('v', self.update_camera_position)
-        # # if not self.safe_mode:
-        #     self.check_transparency()
-        # self.enable_depth_peeling = True
 
 
     def set_background_color(self):
@@ -153,19 +123,6 @@ class GeViewer:
             self.plotter.set_background(self.bkg_colors[0],top=self.bkg_colors[1])
         else:
             self.plotter.set_background(self.bkg_colors[0])
-
-
-    # def check_transparency(self):
-    #     """Enables depth peeling if any of the meshes have transparency. This prevents issues
-    #     with rendering order when displaying transparent objects.
-    #     """
-    #     transparencies = [mesh.point_data['color'][:,-1] for mesh in self.meshes if mesh is not None]
-    #     transparencies = np.concatenate(transparencies)
-    #     if not np.all(transparencies == 1):
-    #         self.plotter.enable_depth_peeling()
-    #         self.has_transparency = True
-    #     else:
-    #         self.has_transparency = False
 
 
     def plot_meshes(self, components, level=0, progress_obj=None):
@@ -274,19 +231,10 @@ class GeViewer:
         """
         print('Switching to ' + ['wireframe', 'solid'][self.wireframe] + ' mode.\n')
         self.wireframe = not self.wireframe
-        # actors = self.plotter.renderer.GetActors()
-        # actors.InitTraversal()
-        # actor = actors.GetNextActor()
         if self.wireframe:
-            # while actor:
-            #     actor.GetProperty().SetRepresentationToWireframe()
-            #     actor = actors.GetNextActor()
             for actor in self.actors.values():
                 actor.GetProperty().SetRepresentationToWireframe()
         else:
-            # while actor:
-            #     actor.GetProperty().SetRepresentationToSurface()
-            #     actor = actors.GetNextActor()
             for actor in self.actors.values():
                 actor.GetProperty().SetRepresentationToSurface()
         if not self.off_screen:
@@ -298,21 +246,12 @@ class GeViewer:
         """
         print('Switching to ' + ['transparent', 'opaque'][self.transparent] + ' mode.\n')
         self.transparent = not self.transparent
-        # actors = self.plotter.renderer.GetActors()
-        # actors.InitTraversal()
-        # actor = actors.GetNextActor()
         if self.transparent:
             self.plotter.enable_depth_peeling()
-            # while actor:
-            #     actor.GetProperty().SetOpacity(0.3)
-            #     actor = actors.GetNextActor()
             for actor in self.actors.values():
                 actor.GetProperty().SetOpacity(0.3)
         else:
             self.plotter.disable_depth_peeling()
-            # while actor:
-            #     actor.GetProperty().SetOpacity(1)
-            #     actor = actors.GetNextActor()
             for actor in self.actors.values():
                 actor.GetProperty().SetOpacity(1)
         if not self.off_screen:
@@ -407,15 +346,6 @@ class GeViewer:
 
                 
     def load(self, filename):
-        """Loads the meshes from a .gev file.
-
-        :param filename: The path to the .gev file.
-        :type filename: str
-        :raises Exception: Invalid file format. Only .gev files are supported.
-        """
-        # if not filename.endswith('.gev'):
-        #     raise Exception('Invalid file format. Only .gev files are supported.')
-        # print('Loading session from ' + str(Path(filename).resolve()) + '...')
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpfolder = tmpdir + '/gevfile/'
             os.makedirs(tmpfolder, exist_ok=False)
@@ -426,14 +356,6 @@ class GeViewer:
             for file in files:
                 with open(tmpfolder + file, 'r') as f:
                     comp = json.load(f)
-                    # if comp['mesh_points'] is not None:
-                    #     comp['mesh_points'] = np.load(tmpfolder + comp['mesh_points'], allow_pickle=False)
-                    # if comp['mesh_inds'] is not None:
-                    #     comp['mesh_inds'] = np.load(tmpfolder + comp['mesh_inds'], allow_pickle=False)
-                    # if comp['scalars'] is not None:
-                    #     comp['scalars'] = np.load(tmpfolder + comp['scalars'], allow_pickle=False)
-                    # if comp['mesh'] is not None:
-                    #     comp['mesh'] = pv.read(tmpfolder + comp['mesh'])
                     components.append(comp)
 
             def load_components(components, level=0):
@@ -451,23 +373,7 @@ class GeViewer:
             
             load_components(components)
             return components
-            # meshes = []
-            # counts = []
-            # mesh_files = [file[-5] for file in os.listdir(tmpfolder) if file.endswith('.vtk')]
-            # for i in range(3):
-            #     if str(i) not in mesh_files:
-            #         meshes.append(None)
-            #         counts.append(0)
-            #         continue
-            #     meshes.append(pv.read(tmpfolder + 'mesh{}.vtk'.format(i)))
-            #     counts.append(1)
-            # viewpoint = np.load(tmpfolder + 'viewpoint.npy')
-            # fov = float(viewpoint[0]) if viewpoint[0] != 'None' else None
-            # pos = [float(p) for p in viewpoint[1:4]] if viewpoint[1] != 'None' else None
-            # ori = [float(o) for o in viewpoint[4:]] if viewpoint[4] != 'None' else None
-            # self.view_params = (fov, pos, ori)
-            # self.meshes = meshes
-            # self.counts = counts
+        
         
     def find_intersections(self, tolerance=0.001, n_samples=100000):
         for actor in self.intersections:

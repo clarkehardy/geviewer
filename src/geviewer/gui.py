@@ -262,7 +262,7 @@ class GeWindow(MainWindow):
 
         # add editable text box that show the camera focal point
         self.camera_focal_layout = QHBoxLayout()
-        self.camera_focal_label = QLabel('Focal Point (x, y, z):')
+        self.camera_focal_label = QLabel('Focal point (x, y, z):')
         self.camera_focal_text = QLineEdit()
         self.camera_focal_text.setMaximumWidth(250)
         self.camera_focal_text.setReadOnly(False)
@@ -273,7 +273,7 @@ class GeWindow(MainWindow):
 
         # add editable text box that show the camera up vector
         self.camera_up_layout = QHBoxLayout()
-        self.camera_up_label = QLabel('Up Vector (x, y, z):')
+        self.camera_up_label = QLabel('Up vector (x, y, z):')
         self.camera_up_text = QLineEdit()
         self.camera_up_text.setMaximumWidth(250)
         self.camera_up_text.setReadOnly(False)
@@ -360,7 +360,7 @@ class GeWindow(MainWindow):
         self.control_layout.addWidget(line3)
 
         # add a heading for the geometry checker
-        heading = QLabel('Geometry Checker')
+        heading = QLabel('Geometry Tools')
         heading_font = QFont()
         heading_font.setPointSize(14)
         heading_font.setBold(True)
@@ -381,7 +381,7 @@ class GeWindow(MainWindow):
         self.control_layout.addLayout(self.intersection_layout_1)
 
         # add a text box to specify the number of samples for overlap checking
-        self.samples_label = QLabel('Number of Points:')
+        self.samples_label = QLabel('Number of points:')
         self.samples_box = QLineEdit(self)
         self.samples_box.setMaximumWidth(250)
         int_validator = QIntValidator(1000, 10000000)
@@ -404,6 +404,26 @@ class GeWindow(MainWindow):
         self.intersection_layout_3.addWidget(self.check_button)
         self.intersection_layout_3.addWidget(self.clear_intersections_button)
         self.control_layout.addLayout(self.intersection_layout_3)
+
+        # add a button to measure the distance between two points
+        self.measure_text = QLabel('Measured distance:')
+        self.measurement_box = QLineEdit()
+        self.measurement_box.setReadOnly(True)
+        self.measurement_box.setMaximumWidth(250)
+        self.measure_button = QPushButton('Measure')
+        self.measure_button.setMinimumWidth(90)
+        self.measure_button.clicked.connect(self.measure_distance)
+        self.clear_measurement_button = QPushButton('Clear Measurement')
+        self.clear_measurement_button.setMinimumWidth(150)
+        self.clear_measurement_button.clicked.connect(self.clear_measurement)
+        self.measure_layout_1 = QHBoxLayout()
+        self.measure_layout_1.addWidget(self.measure_text)
+        self.measure_layout_1.addWidget(self.measurement_box)
+        self.measure_layout_2 = QHBoxLayout()
+        self.measure_layout_2.addWidget(self.measure_button)
+        self.measure_layout_2.addWidget(self.clear_measurement_button)
+        self.control_layout.addLayout(self.measure_layout_1)
+        self.control_layout.addLayout(self.measure_layout_2)
 
         # add a separator between the geometry checker and the console
         line4 = QFrame()
@@ -432,6 +452,150 @@ class GeWindow(MainWindow):
 
         # add the control panel to the main layout
         self.splitter.addWidget(self.control_panel)
+
+
+    def add_toolbar(self):
+
+        self.toolbar = QToolBar('Main Toolbar')
+        self.toolbar.setMovable(True)
+        self.toolbar.setStyleSheet('QToolButton {min-width: 80px; max-width: 80px;}')
+
+        font = QFont()
+        font.setPointSize(14)
+
+        self.wireframe_action = QAction('Wireframe', self)
+        self.wireframe_action.setFont(font)
+        self.wireframe_action.triggered.connect(self.toggle_wireframe)
+        self.toolbar.addAction(self.wireframe_action)
+        self.toolbar.addSeparator()
+
+        self.transparent_action = QAction('Transparent', self)
+        self.transparent_action.setFont(font)
+        self.transparent_action.triggered.connect(self.toggle_transparent)
+        self.toolbar.addAction(self.transparent_action)
+        self.toolbar.addSeparator()
+
+        self.parallel_action = QAction('Parallel', self)
+        self.parallel_action.setFont(font)
+        self.parallel_action.triggered.connect(self.toggle_parallel)
+        self.toolbar.addAction(self.parallel_action)
+        self.toolbar.addSeparator()
+
+        isometric_action = QAction('Isometric', self)
+        isometric_action.setFont(font)
+        isometric_action.triggered.connect(self.plotter.view_isometric)
+        self.toolbar.addAction(isometric_action)
+        self.toolbar.addSeparator()
+
+        top_action = QAction('Top', self)
+        top_action.setFont(font)
+        top_action.triggered.connect(self.plotter.view_xy)
+        self.toolbar.addAction(top_action)
+        self.toolbar.addSeparator()
+
+        bottom_action = QAction('Bottom', self)
+        bottom_action.setFont(font)
+        bottom_action.triggered.connect(lambda: self.plotter.view_xy(negative=True))
+        self.toolbar.addAction(bottom_action)
+        self.toolbar.addSeparator()
+
+        front_action = QAction('Front', self)
+        front_action.setFont(font)
+        front_action.triggered.connect(self.plotter.view_yz)
+        self.toolbar.addAction(front_action)
+        self.toolbar.addSeparator()
+
+        back_action = QAction('Back', self)
+        back_action.setFont(font)
+        back_action.triggered.connect(lambda: self.plotter.view_yz(negative=True))
+        self.toolbar.addAction(back_action)
+        self.toolbar.addSeparator()
+
+        left_action = QAction('Left', self)
+        left_action.setFont(font)
+        left_action.triggered.connect(self.plotter.view_xz)
+        self.toolbar.addAction(left_action)
+        self.toolbar.addSeparator()
+
+        right_action = QAction('Right', self)
+        right_action.setFont(font)
+        right_action.triggered.connect(lambda: self.plotter.view_xz(negative=True))
+        self.toolbar.addAction(right_action)
+        self.toolbar.addSeparator()
+
+        self.viewer_layout.addWidget(self.toolbar)
+
+
+    def add_menu_bar(self):
+        menubar = self.menuBar()
+        file_menu = menubar.addMenu('File')
+        open_action = file_menu.addAction('Open File...')
+        open_action.triggered.connect(self.open_file_dialog)
+        open_action.setShortcut(QKeySequence.Open)
+        save_action = file_menu.addAction('Save As...')
+        save_action.setShortcut(QKeySequence.Save)
+        save_action.triggered.connect(self.save_file)
+        close_window_action = file_menu.addAction('Close Window')
+        close_window_action.triggered.connect(self.close)
+        close_window_action.setShortcut(QKeySequence.Close)
+
+        edit_menu = menubar.addMenu('Edit')
+        clear_console_action = edit_menu.addAction('Clear Console')
+        clear_console_action.triggered.connect(self.console.clear)
+        copy_console_action = edit_menu.addAction('Copy Console')
+        copy_console_action.triggered.connect(self.console.selectAll)
+        copy_console_action.triggered.connect(self.console.copy)
+        clear_action = edit_menu.addAction('Clear Meshes')
+        clear_action.triggered.connect(self.clear_meshes)
+
+        view_menu = menubar.addMenu('View')
+        show_components_action = QAction('Show Components Panel', self, checkable=True)
+        show_components_action.setChecked(True)
+        show_components_action.triggered.connect(self.toggle_components_panel)
+        view_menu.addAction(show_components_action)
+
+        self.show_controls_action = QAction('Show Control Panel', self, checkable=True)
+        self.show_controls_action.setChecked(True)
+        self.show_controls_action.triggered.connect(self.toggle_control_panel)
+        view_menu.addAction(self.show_controls_action)
+
+        show_background_action = QAction('Show Background', self, checkable=True)
+        show_background_action.setChecked(True)
+        show_background_action.triggered.connect(self.toggle_background)
+        view_menu.addAction(show_background_action)
+
+        gradient_action = QAction('Show Gradient', self, checkable=True)
+        gradient_action.setChecked(True)
+        gradient_action.triggered.connect(self.toggle_gradient)
+        view_menu.addAction(gradient_action)
+
+        color_menu = QMenu('Background Colors', self)
+
+        # Create actions for the submenu
+        color_action_1 = QAction('Set Primary Color...', self)
+        color_action_2 = QAction('Set Secondary Color...', self)
+
+        # Connect actions to slots
+        color_action_1.triggered.connect(lambda: self.open_color_picker(0))
+        color_action_2.triggered.connect(lambda: self.open_color_picker(1))
+
+        # Add actions to the submenu
+        color_menu.addAction(color_action_1)
+        color_menu.addAction(color_action_2)
+
+        view_menu.addMenu(color_menu)
+
+        reset_background_action = QAction('Reset Background', self)
+        reset_background_action.triggered.connect(lambda: self.open_color_picker(2))
+        view_menu.addAction(reset_background_action)
+
+        window_menu = menubar.addMenu('Window')
+        window_action = window_menu.addAction('Close')
+        window_action.triggered.connect(self.close)
+
+        help_menu = menubar.addMenu('Help')
+        help_action = help_menu.addAction('License')
+        help_action.triggered.connect(self.show_license)
 
     
     @pyqtSlot(str)
@@ -669,81 +833,6 @@ class GeWindow(MainWindow):
         self.viewer.set_background_color()
 
 
-    def add_menu_bar(self):
-        menubar = self.menuBar()
-        file_menu = menubar.addMenu('File')
-        open_action = file_menu.addAction('Open File...')
-        open_action.triggered.connect(self.open_file_dialog)
-        open_action.setShortcut(QKeySequence.Open)
-        save_action = file_menu.addAction('Save As...')
-        save_action.setShortcut(QKeySequence.Save)
-        save_action.triggered.connect(self.save_file)
-        close_window_action = file_menu.addAction('Close Window')
-        close_window_action.triggered.connect(self.close)
-        close_window_action.setShortcut(QKeySequence.Close)
-
-        edit_menu = menubar.addMenu('Edit')
-        clear_console_action = edit_menu.addAction('Clear Console')
-        clear_console_action.triggered.connect(self.console.clear)
-        copy_console_action = edit_menu.addAction('Copy Console')
-        copy_console_action.triggered.connect(self.console.selectAll)
-        copy_console_action.triggered.connect(self.console.copy)
-        clear_action = edit_menu.addAction('Clear Meshes')
-        clear_action.triggered.connect(self.clear_meshes)
-
-
-        view_menu = menubar.addMenu('View')
-        show_components_action = QAction('Show Components Panel', self, checkable=True)
-        show_components_action.setChecked(True)
-        show_components_action.triggered.connect(self.toggle_left_panel)
-        view_menu.addAction(show_components_action)
-
-        self.show_controls_action = QAction('Show Control Panel', self, checkable=True)
-        self.show_controls_action.setChecked(True)
-        self.show_controls_action.triggered.connect(self.toggle_right_panel)
-        view_menu.addAction(self.show_controls_action)
-
-        show_background_action = QAction('Show Background', self, checkable=True)
-        show_background_action.setChecked(True)
-        show_background_action.triggered.connect(self.toggle_background)
-        view_menu.addAction(show_background_action)
-
-        gradient_action = QAction('Show Gradient', self, checkable=True)
-        gradient_action.setChecked(True)
-        gradient_action.triggered.connect(self.toggle_gradient)
-        view_menu.addAction(gradient_action)
-
-        color_menu = QMenu('Background Colors', self)
-
-        # Create actions for the submenu
-        color_action_1 = QAction('Set Primary Color...', self)
-        color_action_2 = QAction('Set Secondary Color...', self)
-
-        # Connect actions to slots
-        color_action_1.triggered.connect(lambda: self.open_color_picker(0))
-        color_action_2.triggered.connect(lambda: self.open_color_picker(1))
-
-        # Add actions to the submenu
-        color_menu.addAction(color_action_1)
-        color_menu.addAction(color_action_2)
-
-        view_menu.addMenu(color_menu)
-
-        reset_background_action = QAction('Reset Background', self)
-        reset_background_action.triggered.connect(lambda: self.open_color_picker(2))
-        view_menu.addAction(reset_background_action)
-
-        # self.collapse_right_button.clicked.connect(self.toggle_right_panel)
-        # self.viewer_layout.addWidget(self.collapse_right_button)
-
-        window_menu = menubar.addMenu('Window')
-        window_action = window_menu.addAction('Close')
-        window_action.triggered.connect(self.close)
-
-        help_menu = menubar.addMenu('Help')
-        help_action = help_menu.addAction('License')
-        help_action.triggered.connect(self.show_license)
-
     def add_key_events(self):
         """This is the simplest way to have the buttons synchronize
         with whatever key inputs the user provides.
@@ -772,14 +861,14 @@ class GeWindow(MainWindow):
         self.file_name_changed.emit(None)
 
 
-    def toggle_left_panel(self):
+    def toggle_components_panel(self):
         if self.components_panel.isVisible():
             self.components_panel.hide()
         else:
             self.components_panel.show()
 
 
-    def toggle_right_panel(self):
+    def toggle_control_panel(self):
         if self.control_panel.isVisible():
             self.control_panel.hide()
         else:
@@ -789,87 +878,13 @@ class GeWindow(MainWindow):
     def show_license(self):
         with open('LICENSE') as f:
             license_text = f.read().replace('\n\n', '<>').replace('\n', ' ').replace('<>', '\n\n')
-        self.print_to_console('\nLICENSE:\n----------\n' + license_text)
-
-
-    def add_toolbar(self):
-        # Create a toolbar
-        self.toolbar = QToolBar('Main Toolbar')
-        self.viewer_layout.addWidget(self.toolbar)
-        # self.addToolBar(Qt.TopToolBarArea, self.toolbar)
-        self.toolbar.setMovable(True)
-
-        self.toolbar.setStyleSheet('QToolButton {min-width: 80px; max-width: 80px;}')
-
-        font = QFont()
-        font.setPointSize(14)
-        # Add actions to the toolbar
-
-        self.wireframe_action = QAction('Wireframe', self)
-        # self.wireframe_action.setFixedWidth(100)
-        self.wireframe_action.setFont(font)
-        self.wireframe_action.triggered.connect(self.toggle_wireframe)
-        self.toolbar.addAction(self.wireframe_action)
-        self.toolbar.addSeparator()
-
-        self.transparent_action = QAction('Transparent', self)
-        self.transparent_action.setFont(font)
-        self.transparent_action.triggered.connect(self.toggle_transparent)
-        self.toolbar.addAction(self.transparent_action)
-        self.toolbar.addSeparator()
-
-        self.parallel_action = QAction('Parallel', self)
-        self.parallel_action.setFont(font)
-        self.parallel_action.triggered.connect(self.toggle_parallel)
-        self.toolbar.addAction(self.parallel_action)
-        self.toolbar.addSeparator()
-
-        isometric_action = QAction('Isometric', self)
-        isometric_action.setFont(font)
-        isometric_action.triggered.connect(self.plotter.view_isometric)
-        self.toolbar.addAction(isometric_action)
-        self.toolbar.addSeparator()
-
-        top_action = QAction('Top', self)
-        top_action.setFont(font)
-        top_action.triggered.connect(self.plotter.view_xy)
-        self.toolbar.addAction(top_action)
-        self.toolbar.addSeparator()
-
-        bottom_action = QAction('Bottom', self)
-        bottom_action.setFont(font)
-        bottom_action.triggered.connect(lambda: self.plotter.view_xy(negative=True))
-        self.toolbar.addAction(bottom_action)
-        self.toolbar.addSeparator()
-
-        front_action = QAction('Front', self)
-        front_action.setFont(font)
-        front_action.triggered.connect(self.plotter.view_yz)
-        self.toolbar.addAction(front_action)
-        self.toolbar.addSeparator()
-
-        back_action = QAction('Back', self)
-        back_action.setFont(font)
-        back_action.triggered.connect(lambda: self.plotter.view_yz(negative=True))
-        self.toolbar.addAction(back_action)
-        self.toolbar.addSeparator()
-
-        left_action = QAction('Left', self)
-        left_action.setFont(font)
-        left_action.triggered.connect(self.plotter.view_xz)
-        self.toolbar.addAction(left_action)
-        self.toolbar.addSeparator()
-
-        right_action = QAction('Right', self)
-        right_action.setFont(font)
-        right_action.triggered.connect(lambda: self.plotter.view_xz(negative=True))
-        self.toolbar.addAction(right_action)
-        self.toolbar.addSeparator()
+        self.print_to_console('\n' + license_text)
 
 
     def toggle_parallel(self):
         self.viewer.toggle_parallel_projection()
         self.parallel_action.setText('Perspective' if self.viewer.parallel else 'Parallel')
+
 
     def toggle_wireframe(self):
         self.viewer.toggle_wireframe()
@@ -885,7 +900,6 @@ class GeWindow(MainWindow):
         self.wireframe_action.setText('Solid' if self.viewer.wireframe else 'Wireframe')
 
 
-    # Function to open a file dialog and load the selected file
     def open_file_dialog(self):
         options = QFileDialog.Options()
         file_path, _ = QFileDialog.getOpenFileName(None, 'Open File', '', \
@@ -909,7 +923,6 @@ class GeWindow(MainWindow):
 
     def save_file_dialog(self):
         options = QFileDialog.Options()
-        # options |= QFileDialog.DontUseNativeDialog
         file_types = 'Supported File Types (*.png *.svg *.eps *.ps *.pdf *.tex);; '\
                      + 'PNG (*.png);;SVG (*.svg);;EPS (*.eps);;PS (*.ps);;PDF (*.pdf);;TEX (*.tex)'
         file_name, _ = QFileDialog.getSaveFileName(self, 'Save Figure', '', file_types, options=options)
@@ -917,9 +930,9 @@ class GeWindow(MainWindow):
         if file_name:
             try:
                 self.save_figure(file_name, *self.figure_size)
-                # self.plotter.screenshot(file_name)
             except Exception as e:
                 print(e)
+
                 
     def save_figure(self, file_name, width, height):
         try:
@@ -971,10 +984,6 @@ class GeWindow(MainWindow):
             self.generate_checkboxes(self.viewer.components, 0)
         except Exception as e:
             print(e)
-        
-
-    # def open_file(self):
-    #     print('opening file')
 
 
     def save_file(self):
@@ -987,9 +996,6 @@ class GeWindow(MainWindow):
                 self.viewer.save(file_name)
             except Exception as e:
                 print(e)
-
-    def close(self):
-        print('closing application')
 
 
     def toggle_background(self):
@@ -1016,6 +1022,24 @@ class GeWindow(MainWindow):
     def clear_intersections(self):
         for actor in self.viewer.intersections:
             self.plotter.remove_actor(actor)
+        self.viewer.intersections = []
+
+
+    def measure_distance(self):
+        try:
+            self.plotter.add_measurement_widget(self.display_measurement)
+        except Exception as e:
+            print(e)
+
+    def clear_measurement(self):
+        try:
+            self.plotter.clear_measure_widgets()
+            self.measurement_box.setText('')
+        except Exception as e:
+            print(e)
+
+    def display_measurement(self, point1, point2, distance):
+        self.measurement_box.setText('{:.3f}'.format(distance))
 
 
 
