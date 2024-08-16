@@ -16,30 +16,14 @@ class GeViewer:
     and display of 3D visualizations based on the provided data files and
     offers various functionalities such as toggling display options and saving
     sessions.
-
-    :param filenames: A list of file paths to be loaded. Supported file formats
-        include .gev and .wrl. Only the first file is used if multiple .gev files
-        are provided.
-    :type filenames: list of str
-    :param destination: The file path where the session will be saved. If not provided,
-        the session is not saved. The file extension must be .gev if specified.
-    :type destination: str, optional
-    :param off_screen: If True, the plotter is created without displaying it. Defaults to False.
-    :type off_screen: bool, optional
-    :param safe_mode: If True, the viewer operates in safe mode with some features disabled.
-    :type safe_mode: bool, optional
-    :param no_warnings: If True, suppresses warning messages. Defaults to False.
-    :type no_warnings: bool, optional
-
-    :raises Exception: If .gev and .wrl files are mixed, or if multiple .gev files are provided.
-    :raises Exception: If attempting to save a session using an invalid file extension.
     """
     def __init__(self, plotter_widget=None):
-        self.filename = 'No file loaded'
+        """Initializes the GeViewer object.
+
+        :param plotter_widget: The widget to use for the plotter.
+        :type plotter_widget: QWidget, optional
+        """
         self.off_screen = False
-        self.view_params = (None, None, None)
-        self.initial_camera_pos = None
-        self.has_transparency = False
         if plotter_widget:
             self.plotter = plotter.Plotter(plotter_widget)
         else:
@@ -51,7 +35,6 @@ class GeViewer:
         self.transparent = False
         self.gradient = True
         self.parallel = False
-        self.plotter.enable_depth_peeling()
         self.components = []
         self.intersections = []
         self.event_ids = []
@@ -60,21 +43,22 @@ class GeViewer:
 
     def load_files(self, filename, off_screen=False,\
                    progress_callback=None):
-        """Constructor method for the GeViewer object.
+        """Loads the files.
+
+        :param filename: The name of the file to load.
+        :type filename: str
+        :param off_screen: If True, the plotter is created without displaying it. Defaults to False.
+        :type off_screen: bool, optional
+        :param progress_callback: The callback to use for the progress bar.
+        :type progress_callback: callable, optional
         """
-        self.filename = filename
         self.off_screen = off_screen
         if filename.endswith('.gev'):
             new_components = self.load(filename)
         elif filename.endswith('.wrl'):
-            try:
-                parser = parsers.VRMLParser(filename)
-                parser.parse_file(progress_callback)
-                self.view_params = parser.viewpoint_block
-                new_components = [parser.components]
-            except Exception as e:
-                print(e)
-                return
+            parser = parsers.VRMLParser(filename)
+            parser.parse_file(progress_callback)
+            new_components = [parser.components]
         elif filename.endswith('heprep'):
             parser = parsers.HepRepParser(filename)
             parser.parse_file()
@@ -100,21 +84,23 @@ class GeViewer:
     
     
     def create_plotter(self, progress_obj=None):
-        """Creates a Plotter object, a subclass of pyvista.Plotter.
+        """Creates the plotter.
+
+        :param progress_obj: The progress object to use for the plotter.
+        :type progress_obj: ProgressBar, optional
         """
         print('Plotting meshes...')
-        try:
-            if progress_obj:
-                progress_obj.set_maximum_value(self.num_to_plot)
-                progress_obj.reset_progress()
-            self.plot_meshes(self.components, progress_obj=progress_obj)
-            if progress_obj:
-                progress_obj.signal_finished()
-        except Exception as e:
-            print(e)
+        if progress_obj:
+            progress_obj.set_maximum_value(self.num_to_plot)
+            progress_obj.reset_progress()
+        self.plot_meshes(self.components, progress_obj=progress_obj)
+        if progress_obj:
+            progress_obj.signal_finished()
 
 
     def set_background_color(self):
+        """Sets the background color.
+        """
         if self.gradient:
             self.plotter.set_background(self.bkg_colors[0],top=self.bkg_colors[1])
         else:
@@ -122,14 +108,20 @@ class GeViewer:
 
 
     def plot_meshes(self, components, level=0, progress_obj=None):
-        """Adds the meshes to the plot.
+        """Plots the meshes.
+
+        :param components: The components to plot.
+        :type components: list
+        :param level: Keeps track of the recursion level.
+        :type level: int, optional
+        :param progress_obj: The progress object to use for the plotter.
+        :type progress_obj: ProgressBar, optional
         """
-        # print('Plotting meshes...')
         style = 'wireframe' if self.wireframe else 'surface'
         opacity = 0.3 if self.transparent else 1.
         for comp in components:
-            print('...'*level + 'Plotting ' + comp['name'] + '...')
             if comp['mesh'] is not None and not comp['has_actor']:
+                print('...'*level + 'Plotting ' + comp['name'] + '...')
                 if comp['is_event']:
                     self.event_ids.append(comp['id'])
                     this_opacity = 1
@@ -150,60 +142,9 @@ class GeViewer:
             self.num_to_plot = 0
 
 
-    # def set_initial_view(self):
-    #     """Sets the initial camera viewpoint based on the view parameters
-    #     provided in the VRML file.
-    #     """
-    #     fov = self.view_params[0]
-    #     position = self.view_params[1]
-    #     orientation = self.view_params[2]
-    #     if position is not None and orientation is not None:
-    #         up, v = utils.orientation_transform(orientation)
-    #         focus = position + v*np.linalg.norm(position)
-    #     elif position is not None and orientation is None:
-    #         up = np.array([0.,1.,0.])
-    #         focus = position + np.array([0.,0.,-1.])*np.linalg.norm(position)
-    #     elif position is None and orientation is not None:
-    #         self.plotter.view_isometric()
-    #         position = np.linalg.norm(self.plotter.camera.GetPosition())*np.array([0.,0.,1.])
-    #         up, v = utils.orientation_transform(orientation)
-    #         focus = position + v*np.linalg.norm(position)
-    #     else:
-    #         self.plotter.view_isometric()
-    #         position = np.linalg.norm(self.plotter.camera.GetPosition())*np.array([0.,0.,1.])
-    #         up = np.array([0.,1.,0.])
-    #         focus = position + np.array([0.,0.,-1.])*np.linalg.norm(position)
-    #     self.plotter.reset_camera()
-    #     self.set_camera_view((fov,position,up,focus))
-    #     self.initial_camera_pos = self.plotter.camera_position
-    
-
-    # def set_camera_view(self,args=None):
-    #     """Sets the camera viewpoint.
-
-    #     :param args: A list of the view parameters, defaults to None
-    #     :type args: list, optional
-    #     """
-    #     if args is None:
-    #         fov = None
-    #         position, up, focus = asyncio.run(utils.prompt_for_camera_view())
-    #     else:
-    #         fov, position, up, focus = args
-    #     if fov is not None:
-    #         self.plotter.camera.view_angle = fov
-    #     if position is not None:
-    #         self.plotter.camera.position = position
-    #     if up is not None:
-    #         self.plotter.camera.up = up
-    #     if focus is not None:
-    #         self.plotter.camera.focal_point = focus
-    #     if args is None:
-    #         if not self.off_screen:
-    #             self.plotter.update()
-    #         print('Camera view set.\n')
-
-
     def toggle_parallel_projection(self):
+        """Toggles the parallel projection on and off.
+        """
         if not self.parallel:
             self.plotter.enable_parallel_projection()
         else:
@@ -259,29 +200,8 @@ class GeViewer:
             self.plotter.update()
 
 
-    # def export_to_html(self):
-    #     """Saves the interactive viewer to an HTML file, prompting
-    #     the user for a file path.
-    #     """
-    #     try:
-    #         import nest_asyncio
-    #         import trame
-    #         import trame_vuetify
-    #         import trame_vtk
-    #     except ImportError:
-    #         print('Error: exporting to HTML requires additional dependencies.')
-    #         print('Run "pip install geviewer[extras]" to install them.\n')
-    #         return
-    #     file_path = asyncio.run(utils.prompt_for_html_path())
-    #     if file_path is None:
-    #         print('Operation cancelled.\n')
-    #         return
-    #     self.plotter.export_html(file_path)
-    #     print('Interactive viewer saved to ' + str(Path(file_path).resolve()) + '.\n')
-
-
     def save(self, filename):
-        """Saves the meshes to a .gev file.
+        """Saves the session to a .gev file.
 
         :param filename: The name of the file to save the session to.
         :type filename: str
@@ -347,6 +267,11 @@ class GeViewer:
 
                 
     def load(self, filename):
+        """Loads the session from a .gev file.
+
+        :param filename: The name of the file to load the session from.
+        :type filename: str
+        """
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpfolder = tmpdir + '/gevfile/'
             os.makedirs(tmpfolder, exist_ok=False)
@@ -377,6 +302,15 @@ class GeViewer:
         
         
     def is_mesh_inside(self, mesh1, mesh2):
+        """Checks if one mesh is inside another.
+
+        :param mesh1: The first mesh.
+        :type mesh1: pyvista.PolyData
+        :param mesh2: The second mesh.
+        :type mesh2: pyvista.PolyData
+        :return: True if mesh1 is inside mesh2, False otherwise.
+        :rtype: bool
+        """
         bounds1 = mesh1.bounds
         bounds2 = mesh2.bounds
         if bounds1[0] >= bounds2[0] and bounds1[1] <= bounds2[1] and \
@@ -387,6 +321,15 @@ class GeViewer:
     
 
     def do_bounds_intersect(self, mesh1, mesh2):
+        """Checks if the bounds of two meshes intersect.
+
+        :param mesh1: The first mesh.
+        :type mesh1: pyvista.PolyData
+        :param mesh2: The second mesh.
+        :type mesh2: pyvista.PolyData
+        :return: True if the bounds intersect, False otherwise.
+        :rtype: bool
+        """
         bounds1 = mesh1.bounds
         bounds2 = mesh2.bounds
         if bounds1[0] >= bounds2[1] or bounds1[1] <= bounds2[0] or \
@@ -397,6 +340,19 @@ class GeViewer:
     
     
     def get_intersection(self, mesh1, mesh2, tolerance=0.001, n_samples=100000):
+        """Gets the intersection between two meshes.
+
+        :param mesh1: The first mesh.
+        :type mesh1: pyvista.PolyData
+        :param mesh2: The second mesh.
+        :type mesh2: pyvista.PolyData
+        :param tolerance: The tolerance for the intersection.
+        :type tolerance: float, optional
+        :param n_samples: The number of samples to use.
+        :type n_samples: int, optional
+        :return: The points of intersection and the fraction of points that survived.
+        :rtype: tuple
+        """
         points = np.random.uniform(low=mesh1.bounds[::2], \
                                     high=mesh1.bounds[1::2], \
                                     size=(n_samples, 3))
@@ -422,6 +378,15 @@ class GeViewer:
         
         
     def find_intersections(self, tolerance=0.001, n_samples=100000):
+        """Finds the intersections between the meshes.
+
+        :param tolerance: The tolerance for the intersection.
+        :type tolerance: float, optional
+        :param n_samples: The number of samples to use.
+        :type n_samples: int, optional
+        :return: The ids of the meshes that intersect.
+        :rtype: list
+        """
         for actor in self.intersections:
             self.plotter.remove_actor(actor)
         self.intersections = []
@@ -430,6 +395,13 @@ class GeViewer:
 
 
         def find_intersections_recursive(components, level=0):
+            """Finds the intersections between the meshes.
+
+            :param components: The components to check for intersections.
+            :type components: list
+            :param level: Keeps track of the recursion level.
+            :type level: int, optional
+            """
             for comp in components:
                 if comp['mesh'] is not None and not (comp['shape'] == 'Point' or comp['shape'] == 'Line'):
                     check_for_intersections(comp, components)
@@ -440,6 +412,13 @@ class GeViewer:
                     break
 
         def check_for_intersections(comp1, components):
+            """Checks for intersections between one component and all other components.
+
+            :param comp1: The first component.
+            :type comp1: dict
+            :param components: The components to check for intersections.
+            :type components: list
+            """
             for comp2 in components:
                 if comp2['mesh'] is not None and not (comp2['shape'] == 'Point' or comp2['shape'] == 'Line') \
                     and (comp1['id'] != comp2['id']) and comp2['id'] not in checked:
@@ -479,9 +458,13 @@ class GeViewer:
         find_intersections_recursive(self.components)
         return np.unique(overlapping_meshes)
 
-
-    def show(self):
-        """Opens the plotting window.
+    def clear_meshes(self):
+        """Clears the meshes.
         """
-        self.plotter.show(cpos=self.initial_camera_pos,\
-                          before_close_callback=lambda x: print('\nExiting GeViewer.\n'))
+        for actor in self.actors.values():
+            self.plotter.remove_actor(actor)
+        self.actors = {}
+        self.components = []
+        self.intersections = []
+        self.event_ids = []
+        self.num_to_plot = 0

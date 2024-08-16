@@ -3,19 +3,32 @@ import pyvista as pv
 import xml.etree.ElementTree as ET
 import re
 import uuid
-from geviewer import utils
-
 import time
+
+from geviewer import utils
 
 
 class Parser:
-
+    """Base class for all parsers.
+    """
 
     def __init__(self, filename):
+        """Initializes the parser.
+
+        :param filename: The name of the file to parse.
+        :type filename: str
+        """
         self.filename = filename
 
 
     def initialize_template(self, name):
+        """Initializes a template for a component.
+
+        :param name: The name of the component.
+        :type name: str
+        :return: The initialized template.
+        :rtype: dict
+        """
         return  {'name': name, 'id': str(uuid.uuid4())[-12:], 'shape': '', 'points': [], 'mesh_points': [],\
                  'mesh_inds': [], 'colors': [], 'visible': True, 'scalars': [], 'is_dot': False, \
                  'is_event': False, 'mesh': None, 'has_actor': False, 'children': []}
@@ -34,13 +47,7 @@ class Parser:
         :type cells: list of list
         :param colors: A list of arrays containing color data.
         :type colors: list of numpy.ndarray
-        :param pbar: (Optional) A tqdm progress bar instance.
-        :type pbar: tqdm.tqdm, optional
-
-        :returns: A tuple containing three elements:
-            - points (numpy.ndarray): Combined array of point coordinates.
-            - cells (numpy.ndarray): Combined array of cell indices.
-            - colors (numpy.ndarray): Combined array of color data.
+        :return: The combined points, cells, and colors.
         :rtype: tuple
         """
         offsets = np.cumsum([0] + [len(p) for p in points[:-1]]).astype(int)
@@ -59,14 +66,20 @@ class Parser:
 
 
 class VRMLParser(Parser):
+    """Parser for VRML files.
+    """
 
     def parse_file(self, progress_obj=None):
+        """Parses the VRML file and creates the meshes.
+
+        :param progress_obj: The progress object to use.
+        :type progress_obj: geviewer.gui.GeProgressBar, optional
+        """
         data = utils.read_file(self.filename)
         viewpoint_block, polyline_blocks, marker_blocks, solid_blocks = self.extract_blocks(data, progress_obj=progress_obj)
         self.viewpoint_block = viewpoint_block
         now = time.time()
         polyline_mesh, marker_mesh, solid_mesh = self.create_meshes(polyline_blocks, marker_blocks, solid_blocks, progress_obj=progress_obj)
-        print('time to create meshes:', time.time() - now)
         component_name = self.filename.split('/')[-1].split('.')[0]
         component = self.initialize_template(component_name)
         names = ['Trajectories', 'Step Markers', 'Geometry']
@@ -90,14 +103,11 @@ class VRMLParser(Parser):
         :type marker_blocks: list
         :param solid_blocks: List of blocks containing solid data.
         :type solid_blocks: list
-
-        :returns: A tuple containing three elements:
-            - polyline_mesh (:class:`pyvista.PolyData`): Mesh for polylines.
-            - marker_mesh (:class:`pyvista.UnstructuredGrid`): Mesh for markers.
-            - solid_mesh (:class:`pyvista.PolyData`): Mesh for solids.
+        :param progress_obj: The progress object to use.
+        :type progress_obj: geviewer.gui.GeProgressBar, optional
+        :return: The created meshes.
         :rtype: tuple
         """
-
         print('Building meshes...')
 
         total = len(polyline_blocks) + len(marker_blocks) + len(solid_blocks)
@@ -114,19 +124,18 @@ class VRMLParser(Parser):
 
 
     def build_mesh(self, blocks, which, progress_obj=None):
-        """Builds a mesh from given blocks of data.
+        """Builds a mesh for the given blocks.
 
-        This function processes blocks of data, creating a mesh based on the specified
-        type ('polyline' or 'solid').
+        This function processes blocks of data for polylines, markers, and solids,
+        building corresponding meshes for each.
 
-        :param blocks: List of blocks containing data for the mesh.
+        :param blocks: List of blocks containing data.
         :type blocks: list
-        :param which: Type of mesh to build ('polyline' or 'solid').
+        :param which: The type of mesh to build.
         :type which: str
-        :param pbar: (Optional) A tqdm progress bar instance.
-        :type pbar: tqdm.tqdm, optional
-
-        :returns: The created mesh with combined points, cells, and colors.
+        :param progress_obj: The progress object to use.
+        :type progress_obj: geviewer.gui.GeProgressBar, optional
+        :return: The created mesh.
         :rtype: pyvista.PolyData
         """
         points = [None for i in range(len(blocks))]
@@ -158,17 +167,16 @@ class VRMLParser(Parser):
 
 
     def build_markers(self, blocks, progress_obj=None):
-        """Builds a mesh for markers from given blocks of data.
+        """Builds a mesh for the given blocks.
 
-        This function processes blocks of marker data, creating a mesh of spheres for each marker.
+        This function processes blocks of data for markers, creating a mesh for each.
 
-        :param blocks: List of blocks containing marker data.
+        :param blocks: List of blocks containing data.
         :type blocks: list
-        :param pbar: (Optional) A tqdm progress bar instance.
-        :type pbar: tqdm.tqdm, optional
-
-        :returns: The created mesh with combined centers, radii, and colors.
-        :rtype: pyvista.UnstructuredGrid
+        :param progress_obj: The progress object to use.
+        :type progress_obj: geviewer.gui.GeProgressBar, optional
+        :return: The created mesh.
+        :rtype: pyvista.PolyData
         """
         centers = [None for i in range(len(blocks))]
         radii = [None for i in range(len(blocks))]
@@ -203,6 +211,8 @@ class VRMLParser(Parser):
 
         :param file_content: The content of the file as a single string.
         :type file_content: str
+        :param progress_obj: The progress object to use.
+        :type progress_obj: geviewer.gui.GeProgressBar, optional
         :return: A tuple containing four elements:
             - The viewpoint block (if found) as a string or `None` if not found.
             - A list of polyline blocks as strings.
@@ -533,8 +543,12 @@ class VRMLParser(Parser):
 
 
 class HepRepParser(Parser):
+    """Parser for HepRep files.
+    """
 
     def parse_file(self):
+        """Parses the HepRep file and creates the meshes.
+        """
         self.root = self.parse_geometry(self.filename)
         component_name = self.filename.split('/')[-1].split('.')[0]
         self.components = [self.initialize_template(component_name)]
@@ -546,12 +560,23 @@ class HepRepParser(Parser):
 
 
     def parse_geometry(self, xml_file):
+        """Parses the HepRep file and returns the root element.
+        """
         tree = ET.parse(xml_file)
         root = tree.getroot()
         return root
 
 
     def populate_meshes(self, element, components, level=-1):
+        """Populates the meshes for the given element.
+
+        :param element: The element to populate.
+        :type element: xml.etree.ElementTree.Element
+        :param components: The list of components to populate.
+        :type components: list
+        :param level: The recursion level.
+        :type level: int
+        """
         for child in element:
             index = 0
             if child.tag.endswith('instance'):
@@ -608,6 +633,11 @@ class HepRepParser(Parser):
 
 
     def create_meshes(self, components):
+        """Creates the meshes for the given components.
+
+        :param components: The list of components to create meshes for.
+        :type components: list
+        """
         for comp in components:
             if len(comp['children']) > 0:
                 self.create_meshes(comp['children'])
@@ -684,6 +714,11 @@ class HepRepParser(Parser):
 
 
     def draw_mesh(self, components):
+        """Draws the meshes for the given components.
+
+        :param components: The list of components to draw meshes for.
+        :type components: list
+        """
         for comp in components:
             if len(comp['children']) > 0:
                 self.draw_mesh(comp['children'])
@@ -717,6 +752,11 @@ class HepRepParser(Parser):
 
 
     def combine_dicts(self, dicts):
+        """Combines the given dictionaries into a single dictionary.
+
+        :param dicts: The list of dictionaries to combine.
+        :type dicts: list
+        """
         if len(dicts) < 2:
             return dicts[0]
         result = self.initialize_template(dicts[0]['name'])
@@ -750,6 +790,11 @@ class HepRepParser(Parser):
     
     
     def reduce_components(self, components):
+        """Reduces the components by combining duplicate children.
+
+        :param components: The list of components to reduce.
+        :type components: list
+        """
         for comp in components:
             if len(comp['children']) > 1:
                 names = []
@@ -771,19 +816,18 @@ class HepRepParser(Parser):
 
 
 def create_cylinder_mesh(p1, p2, r1, r2, num_segments=25):
-    """
-    Create a mesh for a cylinder-like object defined by two endpoints and two radii.
-    
-    Parameters:
-    - p1: tuple (x, y, z) for the first endpoint
-    - p2: tuple (x, y, z) for the second endpoint
-    - r1: radius at the first endpoint
-    - r2: radius at the second endpoint
-    - num_segments: number of segments to discretize the circle
-    
-    Returns:
-    - points: list of (x, y, z) coordinates
-    - indices: list of indices defining the quadrilateral faces
+    """Creates a mesh for a cylinder.
+
+    :param p1: The first endpoint.
+    :type p1: tuple
+    :param p2: The second endpoint.
+    :type p2: tuple
+    :param r1: The radius at the first endpoint.
+    :type r1: float
+    :param r2: The radius at the second endpoint.
+    :type r2: float
+    :param num_segments: The number of segments to use.
+    :type num_segments: int
     """
     # Convert endpoints to numpy arrays
     p1 = np.array(p1)
@@ -841,21 +885,22 @@ def create_cylinder_mesh(p1, p2, r1, r2, num_segments=25):
 
 
 def create_annular_cylinder_mesh(p1, p2, r1_outer, r2_outer, r1_inner, r2_inner, num_segments=25):
-    """
-    Create a mesh for an annular cylinder-like object defined by two endpoints and two sets of radii.
-    
-    Parameters:
-    - p1: tuple (x, y, z) for the first endpoint
-    - p2: tuple (x, y, z) for the second endpoint
-    - r1_outer: outer radius at the first endpoint
-    - r2_outer: outer radius at the second endpoint
-    - r1_inner: inner radius at the first endpoint
-    - r2_inner: inner radius at the second endpoint
-    - num_segments: number of segments to discretize the circles
-    
-    Returns:
-    - points: list of (x, y, z) coordinates
-    - indices: list of indices defining the quadrilateral faces
+    """Creates a mesh for an annular cylinder.
+
+    :param p1: The first endpoint.
+    :type p1: tuple
+    :param p2: The second endpoint.
+    :type p2: tuple
+    :param r1_outer: The outer radius at the first endpoint.
+    :type r1_outer: float
+    :param r2_outer: The outer radius at the second endpoint.
+    :type r2_outer: float
+    :param r1_inner: The inner radius at the first endpoint.
+    :type r1_inner: float
+    :param r2_inner: The inner radius at the second endpoint.
+    :type r2_inner: float
+    :param num_segments: The number of segments to use.
+    :type num_segments: int
     """
     # Convert endpoints to numpy arrays
     p1 = np.array(p1)
