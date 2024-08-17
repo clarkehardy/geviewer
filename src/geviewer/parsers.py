@@ -62,7 +62,6 @@ class Parser:
         colors = np.concatenate(colors)
 
         return points, cells, colors
-    
 
 
 class VRMLParser(Parser):

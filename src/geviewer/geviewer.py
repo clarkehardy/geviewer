@@ -101,6 +101,8 @@ class GeViewer:
     def set_background_color(self):
         """Sets the background color.
         """
+        if not self.bkg_on:
+            return
         if self.gradient:
             self.plotter.set_background(self.bkg_colors[0],top=self.bkg_colors[1])
         else:
@@ -138,6 +140,7 @@ class GeViewer:
             if len(comp['children']) > 0:
                 self.plot_meshes(comp['children'], level + 1)
         if level == 0:
+            self.plotter.view_isometric()
             print('Done.\n')
             self.num_to_plot = 0
 
@@ -158,7 +161,8 @@ class GeViewer:
         self.bkg_on = not self.bkg_on
         print('Toggling background ' + ['off.','on.'][self.bkg_on] + '\n')
         if self.bkg_on:
-            self.plotter.set_background(self.bkg_colors[0],top=self.bkg_colors[1])
+            top = self.bkg_colors[1] if self.gradient else None
+            self.plotter.set_background(self.bkg_colors[0],top=top)
         else:
             self.plotter.set_background('white')
         if not self.off_screen:
@@ -448,7 +452,7 @@ class GeViewer:
                     if points.n_points > threshold:
                         overlapping_meshes.append(comp1['id'])
                         overlapping_meshes.append(comp2['id'])
-                        actor = self.plotter.add_mesh(points, color='red', style='points_gaussian', show_edges=False)
+                        actor = self.plotter.add_mesh(points, color='red', style='points', show_edges=False)
                         self.intersections.append(actor)
                         print('Warning: {} may intersect {} by {:.3f} percent'\
                               .format(comp1['name'], comp2['name'], 100*overlap_fraction))

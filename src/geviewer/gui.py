@@ -1,15 +1,18 @@
 import sys
 from datetime import datetime
 import traceback
+import webbrowser
 
 from PyQt6.QtWidgets import (
     QApplication, QVBoxLayout, QHBoxLayout, QPushButton, QWidget,
     QCheckBox, QSplitter, QFileDialog, QLabel, QTextEdit, QLineEdit,
-    QColorDialog, QMenu, QToolBar, QSpinBox, QFrame, QScrollArea, QMessageBox,
+    QColorDialog, QMenu, QToolBar, QSpinBox, QFrame, QScrollArea,
+    QMessageBox, QGridLayout, QTabWidget, QGroupBox, QSpacerItem,
+    QSizePolicy, QWidgetAction, QGraphicsOpacityEffect
 )
 from PyQt6.QtGui import (
     QAction, QFont, QColor, QPalette, QDoubleValidator, QIntValidator,
-    QKeySequence, QScreen
+    QKeySequence, QIcon
 )
 from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot, QTimer, QSize
 
@@ -19,11 +22,17 @@ from pyvistaqt import MainWindow
 
 
 class Application(QApplication):
+    """A custom application class for the GeViewer application.
+    """
     def __init__(self, *args, **kwargs):
+        """Initializes the application.
+        """
         super().__init__(*args, **kwargs)
         self.window = None
 
     def notify(self, receiver, event):
+        """Handles unhandled exceptions.
+        """
         try:
             return super().notify(receiver, event)
         except Exception as e:
@@ -45,25 +54,31 @@ class Window(MainWindow):
         super().__init__()
 
         # initialize some class attributes
-        self.default_header = 'No file loaded'
+        self.default_title = 'GeViewer'
         self.current_file = []
         self.checkbox_mapping = {}
         self.events_list = []
         self.figure_size = [1920, 1440]
 
         # create the main window
-        self.setWindowTitle('GeViewer')
+        self.setWindowTitle(self.default_title)
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.main_layout = QHBoxLayout(self.central_widget)
         self.splitter = QSplitter(Qt.Horizontal)
 
         # add panels, toolbar, and menu bar
-        self.add_components_panel()
         self.add_viewer_panel()
         self.add_control_panel()
+        self.add_components_panel()
+
+        self.splitter.addWidget(self.components_panel)
+        self.splitter.addWidget(self.viewer_panel)
+        self.splitter.addWidget(self.control_panel)
+        self.splitter.setChildrenCollapsible(False)
+        self.splitter.setSizes([300, 800, 300])
+        
         self.add_menu_bar()
-        self.splitter.setSizes([200, 800, 200])
 
         # Add the splitter to the layout
         self.main_layout.addWidget(self.splitter)
@@ -71,10 +86,11 @@ class Window(MainWindow):
         self.print_to_console('Welcome to GeViewer!')
         utils.check_for_updates()
 
+        # resize and center the window
+        self.resize_window()
         # Set the window reference
         QApplication.instance().window = self
 
-        self.resize_window()
 
     def resize_window(self):
         # Get the primary screen
@@ -82,17 +98,19 @@ class Window(MainWindow):
         screen_geometry = screen.availableGeometry()
 
         # Get the size hint from the main layout
-        size_hint = self.main_layout.sizeHint()
+        # size_hint = self.main_layout.sizeHint()
 
         # Ensure the size is not larger than the screen
-        desired_width = min(size_hint.width(), int(screen_geometry.width() * 0.9))
-        desired_height = min(size_hint.height(), int(screen_geometry.height() * 0.9))
+        # desired_width = min(size_hint.width(), int(screen_geometry.width() * 0.9))
+        # desired_height = min(size_hint.height(), int(screen_geometry.height() * 0.9))
 
-        # Set the window size
-        self.resize(QSize(desired_width, desired_height))
+        if int(screen_geometry.width()) < 1920:
+            self.showMaximized()
+        else:
+            self.resize(QSize(int(screen_geometry.width() * 0.8), \
+                              int(screen_geometry.height() * 0.8)))
+            self.center_on_screen(screen_geometry)
 
-        # Center the window on the screen
-        self.center_on_screen(screen_geometry)
 
     def center_on_screen(self, screen_geometry):
         frame_geometry = self.frameGeometry()
@@ -100,16 +118,11 @@ class Window(MainWindow):
         frame_geometry.moveCenter(center_point)
         self.move(frame_geometry.topLeft())
 
-    def showEvent(self, event):
-        # This ensures the window is properly sized after all widgets are initialized
-        super().showEvent(event)
-        QTimer.singleShot(0, self.resize_window)
 
     def global_exception_hook(self, exctype, value, traceback_obj):
         """Global method to catch unhandled exceptions."""
         error_message = ''.join(traceback.format_exception(exctype, value, traceback_obj))
-        self.print_to_console('Error:')
-        self.print_to_console(error_message)
+        self.print_to_console('Error:\n' + error_message)
         error_box = QMessageBox()
         error_box.setIcon(QMessageBox.Icon.Critical)
         error_box.setText('An unexpected error occurred.')
@@ -124,28 +137,46 @@ class Window(MainWindow):
         """
         # create a layout for the components panel
         self.components_panel = QWidget()
-        self.components_panel.setMinimumWidth(250)
+        # self.components_panel.setMinimumWidth(256)
         self.object_layout = QVBoxLayout(self.components_panel)
 
         # add a heading
-        heading = QLabel('Components List')
-        heading_font = QFont()
-        heading_font.setPointSize(14)
-        heading_font.setBold(True)
-        heading.setFont(heading_font)
+        heading = QLabel('Components')
+        # heading_font = QFont()
+        # heading_font.setPointSize(13)
+        # # heading_font.setWeight(QFont.Light)
+        # # heading_font.setBold(True)
+        # heading.setFont(heading_font)
+        
+
+        tab_height = self.tab_widget.tabBar().height()  # Get the actual height of the tab
+        heading.setFixedHeight(tab_height)
+        heading.setAlignment(Qt.AlignVCenter)
+        heading.setStyleSheet("padding-left: 5px;")
         self.object_layout.addWidget(heading)
 
         # create the scroll area for the checkboxes
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
+
+        instructions = 'Click "File > Open File..." to add components'
+        self.load_instructions = QLabel(instructions)
+        load_instructions_font = QFont()
+        load_instructions_font.setPointSize(12)
+        load_instructions_font.setItalic(True)
+        opacity_effect = QGraphicsOpacityEffect()
+        opacity_effect.setOpacity(0.5)
+        self.load_instructions.setGraphicsEffect(opacity_effect)
+        self.load_instructions.setFont(load_instructions_font)
+        self.load_instructions.setWordWrap(True)
+        # self.scroll_area.setWidget(self.load_instructions)
+
         self.checkboxes_widget = QWidget()
         self.checkboxes_layout = QVBoxLayout(self.checkboxes_widget)
         self.checkboxes_layout.setAlignment(Qt.AlignTop)
+        self.checkboxes_layout.addWidget(self.load_instructions)
         self.scroll_area.setWidget(self.checkboxes_widget)
         self.object_layout.addWidget(self.scroll_area)
-
-        # add the components panel to the main layout
-        self.splitter.addWidget(self.components_panel)
 
 
     def add_viewer_panel(self):
@@ -153,17 +184,18 @@ class Window(MainWindow):
         """
         # create a layout for the viewer panel
         self.viewer_panel = QWidget()
-        self.viewer_panel.setMinimumWidth(500)
+        # self.viewer_panel.setMinimumWidth(512)
+        # self.viewer_panel.setMinimumHeight(720)
         self.viewer_layout = QVBoxLayout(self.viewer_panel)
 
-        # add a heading that updates as files are loaded
-        self.heading = QLabel('Viewing: ' + self.default_header)
-        heading_font = QFont()
-        heading_font.setPointSize(14)
-        heading_font.setBold(True)
-        self.heading.setFont(heading_font)
-        self.file_name_changed.connect(self.update_header)
-        self.viewer_layout.addWidget(self.heading)
+        # # add a heading that updates as files are loaded
+        # self.heading = QLabel('Viewing: ' + self.default_title)
+        # heading_font = QFont()
+        # heading_font.setPointSize(14)
+        # heading_font.setBold(True)
+        # self.heading.setFont(heading_font)
+        self.file_name_changed.connect(self.update_title)
+        # self.viewer_layout.addWidget(self.heading)
 
         # create the viewer
         self.viewer = GeViewer(self.viewer_panel)
@@ -176,59 +208,238 @@ class Window(MainWindow):
         # add the plotter to the viewer layout
         self.viewer_layout.addWidget(self.plotter.interactor)
 
-        # add the viewer panel to the main layout
-        self.splitter.addWidget(self.viewer_panel)
 
     def add_control_panel(self):
         """Adds the control panel to the main window.
         """
         # create a layout for the control panel
         self.control_panel = QWidget()
-        self.control_panel.setMinimumWidth(250)
+        # self.control_panel.setMinimumWidth(256)
         self.control_layout = QVBoxLayout(self.control_panel)
 
-        # add a heading for the camera options
+        # add a heading for the console
+        control_panel_heading = QLabel('Control Panel')
+        control_panel_heading_font = QFont()
+        control_panel_heading_font.setPointSize(14)
+        control_panel_heading_font.setBold(True)
+        control_panel_heading.setFont(control_panel_heading_font)
+        # self.control_layout.addWidget(control_panel_heading)
+
+        # Create a tab widget
+        self.tab_widget = QTabWidget()
+        self.tab_widget.setMinimumWidth(250)
+        self.tab_widget.setMinimumHeight(300)
+        self.tab_widget.setMaximumHeight(350)
+        # self.tab_widget.setMaximumHeight(350)
+
+        # Create tabs
+        self.options_tab = QWidget()
+        self.tools_tab = QWidget()
+
+        # Create layouts for each tab
+        self.options_layout = QVBoxLayout(self.options_tab)
+        self.tools_layout = QVBoxLayout(self.tools_tab)
+
+        # Add tabs to the tab widget
+        self.tab_widget.addTab(self.options_tab, 'Options')
+        self.tab_widget.addTab(self.tools_tab, 'Tools')
+
+        # Add the tab widget to the control layout
+        self.control_layout.addWidget(self.tab_widget)
+
+        # Add components to tabs
+        self.add_options_tab()
+        self.add_tools_tab()
+
+        # add a separator between the geometry checker and the console
+        # line = QFrame()
+        # line.setFrameShape(QFrame.HLine)
+        # line.setFrameShadow(QFrame.Sunken)
+        # self.control_layout.addWidget(line)
+
+        # Create a QGroupBox for the console
+        # console_group = QGroupBox("Console")
+        console_layout = QVBoxLayout()
+        
+        # Add the console to the group box
+        self.console = QTextEdit()
+        self.console.setReadOnly(True)
+        sys.stdout = utils.ConsoleRedirect(self.console)
+        sys.stderr = utils.ConsoleRedirect(self.console)
+        console_layout.addWidget(self.console)
+        
+        # Set the layout for the group box
+        # console_group.setLayout(console_layout)
+        
+        # Add the group box to the control layout
+        # self.control_layout.addWidget(console_group)
+        self.control_layout.addLayout(console_layout)
+
+        # Add the progress bar
+        self.progress_bar = utils.ProgressBar()
+        self.control_layout.addWidget(self.progress_bar)
+
+
+    def add_options_tab(self):
+        """Adds camera and figure options to the first tab."""
+        grid_layout = QGridLayout()
+
+        # Camera Options section
         heading = QLabel('Camera Options')
         heading_font = QFont()
         heading_font.setPointSize(14)
         heading_font.setBold(True)
         heading.setFont(heading_font)
-        self.control_layout.addWidget(heading)
+        grid_layout.addWidget(heading, 0, 0, 1, 2)  # Spanning 2 columns
 
-        # add editable text box that show the camera position
-        self.camera_position_layout = QHBoxLayout()
-        self.camera_position_label = QLabel('Position (x, y, z):')
+        camera_instructions = 'Enter the coordinates as three comma-separated numbers'
+
+        self.camera_position_label = QLabel('Position:')
         self.camera_position_text = QLineEdit()
-        self.camera_position_text.setMaximumWidth(250)
         self.camera_position_text.setReadOnly(False)
         self.camera_position_text.editingFinished.connect(self.handle_camera_position_change)
-        self.camera_position_layout.addWidget(self.camera_position_label)
-        self.camera_position_layout.addWidget(self.camera_position_text)
-        self.control_layout.addLayout(self.camera_position_layout)
+        self.camera_position_text.setToolTip(camera_instructions)
+        grid_layout.addWidget(self.camera_position_label, 1, 0)
+        grid_layout.addWidget(self.camera_position_text, 1, 1, 1, 1)
 
-        # add editable text box that show the camera focal point
-        self.camera_focal_layout = QHBoxLayout()
-        self.camera_focal_label = QLabel('Focal point (x, y, z):')
+        self.camera_focal_label = QLabel('Focal point:')
         self.camera_focal_text = QLineEdit()
-        self.camera_focal_text.setMaximumWidth(250)
         self.camera_focal_text.setReadOnly(False)
         self.camera_focal_text.editingFinished.connect(self.handle_camera_focal_change)
-        self.camera_focal_layout.addWidget(self.camera_focal_label)
-        self.camera_focal_layout.addWidget(self.camera_focal_text)
-        self.control_layout.addLayout(self.camera_focal_layout)
+        self.camera_focal_text.setToolTip(camera_instructions)
+        grid_layout.addWidget(self.camera_focal_label, 2, 0)
+        grid_layout.addWidget(self.camera_focal_text, 2, 1, 1, 1)
 
-        # add editable text box that show the camera up vector
-        self.camera_up_layout = QHBoxLayout()
-        self.camera_up_label = QLabel('Up vector (x, y, z):')
+        self.camera_up_label = QLabel('Up vector:')
         self.camera_up_text = QLineEdit()
-        self.camera_up_text.setMaximumWidth(250)
         self.camera_up_text.setReadOnly(False)
         self.camera_up_text.editingFinished.connect(self.handle_camera_up_change)
-        self.camera_up_layout.addWidget(self.camera_up_label)
-        self.camera_up_layout.addWidget(self.camera_up_text)
-        self.control_layout.addLayout(self.camera_up_layout)
+        self.camera_up_text.setToolTip(camera_instructions)
+        grid_layout.addWidget(self.camera_up_label, 3, 0)
+        grid_layout.addWidget(self.camera_up_text, 3, 1, 1, 1)
 
-        # create a timer to update the boxes above with the new values
+        # Event Viewer section (moved above Figure Options)
+        event_heading = QLabel('Event Viewer')
+        event_heading_font = QFont()
+        event_heading_font.setPointSize(14)
+        event_heading_font.setBold(True)
+        event_heading.setFont(event_heading_font)
+        grid_layout.addWidget(event_heading, 4, 0, 1, 2)  # Spanning 2 columns
+
+        self.event_selection_label = QLabel('Show event:')
+        self.event_selection_box = QSpinBox()
+        self.event_selection_box.setRange(1, 1)
+        self.event_selection_box.setValue(1)
+        self.event_selection_box.setWrapping(True)
+        self.event_selection_box.valueChanged.connect(lambda: self.show_single_event(self.event_selection_box.value()))
+        grid_layout.addWidget(self.event_selection_label, 5, 0)
+        grid_layout.addWidget(self.event_selection_box, 5, 1, 1, 1)
+
+        # Figure Options section
+        figure_heading = QLabel('Figure Options')
+        figure_heading_font = QFont()
+        figure_heading_font.setPointSize(14)
+        figure_heading_font.setBold(True)
+        figure_heading.setFont(figure_heading_font)
+        grid_layout.addWidget(figure_heading, 6, 0, 1, 2)  # Spanning 2 columns
+
+        figure_instructions = 'Enter the figure width and height in pixels as two comma-separated numbers'
+
+        self.figure_size_label = QLabel('Figure size:')
+        self.figure_size_text = QLineEdit()
+        self.figure_size_text.setText('{}, {}'.format(*self.figure_size))
+        self.figure_size_text.setReadOnly(False)
+        self.figure_size_text.editingFinished.connect(self.handle_figure_size_change)
+        self.figure_size_text.setToolTip(figure_instructions)
+        grid_layout.addWidget(self.figure_size_label, 7, 0)
+        grid_layout.addWidget(self.figure_size_text, 7, 1, 1, 1)
+
+        self.save_button = QPushButton('Export Figure', self)
+        self.save_button.clicked.connect(self.save_file_dialog)
+        grid_layout.addWidget(self.save_button, 8, 0, 1, 2)  # Spanning 2 columns
+
+        self.options_layout.addLayout(grid_layout)
+        
+        # Align the content to the top
+        # self.options_layout.setAlignment(Qt.AlignTop)
+
+
+    def add_tools_tab(self):
+        """Adds view and geometry options to the second tab."""
+        grid_layout = QGridLayout()
+
+        # Overlap Inspector section
+        overlap_heading = QLabel('Overlap Inspector')
+        overlap_heading_font = QFont()
+        overlap_heading_font.setPointSize(14)
+        overlap_heading_font.setBold(True)
+        overlap_heading.setFont(overlap_heading_font)
+        grid_layout.addWidget(overlap_heading, 0, 0, 1, 2)  # Spanning 2 columns
+
+        self.tolerance_label = QLabel('Tolerance:')
+        self.tolerance_box = QLineEdit()
+        double_validator = QDoubleValidator(1e-6, 1, 6)
+        double_validator.setNotation(QDoubleValidator.Notation.StandardNotation)
+        self.tolerance_box.setValidator(double_validator)
+        self.tolerance_box.setText('0.001')
+        self.tolerance_box.setToolTip('Enter the tolerance for overlap detection')
+        grid_layout.addWidget(self.tolerance_label, 1, 0)
+        grid_layout.addWidget(self.tolerance_box, 1, 1, 1, 1)
+
+        self.samples_label = QLabel('Number of points:')
+        self.samples_box = QLineEdit(self)
+        int_validator = QIntValidator(1000, 10000000)
+        self.samples_box.setValidator(int_validator)
+        self.samples_box.setText('10000')
+        self.samples_box.setToolTip('Enter the number of sample points for overlap detection')
+        grid_layout.addWidget(self.samples_label, 2, 0)
+        grid_layout.addWidget(self.samples_box, 2, 1, 1, 1)
+
+        self.check_button = QPushButton('Find Overlaps')
+        self.check_button.clicked.connect(lambda: self.check_geometry(self.tolerance_box.text(), self.samples_box.text()))
+        self.clear_intersections_button = QPushButton('Clear')
+        self.clear_intersections_button.clicked.connect(self.clear_intersections)
+        grid_layout.addWidget(self.check_button, 3, 0)
+        grid_layout.addWidget(self.clear_intersections_button, 3, 1, 1, 1)
+
+        measurement_heading = QLabel('Measurement Tool')
+        measurement_heading_font = QFont()
+        measurement_heading_font.setPointSize(14)
+        measurement_heading_font.setBold(True)
+        measurement_heading.setFont(measurement_heading_font)
+        grid_layout.addWidget(measurement_heading, 4, 0, 1, 2)  # Spanning 2 columns
+
+        # Measurement 1
+        self.measure_text = QLabel('Measurement 1:')
+        self.measurement_box = QLineEdit()
+        self.measurement_box.setReadOnly(True)
+        grid_layout.addWidget(self.measure_text, 5, 0)
+        grid_layout.addWidget(self.measurement_box, 5, 1, 1, 1)
+
+        # Measurement 2
+        self.measure_text_2 = QLabel('Measurement 2:')
+        self.measurement_box_2 = QLineEdit()
+        self.measurement_box_2.setReadOnly(True)
+        grid_layout.addWidget(self.measure_text_2, 6, 0)
+        grid_layout.addWidget(self.measurement_box_2, 6, 1, 1, 1)
+
+        # Measurement 3
+        self.measure_text_3 = QLabel('Measurement 3:')
+        self.measurement_box_3 = QLineEdit()
+        self.measurement_box_3.setReadOnly(True)
+        grid_layout.addWidget(self.measure_text_3, 7, 0)
+        grid_layout.addWidget(self.measurement_box_3, 7, 1, 1, 1)
+
+        # Add and Clear buttons
+        self.measure_button = QPushButton('Add Measurement')
+        self.measure_button.setMinimumWidth(130)
+        self.measure_button.clicked.connect(self.measure_distance)
+        self.clear_measurement_button = QPushButton('Clear')
+        self.clear_measurement_button.clicked.connect(self.clear_measurement)
+        grid_layout.addWidget(self.measure_button, 8, 0)
+        grid_layout.addWidget(self.clear_measurement_button, 8, 1)
+
+        # Create a timer to update the boxes above with the new values
         self.update_timer = QTimer()
         self.update_timer.setInterval(200)
         self.update_timer.setSingleShot(True)
@@ -237,167 +448,10 @@ class Window(MainWindow):
         self.last_figure_size = None
         self.monitor_camera_position()
 
-        # add a separator between the camera options and the figure options
-        line1 = QFrame()
-        line1.setFrameShape(QFrame.HLine)
-        line1.setFrameShadow(QFrame.Sunken)
-        self.control_layout.addWidget(line1)
-
-        # add a heading for the figure options
-        figure_heading = QLabel('Figure Options')
-        figure_heading_font = QFont()
-        figure_heading_font.setPointSize(14)
-        figure_heading_font.setBold(True)
-        figure_heading.setFont(figure_heading_font)
-        self.control_layout.addWidget(figure_heading)
-
-        # add an editable textbox to specify the figure size
-        self.figure_size_layout = QHBoxLayout()
-        self.figure_size_label = QLabel('Size [px] (width, height):')
-        self.figure_size_text = QLineEdit()
-        self.figure_size_text.setMaximumWidth(250)
-        self.figure_size_text.setText('{}, {}'.format(*self.figure_size))
-        self.figure_size_text.setReadOnly(False)
-        self.figure_size_text.editingFinished.connect(self.handle_figure_size_change)
-        self.figure_size_layout.addWidget(self.figure_size_label)
-        self.figure_size_layout.addWidget(self.figure_size_text)
-        self.control_layout.addLayout(self.figure_size_layout)
-
-        # add a button to export the figure
-        self.save_button_layout = QHBoxLayout()
-        self.save_button = QPushButton('Export Figure', self)
-        self.save_button.clicked.connect(self.save_file_dialog)
-        self.save_button_layout.addWidget(self.save_button)
-        self.control_layout.addLayout(self.save_button_layout)
-
-        # add a separator between the figure options and the event viewer
-        line2 = QFrame()
-        line2.setFrameShape(QFrame.HLine)
-        line2.setFrameShadow(QFrame.Sunken)
-        self.control_layout.addWidget(line2)
-
-        # add a heading for the event viewer
-        heading = QLabel('Event Viewer')
-        heading_font = QFont()
-        heading_font.setPointSize(14)
-        heading_font.setBold(True)
-        heading.setFont(heading_font)
-        self.control_layout.addWidget(heading)
-
-        # add a spin box to select the event number
-        self.event_selection_layout = QHBoxLayout()
-        self.event_selection_label = QLabel('Show event number:')
-        self.event_selection_box = QSpinBox()
-        self.event_selection_box.setMaximumWidth(250)
-        self.event_selection_box.setRange(1, 1)
-        self.event_selection_box.setValue(1)
-        self.event_selection_box.setWrapping(True)
-
-        # update the spin box as more events are loaded
-        self.event_selection_box.valueChanged.connect(lambda: self.show_single_event(self.event_selection_box.value()))
-        self.event_selection_layout.addWidget(self.event_selection_label)
-        self.event_selection_layout.addWidget(self.event_selection_box)
-        self.control_layout.addLayout(self.event_selection_layout)
-
-        # add a separator between the event viewer and the geometry checker
-        line3 = QFrame()
-        line3.setFrameShape(QFrame.HLine)
-        line3.setFrameShadow(QFrame.Sunken)
-        self.control_layout.addWidget(line3)
-
-        # add a heading for the geometry checker
-        heading = QLabel('Geometry Tools')
-        heading_font = QFont()
-        heading_font.setPointSize(14)
-        heading_font.setBold(True)
-        heading.setFont(heading_font)
-        self.control_layout.addWidget(heading)
-
-        # add a text box to specify the tolerance for overlap checking
-        self.tolerance_label = QLabel('Tolerance:')
-        self.tolerance_box = QLineEdit()
-        self.tolerance_box.setMaximumWidth(250)
-        double_validator = QDoubleValidator(1e-6, 1, 6)
-        double_validator.setNotation(QDoubleValidator.StandardNotation)
-        self.tolerance_box.setValidator(double_validator)
-        self.tolerance_box.setText('0.001')
-        self.intersection_layout_1 = QHBoxLayout()
-        self.intersection_layout_1.addWidget(self.tolerance_label)
-        self.intersection_layout_1.addWidget(self.tolerance_box)
-        self.control_layout.addLayout(self.intersection_layout_1)
-
-        # add a text box to specify the number of samples for overlap checking
-        self.samples_label = QLabel('Number of points:')
-        self.samples_box = QLineEdit(self)
-        self.samples_box.setMaximumWidth(250)
-        int_validator = QIntValidator(1000, 10000000)
-        self.samples_box.setValidator(int_validator)
-        self.samples_box.setText('10000')
-        self.intersection_layout_2 = QHBoxLayout()
-        self.intersection_layout_2.addWidget(self.samples_label)
-        self.intersection_layout_2.addWidget(self.samples_box)
-        self.control_layout.addLayout(self.intersection_layout_2)
-
-        # add a button to check for overlaps
-        self.check_button = QPushButton('Find Overlaps')
-        self.check_button.setMinimumWidth(120)
-        self.check_button.clicked.connect(lambda: self.check_geometry(self.tolerance_box.text(),\
-                                                                      self.samples_box.text()))
-        self.clear_intersections_button = QPushButton('Clear Overlaps')
-        self.clear_intersections_button.setMinimumWidth(120)
-        self.clear_intersections_button.clicked.connect(self.clear_intersections)
-        self.intersection_layout_3 = QHBoxLayout()
-        self.intersection_layout_3.addWidget(self.check_button)
-        self.intersection_layout_3.addWidget(self.clear_intersections_button)
-        self.control_layout.addLayout(self.intersection_layout_3)
-
-        # add a button to measure the distance between two points
-        self.measure_text = QLabel('Measured distance:')
-        self.measurement_box = QLineEdit()
-        self.measurement_box.setReadOnly(True)
-        self.measurement_box.setMaximumWidth(250)
-        self.measure_button = QPushButton('Measure')
-        self.measure_button.setMinimumWidth(90)
-        self.measure_button.clicked.connect(self.measure_distance)
-        self.clear_measurement_button = QPushButton('Clear Measurement')
-        self.clear_measurement_button.setMinimumWidth(150)
-        self.clear_measurement_button.clicked.connect(self.clear_measurement)
-        self.measure_layout_1 = QHBoxLayout()
-        self.measure_layout_1.addWidget(self.measure_text)
-        self.measure_layout_1.addWidget(self.measurement_box)
-        self.measure_layout_2 = QHBoxLayout()
-        self.measure_layout_2.addWidget(self.measure_button)
-        self.measure_layout_2.addWidget(self.clear_measurement_button)
-        self.control_layout.addLayout(self.measure_layout_1)
-        self.control_layout.addLayout(self.measure_layout_2)
-
-        # add a separator between the geometry checker and the console
-        line4 = QFrame()
-        line4.setFrameShape(QFrame.HLine)
-        line4.setFrameShadow(QFrame.Sunken)
-        self.control_layout.addWidget(line4)
-
-        # add a heading for the console
-        heading = QLabel('Console')
-        heading_font = QFont()
-        heading_font.setPointSize(14)
-        heading_font.setBold(True)
-        heading.setFont(heading_font)
-        self.control_layout.addWidget(heading)
-
-        # add the console and redirect stdout and stderr to it
-        self.console = QTextEdit()
-        self.console.setReadOnly(True)
-        sys.stdout = utils.ConsoleRedirect(self.console)
-        sys.stderr = utils.ConsoleRedirect(self.console)
-        self.control_layout.addWidget(self.console)
-
-        # add the progress bar
-        self.progress_bar = utils.ProgressBar()
-        self.control_layout.addWidget(self.progress_bar)
-
-        # add the control panel to the main layout
-        self.splitter.addWidget(self.control_panel)
+        self.tools_layout.addLayout(grid_layout)
+        
+        # Align the content to the top
+        # self.tools_layout.setAlignment(Qt.AlignTop)
 
 
     def add_toolbar(self):
@@ -405,90 +459,68 @@ class Window(MainWindow):
 
         This method creates a QToolBar and populates it with various actions
         for controlling the viewer's display options and camera views. The
-        toolbar includes buttons for toggling wireframe mode, transparency,
+        toolbar includes actions for toggling wireframe mode, transparency,
         parallel projection, and setting different standard views (isometric,
         top, bottom, front, back).
 
-        Each action in the toolbar is given a large font for better visibility.
-        The toolbar is made movable and the buttons are given a fixed width
-        for consistent appearance.
+        The toolbar is made movable and the actions are given icons for better visibility.
         """
         self.toolbar = QToolBar('Main Toolbar')
         self.toolbar.setMovable(True)
-        self.toolbar.setStyleSheet('QToolButton {min-width: 80px; max-width: 80px;}')
 
-        font = QFont()
-        font.setPointSize(14)
+        toolbar_font = QFont()
+        toolbar_font.setPointSize(12)  # Adjust this value to change the text size
+        action_width = 80
+        self.toolbar.setFont(toolbar_font)
 
-        # add the toggle wireframe action
+        # Create actions
         self.wireframe_action = QAction('Wireframe', self)
-        self.wireframe_action.setFont(font)
+        # self.wireframe_action.setCheckable(True)
         self.wireframe_action.triggered.connect(self.toggle_wireframe)
-        self.toolbar.addAction(self.wireframe_action)
-        self.toolbar.addSeparator()
 
-        # add the toggle transparency action
         self.transparent_action = QAction('Transparent', self)
-        self.transparent_action.setFont(font)
+        # self.transparent_action.setCheckable(True)
         self.transparent_action.triggered.connect(self.toggle_transparent)
-        self.toolbar.addAction(self.transparent_action)
-        self.toolbar.addSeparator()
 
-        # add the parallel action
         self.parallel_action = QAction('Parallel', self)
-        self.parallel_action.setFont(font)
+        # self.parallel_action.setCheckable(True)
         self.parallel_action.triggered.connect(self.toggle_parallel)
-        self.toolbar.addAction(self.parallel_action)
-        self.toolbar.addSeparator()
 
-        # add the isometric view action
         isometric_action = QAction('Isometric', self)
-        isometric_action.setFont(font)
         isometric_action.triggered.connect(self.plotter.view_isometric)
+
+        # Add actions to the toolbar
+        self.toolbar.addAction(self.wireframe_action)
+        tool_button = self.toolbar.widgetForAction(self.wireframe_action)
+        tool_button.setFixedWidth(action_width)
+        self.toolbar.addAction(self.transparent_action)
+        tool_button = self.toolbar.widgetForAction(self.transparent_action)
+        tool_button.setFixedWidth(action_width)
+        self.toolbar.addAction(self.parallel_action)
+        tool_button = self.toolbar.widgetForAction(self.parallel_action)
+        tool_button.setFixedWidth(action_width)
         self.toolbar.addAction(isometric_action)
-        self.toolbar.addSeparator()
+        tool_button = self.toolbar.widgetForAction(isometric_action)
+        tool_button.setFixedWidth(action_width)
 
-        # add the top view action
-        top_action = QAction('Top', self)
-        top_action.setFont(font)
-        top_action.triggered.connect(self.plotter.view_xy)
-        self.toolbar.addAction(top_action)
-        self.toolbar.addSeparator()
+        # tool_button.setStyleSheet("QToolButton { min-width: 80px; max-width: 80px; }")
 
-        # add the bottom view action
-        bottom_action = QAction('Bottom', self)
-        bottom_action.setFont(font)
-        bottom_action.triggered.connect(lambda: self.plotter.view_xy(negative=True))
-        self.toolbar.addAction(bottom_action)
-        self.toolbar.addSeparator()
+        # Create and add actions for view buttons
+        view_actions = [
+            ('Top', self.plotter.view_xy),
+            ('Bottom', lambda: self.plotter.view_xy(negative=True)),
+            ('Front', self.plotter.view_yz),
+            ('Back', lambda: self.plotter.view_yz(negative=True)),
+            ('Left', self.plotter.view_xz),
+            ('Right', lambda: self.plotter.view_xz(negative=True))
+        ]
 
-        # add the front view action
-        front_action = QAction('Front', self)
-        front_action.setFont(font)
-        front_action.triggered.connect(self.plotter.view_yz)
-        self.toolbar.addAction(front_action)
-        self.toolbar.addSeparator()
-
-        # add the back view action
-        back_action = QAction('Back', self)
-        back_action.setFont(font)
-        back_action.triggered.connect(lambda: self.plotter.view_yz(negative=True))
-        self.toolbar.addAction(back_action)
-        self.toolbar.addSeparator()
-
-        # add the left view action
-        left_action = QAction('Left', self)
-        left_action.setFont(font)
-        left_action.triggered.connect(self.plotter.view_xz)
-        self.toolbar.addAction(left_action)
-        self.toolbar.addSeparator()
-
-        # add the right view action
-        right_action = QAction('Right', self)
-        right_action.setFont(font)
-        right_action.triggered.connect(lambda: self.plotter.view_xz(negative=True))
-        self.toolbar.addAction(right_action)
-        self.toolbar.addSeparator()
+        for text, callback in view_actions:
+            action = QAction(text, self)
+            action.triggered.connect(callback)
+            self.toolbar.addAction(action)
+            tool_button = self.toolbar.widgetForAction(action)
+            tool_button.setFixedWidth(60)
 
         self.viewer_layout.addWidget(self.toolbar)
 
@@ -530,7 +562,7 @@ class Window(MainWindow):
         copy_console_action.setShortcut(QKeySequence.Copy)
         clear_console_action = edit_menu.addAction('Clear Console')
         clear_console_action.triggered.connect(self.console.clear)
-        clear_action = edit_menu.addAction('Clear Meshes')
+        clear_action = edit_menu.addAction('Clear Viewer')
         clear_action.triggered.connect(self.clear_meshes)
 
         # create the view menu
@@ -573,12 +605,8 @@ class Window(MainWindow):
         reset_background_action.triggered.connect(lambda: self.open_color_picker(2))
         view_menu.addAction(reset_background_action)
 
-
         # create the window menu
         window_menu = menubar.addMenu('Window')
-        close_action = window_menu.addAction('Close')
-        close_action.triggered.connect(self.close)
-        close_action.setShortcut(QKeySequence.Close)
         maximize_action = window_menu.addAction('Maximize')
         maximize_action.triggered.connect(self.showMaximized)
         minimize_action = window_menu.addAction('Minimize')
@@ -592,10 +620,12 @@ class Window(MainWindow):
         license_action.triggered.connect(self.show_license)
         update_action = help_menu.addAction('Check for Updates')
         update_action.triggered.connect(utils.check_for_updates)
+        documentation_action = help_menu.addAction('Documentation')
+        documentation_action.triggered.connect(self.show_documentation)
 
     
     @pyqtSlot(str)
-    def update_header(self, filename):
+    def update_title(self, filename):
         """Updates the header text to reflect the current file being viewed.
 
         This method updates the text of the header to indicate the current file
@@ -607,11 +637,11 @@ class Window(MainWindow):
         """
         if filename:
             self.current_file.append(filename)
-            viewing = 'Viewing: ' + self.current_file[0] \
+            title = self.default_title + ' - ' + self.current_file[0] \
                     + ['',' + {} more'.format(len(self.current_file) - 1)][len(self.current_file) > 1]
         else:
-            viewing = 'Viewing: ' + self.default_header
-        self.heading.setText(viewing)
+            title = self.default_title
+        self.setWindowTitle(title)
 
 
     @pyqtSlot(int)
@@ -639,6 +669,9 @@ class Window(MainWindow):
         :param level: The level of the components to generate checkboxes for.
         :type level: int
         """
+        self.checkboxes_layout.removeWidget(self.load_instructions)
+        self.load_instructions.hide()
+        self.load_instructions.parentWidget().update()
         for comp in components:
             if comp['id'] not in self.checkbox_mapping:
                 checkbox = QCheckBox(comp['name'])
@@ -1065,7 +1098,7 @@ class Window(MainWindow):
         :type wireframe: bool
         """
         self.viewer.wireframe = wireframe
-        self.update_wireframe_button()
+        self.update_wireframe_action()
 
     
     def clear_meshes(self):
@@ -1080,6 +1113,8 @@ class Window(MainWindow):
         while self.checkboxes_layout.count() > 0:
             item = self.checkboxes_layout.takeAt(0)
             item.widget().deleteLater()
+        self.checkboxes_layout.addWidget(self.load_instructions)
+        self.load_instructions.show()
         self.viewer.clear_meshes()
         self.events_list = []
         self.current_file = []
@@ -1140,7 +1175,7 @@ class Window(MainWindow):
         wireframe button.
         """
         self.viewer.toggle_wireframe()
-        self.update_wireframe_button()
+        self.update_wireframe_action()
 
 
     def toggle_transparent(self):
@@ -1154,7 +1189,7 @@ class Window(MainWindow):
         self.transparent_action.setText('Opaque' if self.viewer.transparent else 'Transparent')
 
 
-    def update_wireframe_button(self):
+    def update_wireframe_action(self):
         """Updates the wireframe button.
 
         This method updates the wireframe button by setting the text to 'Solid'
@@ -1171,20 +1206,25 @@ class Window(MainWindow):
         """
         try:
             options = QFileDialog.Options()
-            file_path, _ = QFileDialog.getOpenFileName(self, 'Open File', '', 
-                                                       'All Supported Files (*.wrl *.heprep *.gev);;' +
-                                                       'VRML Files (*.wrl);;HepRep Files (*.heprep);;' +
-                                                       'GEV Files (*.gev)', options=options)
-            if file_path:
-                self.progress_bar.setValue(0)
-                self.file_name_changed.emit(file_path)
-                self.print_to_console('Loading file: ' + file_path)
-                self.worker = utils.Worker(self.viewer.load_files, self.progress_bar, filename=file_path, off_screen=True)
-                self.worker.on_finished(self.add_components)
-                self.worker.start()
+            dialog = QFileDialog(self, 'Open File', '', 
+                                 'All Supported Files (*.wrl *.heprep *.gev);;' +
+                                 'VRML Files (*.wrl);;HepRep Files (*.heprep);;'
+                                 'GEV Files (*.gev)', options=options)
+            dialog.setFileMode(QFileDialog.ExistingFile)
+            dialog.fileSelected.connect(self.handle_file_selected)
+            dialog.show()
         except Exception as e:
             self.global_exception_hook(type(e), e, e.__traceback__)
 
+    def handle_file_selected(self, file_path):
+        """Handles the selected file."""
+        if file_path:
+            self.progress_bar.setValue(0)
+            self.file_name_changed.emit(file_path)
+            self.print_to_console('Loading file: ' + file_path)
+            self.worker = utils.Worker(self.viewer.load_files, self.progress_bar, filename=file_path, off_screen=True)
+            self.worker.on_finished(self.add_components)
+            self.worker.start()
 
     def save_file_dialog(self):
         """Saves the file dialog.
@@ -1386,6 +1426,8 @@ class Window(MainWindow):
         """
         self.plotter.clear_measure_widgets()
         self.measurement_box.setText('')
+        self.measurement_box_2.setText('')
+        self.measurement_box_3.setText('')
 
 
     def display_measurement(self, point1, point2, distance):
@@ -1401,7 +1443,28 @@ class Window(MainWindow):
         :param distance: The distance between the two points.
         :type distance: float
         """
-        self.measurement_box.setText('{:.3f}'.format(distance))
+        boxes = [self.measurement_box, self.measurement_box_2, self.measurement_box_3]
+        for box in boxes:
+            if box.text() == '':
+                box.setText('{:.3f}'.format(distance))
+                return
+        boxes[0].setText(boxes[1].text())
+        boxes[1].setText(boxes[2].text())
+        boxes[2].setText('{:.3f}'.format(distance))
+
+
+    def show_documentation(self):
+        """Shows the documentation.
+
+        This method shows the documentation by opening the documentation in
+        the default web browser.
+        """
+        try:
+            webbrowser.open('https://geviewer.readthedocs.io/en/latest/')
+        except Exception as e:
+            doc_url = 'https://geviewer.readthedocs.io/en/latest/'
+            self.print_to_console('Find the GeViewer documentation at ' + \
+                '<a href="' + doc_url + '">' + doc_url + '</a>')
 
 
 def launch_app():
@@ -1414,10 +1477,19 @@ def launch_app():
     sys.excepthook = window.global_exception_hook
     
     window.show()
-    sys.exit(app.exec())
+    
+    # Process events before entering the main event loop
+    app.processEvents()
+    
+    # Use exec() instead of exit() to allow for clean shutdown
+    return app.exec()
+
+# Modify the main script to use the return value from launch_app()
+if __name__ == "__main__":
+    sys.exit(launch_app())
 
 
 def global_exception_hook(exctype, value, traceback_obj):
     error_message = ''.join(traceback.format_exception(exctype, value, traceback_obj))
-    print('An error occurred:')
+    print('Error:')
     print(error_message)
