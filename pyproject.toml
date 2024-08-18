@@ -16,9 +16,8 @@ authors = [{ name = "Clarke Hardy", email = "cahardy@stanford.edu" }]
 license = {file = 'LICENSE'}
 readme = "README.md"
 requires-python = ">=3.8"
-dependencies = ["numpy",
-                "pyvista",
-                "tqdm"]
+dependencies = ["PyQt6",
+                "pyvistaqt"]
 keywords = ["geant4",
             "viewer",
             "visualizer",
@@ -31,7 +30,8 @@ keywords = ["geant4",
             "track",
             "detector",
             "geometry",
-            "vrml"]
+            "vrml",
+            "heprep"]
 
 [project.optional-dependencies]
 extras = ["nest_asyncio",
@@ -41,6 +41,7 @@ extras = ["nest_asyncio",
 
 [project.scripts]
 geviewer = "geviewer.main:main"
+geviewer-gui = "geviewer.main:launch"
 
 [project.urls]
 repository = "https://github.com/clarkehardy/geviewer.git"

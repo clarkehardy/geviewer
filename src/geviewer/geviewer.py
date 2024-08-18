@@ -464,3 +464,4 @@ class GeViewer:
         """
         self.plotter.show(cpos=self.initial_camera_pos,\
                           before_close_callback=lambda x: print('\nExiting GeViewer.\n'))
+
