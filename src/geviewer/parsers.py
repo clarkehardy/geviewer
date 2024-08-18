@@ -220,7 +220,7 @@ class VRMLParser(Parser):
         :rtype: tuple
         """
 
-        print('Parsing data...')
+        print('Parsing VRML file...')
 
         polyline_blocks = []
         marker_blocks = []
@@ -545,17 +545,30 @@ class HepRepParser(Parser):
     """Parser for HepRep files.
     """
 
-    def parse_file(self):
+    def parse_file(self, progress_obj=None):
         """Parses the HepRep file and creates the meshes.
         """
-        self.root = self.parse_geometry(self.filename)
+        self.root, total_elements = self.parse_geometry(self.filename)
         component_name = self.filename.split('/')[-1].split('.')[0]
         self.components = [self.initialize_template(component_name)]
         self.event_number = 0
-        self.populate_meshes(self.root, self.components)
-        self.create_meshes(self.components)
+        self.num_components = 0
+        print('Parsing HepRep file...')
+        if progress_obj:
+            progress_obj.reset_progress()
+            progress_obj.set_maximum_value(total_elements)
+        self.populate_meshes(self.root, self.components, progress_obj=progress_obj)
+        if progress_obj:
+            progress_obj.signal_finished()
+        print('Building meshes...')
+        if progress_obj:
+            progress_obj.reset_progress()
+            progress_obj.set_maximum_value(self.num_components)
+        self.create_meshes(self.components, progress_obj=progress_obj)
         self.reduce_components(self.components)
-        self.draw_mesh(self.components)
+        self.build_mesh(self.components)
+        if progress_obj:
+            progress_obj.signal_finished()
 
 
     def parse_geometry(self, xml_file):
@@ -563,10 +576,12 @@ class HepRepParser(Parser):
         """
         tree = ET.parse(xml_file)
         root = tree.getroot()
-        return root
+        # approximation for the sake of the progress bar
+        total_elements = len(root.findall('.//*'))
+        return root, total_elements
 
 
-    def populate_meshes(self, element, components, level=-1):
+    def populate_meshes(self, element, components, level=-1, progress_obj=None):
         """Populates the meshes for the given element.
 
         :param element: The element to populate.
@@ -575,11 +590,17 @@ class HepRepParser(Parser):
         :type components: list
         :param level: The recursion level.
         :type level: int
+        :param progress_obj: The progress object to use for the progress bar.
+        :type progress_obj: ProgressBar, optional
         """
+        if progress_obj:
+            progress_obj.increment_progress()
         for child in element:
+            if progress_obj:
+                progress_obj.increment_progress()
             index = 0
             if child.tag.endswith('instance'):
-                self.populate_meshes(child, components, level + 1)
+                self.populate_meshes(child, components, level + 1, progress_obj)
             elif child.tag.endswith('attvalue') and child.attrib['name'] == 'DrawAs':
                 components[index]['shape'] = child.attrib['value']
             elif child.tag.endswith('attvalue') and child.attrib['name'] == 'LineColor':
@@ -596,6 +617,8 @@ class HepRepParser(Parser):
             elif child.tag.endswith('primitive'):
                 points = []
                 for grandchild in child:
+                    if progress_obj:
+                        progress_obj.increment_progress()
                     if grandchild.tag.endswith('point'):
                         points.append([float(grandchild.attrib['x']), \
                                        float(grandchild.attrib['y']), \
@@ -613,7 +636,7 @@ class HepRepParser(Parser):
                 if name == 'Event Data':
                     self.event_number += 1
                 if self.event_number > 0 and (name == 'TransientPolylines' or \
-                                            name == 'Hits'):
+                                              name == 'Hits'):
                     # these seem to contain the same information as trajectories
                     # so skip them for now
                     continue
@@ -624,22 +647,24 @@ class HepRepParser(Parser):
                 elif self.event_number > 0 and name == 'Trajectory Step Points':
                     is_event = True
                 child_component = self.initialize_template(name)
+                self.num_components += 1
                 child_component['is_event'] = is_event
-                self.populate_meshes(child, [child_component], level + 1)
+                self.populate_meshes(child, [child_component], level + 1, progress_obj)
                 components[index]['children'].append(child_component)
-                    
                 index += 1
 
 
-    def create_meshes(self, components):
+    def create_meshes(self, components, progress_obj=None):
         """Creates the meshes for the given components.
 
         :param components: The list of components to create meshes for.
         :type components: list
         """
         for comp in components:
+            if progress_obj:
+                progress_obj.increment_progress()
             if len(comp['children']) > 0:
-                self.create_meshes(comp['children'])
+                self.create_meshes(comp['children'], progress_obj)
             if comp['shape'] == 'Prism':
                 comp['mesh_points'] = np.array(comp['points'])
                 comp['mesh_inds'] = [[4, 0, 1, 2, 3,\
@@ -712,7 +737,7 @@ class HepRepParser(Parser):
                                                    zip(comp['colors'], comp['points'])])]
 
 
-    def draw_mesh(self, components):
+    def build_mesh(self, components):
         """Draws the meshes for the given components.
 
         :param components: The list of components to draw meshes for.
@@ -720,7 +745,7 @@ class HepRepParser(Parser):
         """
         for comp in components:
             if len(comp['children']) > 0:
-                self.draw_mesh(comp['children'])
+                self.build_mesh(comp['children'])
             if comp['shape'] == 'Prism' and len(comp['mesh_points']) > 0 and comp['visible']:
                 for i, points in enumerate(comp['mesh_points']):
                     shape = pv.PolyData(points, faces=comp['mesh_inds'][i])
@@ -745,8 +770,6 @@ class HepRepParser(Parser):
             
             shape.point_data.set_scalars(comp['scalars'][i], name='color')
             shape = shape.clean()
-            if not shape.is_manifold:
-                print('Warning: {} is not a manifold object'.format(comp['name']))
             comp['mesh'] = shape
 
 

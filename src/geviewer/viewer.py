@@ -41,7 +41,7 @@ class GeViewer:
         self.actors = {}
 
 
-    def load_files(self, filename, off_screen=False,\
+    def load_file(self, filename, off_screen=False,\
                    progress_callback=None):
         """Loads the files.
 
@@ -61,7 +61,7 @@ class GeViewer:
             new_components = [parser.components]
         elif filename.endswith('heprep'):
             parser = parsers.HepRepParser(filename)
-            parser.parse_file()
+            parser.parse_file(progress_callback)
             new_components = parser.components
         self.num_to_plot = self.count_components(new_components)
         self.components.extend(new_components)
@@ -98,17 +98,6 @@ class GeViewer:
             progress_obj.signal_finished()
 
 
-    def set_background_color(self):
-        """Sets the background color.
-        """
-        if not self.bkg_on:
-            return
-        if self.gradient:
-            self.plotter.set_background(self.bkg_colors[0],top=self.bkg_colors[1])
-        else:
-            self.plotter.set_background(self.bkg_colors[0])
-
-
     def plot_meshes(self, components, level=0, progress_obj=None):
         """Plots the meshes.
 
@@ -141,8 +130,19 @@ class GeViewer:
                 self.plot_meshes(comp['children'], level + 1)
         if level == 0:
             self.plotter.view_isometric()
-            print('Done.\n')
+            print('Done plotting.')
             self.num_to_plot = 0
+        
+
+    def set_background_color(self):
+        """Sets the background color.
+        """
+        if not self.bkg_on:
+            return
+        if self.gradient:
+            self.plotter.set_background(self.bkg_colors[0],top=self.bkg_colors[1])
+        else:
+            self.plotter.set_background(self.bkg_colors[0])
 
 
     def toggle_parallel_projection(self):
@@ -159,7 +159,6 @@ class GeViewer:
         """Toggles the gradient background on and off.
         """
         self.bkg_on = not self.bkg_on
-        print('Toggling background ' + ['off.','on.'][self.bkg_on] + '\n')
         if self.bkg_on:
             top = self.bkg_colors[1] if self.gradient else None
             self.plotter.set_background(self.bkg_colors[0],top=top)
@@ -173,7 +172,6 @@ class GeViewer:
         """Toggles between solid and wireframe display modes. Disables depth
         peeling if wireframe mode is enabled to improve responsiveness.
         """
-        print('Switching to ' + ['wireframe', 'solid'][self.wireframe] + ' mode.\n')
         self.wireframe = not self.wireframe
         if self.wireframe:
             for actor in self.actors.values():
@@ -188,7 +186,6 @@ class GeViewer:
     def toggle_transparent(self):
         """Toggles transparency on and off.
         """
-        print('Switching to ' + ['transparent', 'opaque'][self.transparent] + ' mode.\n')
         self.transparent = not self.transparent
         if self.transparent:
             self.plotter.enable_depth_peeling()
@@ -267,7 +264,6 @@ class GeViewer:
                     i += 1
                 filename = 'viewer{}.gev'.format(i)
             shutil.copy(tmpdir + '/gevfile.gev', filename)
-        print('Success: session saved to ' + str(Path(filename).resolve()) + '.\n')
 
                 
     def load(self, filename):

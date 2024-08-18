@@ -1,9 +1,9 @@
 import sys
-from datetime import datetime
 import traceback
 import webbrowser
 import io
 import re
+
 from PyQt6.QtCore import QDateTime, QThread, pyqtSignal, QEventLoop
 
 from PyQt6.QtWidgets import (
@@ -19,7 +19,7 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot, QTimer, QSize, QObject
 
-from geviewer.geviewer import GeViewer
+from geviewer.viewer import GeViewer
 import geviewer.utils as utils
 from pyvistaqt import MainWindow
 
@@ -66,10 +66,10 @@ class Window(MainWindow):
 
         # create the main window
         self.setWindowTitle(self.default_title)
-        self.central_widget = QWidget()
-        self.setCentralWidget(self.central_widget)
-        self.main_layout = QHBoxLayout(self.central_widget)
-        self.splitter = QSplitter(Qt.Horizontal)
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QHBoxLayout(central_widget)
+        splitter = QSplitter(Qt.Horizontal)
 
         # add panels and menu bar
         self.create_viewer_panel()
@@ -78,18 +78,20 @@ class Window(MainWindow):
         self.add_menu_bar()
 
         # create a splitter and add the panels to it
-        self.splitter.addWidget(self.components_panel)
-        self.splitter.addWidget(self.viewer_panel)
-        self.splitter.addWidget(self.control_panel)
-        self.splitter.setChildrenCollapsible(False)
-        self.splitter.setSizes([300, 800, 300])
-        self.main_layout.addWidget(self.splitter)
+        splitter.addWidget(self.components_panel)
+        splitter.addWidget(self.viewer_panel)
+        splitter.addWidget(self.control_panel)
+        splitter.setChildrenCollapsible(False)
+        splitter.setSizes([300, 800, 300])
+        main_layout.addWidget(splitter)
 
         # other setup
         self.number_of_events.connect(self.update_event_total)
         self.file_name_changed.connect(self.update_title)
         self.print_to_console('Welcome to GeViewer!')
-        utils.check_for_updates()
+        updates = utils.check_for_updates()
+        if updates:
+            self.print_to_console(updates)
         self.resize_window()
         QApplication.instance().window = self
 
@@ -143,7 +145,7 @@ class Window(MainWindow):
         for file in files:
             self.load_file(file)
             
-            # Wait for the file to be loaded completely
+            # wait for the file to be loaded completely
             loop = QEventLoop()
             self.file_load_manager.file_loaded.connect(loop.quit)
             loop.exec()
@@ -158,7 +160,7 @@ class Window(MainWindow):
         """
         # create a layout for the components panel
         self.components_panel = QWidget()
-        self.object_layout = QVBoxLayout(self.components_panel)
+        ojbect_layout = QVBoxLayout(self.components_panel)
 
         # add a heading
         heading = QLabel('Components')
@@ -166,11 +168,11 @@ class Window(MainWindow):
         heading.setFixedHeight(tab_height)
         heading.setAlignment(Qt.AlignVCenter)
         heading.setStyleSheet("padding-left: 5px;")
-        self.object_layout.addWidget(heading)
+        ojbect_layout.addWidget(heading)
 
         # create the scroll area for the checkboxes
-        self.scroll_area = QScrollArea()
-        self.scroll_area.setWidgetResizable(True)
+        components_area = QScrollArea()
+        components_area.setWidgetResizable(True)
 
         # add temporary instructions
         instructions = 'Click "File > Open File..." to add components'
@@ -185,12 +187,12 @@ class Window(MainWindow):
         self.load_instructions.setWordWrap(True)
 
         # create a widget to hold the checkboxes
-        self.checkboxes_widget = QWidget()
-        self.checkboxes_layout = QVBoxLayout(self.checkboxes_widget)
+        checkboxes_widget = QWidget()
+        self.checkboxes_layout = QVBoxLayout(checkboxes_widget)
         self.checkboxes_layout.setAlignment(Qt.AlignTop)
         self.checkboxes_layout.addWidget(self.load_instructions)
-        self.scroll_area.setWidget(self.checkboxes_widget)
-        self.object_layout.addWidget(self.scroll_area)
+        components_area.setWidget(checkboxes_widget)
+        ojbect_layout.addWidget(components_area)
 
 
     def create_viewer_panel(self):
@@ -217,7 +219,7 @@ class Window(MainWindow):
         """
         # create a layout for the control panel
         self.control_panel = QWidget()
-        self.control_layout = QVBoxLayout(self.control_panel)
+        control_layout = QVBoxLayout(self.control_panel)
 
         # add a heading for the console
         control_panel_heading = QLabel('Control Panel')
@@ -226,28 +228,22 @@ class Window(MainWindow):
         control_panel_heading_font.setBold(True)
         control_panel_heading.setFont(control_panel_heading_font)
 
-        # Create a tab widget
+        # create a tab widget
         self.tab_widget = QTabWidget()
         self.tab_widget.setMinimumWidth(250)
         self.tab_widget.setMinimumHeight(300)
         self.tab_widget.setMaximumHeight(350)
 
-        # Create tabs
-        self.options_tab = QWidget()
-        self.tools_tab = QWidget()
+        # create tabs
+        options_tab = QWidget()
+        tools_tab = QWidget()
+        self.options_layout = QVBoxLayout(options_tab)
+        self.tools_layout = QVBoxLayout(tools_tab)
+        self.tab_widget.addTab(options_tab, 'Options')
+        self.tab_widget.addTab(tools_tab, 'Tools')
+        control_layout.addWidget(self.tab_widget)
 
-        # Create layouts for each tab
-        self.options_layout = QVBoxLayout(self.options_tab)
-        self.tools_layout = QVBoxLayout(self.tools_tab)
-
-        # Add tabs to the tab widget
-        self.tab_widget.addTab(self.options_tab, 'Options')
-        self.tab_widget.addTab(self.tools_tab, 'Tools')
-
-        # Add the tab widget to the control layout
-        self.control_layout.addWidget(self.tab_widget)
-
-        # Add components to tabs
+        # add components to tabs
         self.add_options_tab()
         self.add_tools_tab()
 
@@ -258,18 +254,18 @@ class Window(MainWindow):
         sys.stdout = ConsoleRedirect(self.console)
         sys.stderr = ConsoleRedirect(self.console)
         console_layout.addWidget(self.console)
-        self.control_layout.addLayout(console_layout)
+        control_layout.addLayout(console_layout)
 
         # Add the progress bar
         self.progress_bar = ProgressBar()
-        self.control_layout.addWidget(self.progress_bar)
+        control_layout.addWidget(self.progress_bar)
 
 
     def add_options_tab(self):
         """Adds camera and figure options to the first tab."""
         grid_layout = QGridLayout()
 
-        # camera Options section
+        # camera options section
         heading = QLabel('Camera Options')
         heading_font = QFont()
         heading_font.setPointSize(14)
@@ -354,31 +350,31 @@ class Window(MainWindow):
         overlap_heading.setFont(overlap_heading_font)
         grid_layout.addWidget(overlap_heading, 0, 0, 1, 2)
 
-        self.tolerance_label = QLabel('Tolerance:')
-        self.tolerance_box = QLineEdit()
+        tolerance_label = QLabel('Tolerance:')
+        tolerance_box = QLineEdit()
         double_validator = QDoubleValidator(1e-6, 1, 6)
         double_validator.setNotation(QDoubleValidator.Notation.StandardNotation)
-        self.tolerance_box.setValidator(double_validator)
-        self.tolerance_box.setText('0.001')
-        self.tolerance_box.setToolTip('Enter the tolerance for overlap detection')
-        grid_layout.addWidget(self.tolerance_label, 1, 0)
-        grid_layout.addWidget(self.tolerance_box, 1, 1, 1, 1)
+        tolerance_box.setValidator(double_validator)
+        tolerance_box.setText('0.001')
+        tolerance_box.setToolTip('Enter the tolerance for overlap detection')
+        grid_layout.addWidget(tolerance_label, 1, 0)
+        grid_layout.addWidget(tolerance_box, 1, 1, 1, 1)
 
-        self.samples_label = QLabel('Number of points:')
-        self.samples_box = QLineEdit(self)
+        samples_label = QLabel('Number of points:')
+        samples_box = QLineEdit(self)
         int_validator = QIntValidator(1000, 10000000)
-        self.samples_box.setValidator(int_validator)
-        self.samples_box.setText('10000')
-        self.samples_box.setToolTip('Enter the number of sample points for overlap detection')
-        grid_layout.addWidget(self.samples_label, 2, 0)
-        grid_layout.addWidget(self.samples_box, 2, 1, 1, 1)
+        samples_box.setValidator(int_validator)
+        samples_box.setText('10000')
+        samples_box.setToolTip('Enter the number of sample points for overlap detection')
+        grid_layout.addWidget(samples_label, 2, 0)
+        grid_layout.addWidget(samples_box, 2, 1, 1, 1)
 
-        self.check_button = QPushButton('Find Overlaps')
-        self.check_button.clicked.connect(lambda: self.check_geometry(self.tolerance_box.text(), self.samples_box.text()))
-        self.clear_overlaps_button = QPushButton('Clear')
-        self.clear_overlaps_button.clicked.connect(self.clear_overlaps)
-        grid_layout.addWidget(self.check_button, 3, 0)
-        grid_layout.addWidget(self.clear_overlaps_button, 3, 1, 1, 1)
+        check_button = QPushButton('Find Overlaps')
+        check_button.clicked.connect(lambda: self.check_geometry(tolerance_box.text(), samples_box.text()))
+        clear_overlaps_button = QPushButton('Clear')
+        clear_overlaps_button.clicked.connect(self.clear_overlaps)
+        grid_layout.addWidget(check_button, 3, 0)
+        grid_layout.addWidget(clear_overlaps_button, 3, 1, 1, 1)
 
         # measurement tool section
         measurement_heading = QLabel('Measurement Tool')
@@ -388,31 +384,31 @@ class Window(MainWindow):
         measurement_heading.setFont(measurement_heading_font)
         grid_layout.addWidget(measurement_heading, 4, 0, 1, 2)
 
-        self.measure_text = QLabel('Measurement 1:')
+        measure_text = QLabel('Measurement 1:')
         self.measurement_box = QLineEdit()
         self.measurement_box.setReadOnly(True)
-        grid_layout.addWidget(self.measure_text, 5, 0)
+        grid_layout.addWidget(measure_text, 5, 0)
         grid_layout.addWidget(self.measurement_box, 5, 1, 1, 1)
 
-        self.measure_text_2 = QLabel('Measurement 2:')
+        measure_text_2 = QLabel('Measurement 2:')
         self.measurement_box_2 = QLineEdit()
         self.measurement_box_2.setReadOnly(True)
-        grid_layout.addWidget(self.measure_text_2, 6, 0)
+        grid_layout.addWidget(measure_text_2, 6, 0)
         grid_layout.addWidget(self.measurement_box_2, 6, 1, 1, 1)
 
-        self.measure_text_3 = QLabel('Measurement 3:')
+        measure_text_3 = QLabel('Measurement 3:')
         self.measurement_box_3 = QLineEdit()
         self.measurement_box_3.setReadOnly(True)
-        grid_layout.addWidget(self.measure_text_3, 7, 0)
+        grid_layout.addWidget(measure_text_3, 7, 0)
         grid_layout.addWidget(self.measurement_box_3, 7, 1, 1, 1)
 
-        self.measure_button = QPushButton('Add Measurement')
-        self.measure_button.setMinimumWidth(130)
-        self.measure_button.clicked.connect(self.measure_distance)
-        self.clear_measurement_button = QPushButton('Clear')
-        self.clear_measurement_button.clicked.connect(self.clear_measurement)
-        grid_layout.addWidget(self.measure_button, 8, 0)
-        grid_layout.addWidget(self.clear_measurement_button, 8, 1)
+        measure_button = QPushButton('Add Measurement')
+        measure_button.setMinimumWidth(130)
+        measure_button.clicked.connect(self.measure_distance)
+        clear_measurement_button = QPushButton('Clear')
+        clear_measurement_button.clicked.connect(self.clear_measurement)
+        grid_layout.addWidget(measure_button, 8, 0)
+        grid_layout.addWidget(clear_measurement_button, 8, 1)
 
         # timer to update the camera settings when the view is changed
         self.update_timer = QTimer()
@@ -466,13 +462,20 @@ class Window(MainWindow):
 
         # view actions that don't change when clicked
         view_actions = [
-            ('Isometric', self.plotter.view_isometric),
-            ('Top', self.plotter.view_xy),
-            ('Bottom', lambda: self.plotter.view_xy(negative=True)),
-            ('Front', self.plotter.view_yz),
-            ('Back', lambda: self.plotter.view_yz(negative=True)),
-            ('Left', self.plotter.view_xz),
-            ('Right', lambda: self.plotter.view_xz(negative=True))
+            ('Isometric', lambda: (self.print_to_console('Switching to isometric view.'), \
+                                   self.plotter.view_isometric())),
+            ('Top', lambda: (self.print_to_console('Switching to top view.'), \
+                             self.plotter.view_xy())),
+            ('Bottom', lambda: (self.print_to_console('Switching to bottom view.'), \
+                                self.plotter.view_xy(negative=True))),
+            ('Front', lambda: (self.print_to_console('Switching to front view.'), \
+                               self.plotter.view_yz())),
+            ('Back', lambda: (self.print_to_console('Switching to back view.'), \
+                              self.plotter.view_yz(negative=True))),
+            ('Left', lambda: (self.print_to_console('Switching to left view.'), \
+                              self.plotter.view_xz())),
+            ('Right', lambda: (self.print_to_console('Switching to right view.'), \
+                               self.plotter.view_xz(negative=True)))
         ]
 
         for text, callback in view_actions:
@@ -579,7 +582,7 @@ class Window(MainWindow):
         license_action = help_menu.addAction('License')
         license_action.triggered.connect(self.show_license)
         update_action = help_menu.addAction('Check for Updates')
-        update_action.triggered.connect(utils.check_for_updates)
+        update_action.triggered.connect(self.check_for_updates)
         documentation_action = help_menu.addAction('Documentation')
         documentation_action.triggered.connect(self.show_documentation)
 
@@ -590,9 +593,9 @@ class Window(MainWindow):
     
     @pyqtSlot(str)
     def update_title(self, filename):
-        """Updates the header text to reflect the current file being viewed.
+        """Updates the title text to reflect the current file being viewed.
 
-        This method updates the text of the header to indicate the current file
+        This method updates the text of the window title to indicate the current file
         being viewed. If multiple files are being viewed, it will also show
         the number of additional files being viewed.
 
@@ -723,6 +726,7 @@ class Window(MainWindow):
         :param event_index: The index of the event to show.
         :type event_index: int
         """
+        self.print_to_console('Showing event {}.'.format(event_index))
         for i, event in enumerate(self.events_list):
             if i == event_index - 1:
                 self.checkbox_mapping[event].setCheckState(Qt.CheckState.Checked)
@@ -737,6 +741,7 @@ class Window(MainWindow):
         attribute of the viewer to the opposite of its current value and
         updating the parallel button.
         """
+        self.print_to_console('Turning parallel projection ' + ['on.','off.'][self.viewer.parallel])
         self.viewer.toggle_parallel_projection()
         self.parallel_action.setText('Perspective' if self.viewer.parallel else 'Parallel')
 
@@ -748,6 +753,7 @@ class Window(MainWindow):
         of the viewer to the opposite of its current value and updating the
         wireframe button.
         """
+        self.print_to_console('Switching to ' + ['wireframe', 'solid'][self.viewer.wireframe] + ' mode.')
         self.viewer.toggle_wireframe()
         self.update_wireframe_action()
 
@@ -759,6 +765,7 @@ class Window(MainWindow):
         of the viewer to the opposite of its current value and updating the
         transparency button.
         """
+        self.print_to_console('Switching to ' + ['transparent', 'opaque'][self.viewer.transparent] + ' mode.')
         self.viewer.toggle_transparent()
         self.transparent_action.setText('Opaque' if self.viewer.transparent else 'Transparent')
 
@@ -808,6 +815,7 @@ class Window(MainWindow):
         :param position: The new camera position.
         :type position: str
         """
+        self.print_to_console('Setting camera position to ' + position + '.')
         position = [float(x) for x in position.split(',')]
         self.plotter.camera.position = position
         self.plotter.update()
@@ -822,6 +830,7 @@ class Window(MainWindow):
         :param focal_point: The new camera focal point.
         :type focal_point: str
         """
+        self.print_to_console('Setting camera focal point to ' + focal_point + '.')
         focal_point = [float(x) for x in focal_point.split(',')]
         self.plotter.camera.focal_point = focal_point
         self.plotter.update()
@@ -836,6 +845,7 @@ class Window(MainWindow):
         :param up_vector: The new camera up vector.
         :type up_vector: str
         """
+        self.print_to_console('Setting camera up vector to ' + up_vector + '.')
         up_vector = [float(x) for x in up_vector.split(',')]
         self.plotter.camera.up = up_vector
         self.plotter.update()
@@ -850,6 +860,7 @@ class Window(MainWindow):
         :param figure_size: The new figure size.
         :type figure_size: str
         """
+        self.print_to_console('Setting figure size to ' + figure_size + '.')
         figure_size = [int(x) for x in figure_size.split(',')]
         self.figure_size = figure_size
 
@@ -1150,15 +1161,14 @@ class Window(MainWindow):
         """
         import pyvista as pv
 
-        # Create an off-screen plotter with the desired size
+        # create an off-screen plotter with the given size
         off_screen_plotter = pv.Plotter(off_screen=True, window_size=[width, height])
         off_screen_plotter.set_background(*self.viewer.bkg_colors)
         
-        # Copy the mesh and camera settings to the off-screen plotter
+        # copy the mesh and camera settings to the off-screen plotter
         for actor in self.plotter.renderer.actors.values():
             off_screen_plotter.add_actor(actor)
         
-        # Copy camera position
         off_screen_plotter.camera_position = self.plotter.camera_position
         off_screen_plotter.enable_anti_aliasing('msaa', multi_samples=16)
 
@@ -1197,7 +1207,7 @@ class Window(MainWindow):
             self.print_to_console('Success: no overlaps found.')
         else:
             self.show_overlaps(overlapping_meshes)
-            self.print_to_console('Done.')
+            self.print_to_console('Done checking geometry.')
 
 
     def show_overlaps(self, overlapping_meshes):
@@ -1215,7 +1225,7 @@ class Window(MainWindow):
         for mesh_id in overlapping_meshes:
             self.checkbox_mapping[mesh_id].setCheckState(Qt.CheckState.Checked)
         if not self.viewer.transparent:
-            self.toggle_transparent()
+            self.viewer.toggle_transparent()
         self.plotter.view_isometric()
 
 
@@ -1228,6 +1238,7 @@ class Window(MainWindow):
         for actor in self.viewer.overlaps:
             self.plotter.remove_actor(actor)
         self.viewer.overlaps = []
+        self.print_to_console('Overlaps cleared.')
 
 
     def measure_distance(self):
@@ -1236,6 +1247,7 @@ class Window(MainWindow):
         This method measures the distance by adding a measurement widget to the plotter
         and clearing the measurement box.
         """
+        self.print_to_console('Measuring distance. Click on two points to measure the distance between them.')
         self.plotter.add_measurement_widget(self.display_measurement)
 
 
@@ -1265,12 +1277,13 @@ class Window(MainWindow):
     def clear_measurement(self):
         """Clears the measurement.
 
-        This method clears the measurement by clearing the measurement box.
+        This method clears the measurement by clearing the measurement boxes.
         """
         self.plotter.clear_measure_widgets()
         self.measurement_box.setText('')
         self.measurement_box_2.setText('')
         self.measurement_box_3.setText('')
+        self.print_to_console('Measurements cleared.')
 
     ##############################################################
     # Methods for the console
@@ -1319,7 +1332,7 @@ class Window(MainWindow):
             self.progress_bar.setValue(0)
             self.file_name_changed.emit(file_path)
             self.print_to_console('Loading file: ' + file_path)
-            self.worker = Worker(self.viewer.load_files, self.progress_bar, filename=file_path, off_screen=True)
+            self.worker = Worker(self.viewer.load_file, self.progress_bar, filename=file_path, off_screen=True)
             self.worker.on_finished(self.on_file_loaded)
             self.worker.start()
 
@@ -1329,6 +1342,7 @@ class Window(MainWindow):
         """
         self.add_components()
         self.file_load_manager.file_loaded.emit()
+        self.print_to_console('Success: file loaded.')
 
 
     def save_file_dialog(self):
@@ -1344,6 +1358,7 @@ class Window(MainWindow):
             
             if file_name:
                 self.viewer.save(file_name)
+                self.print_to_console('Success: file saved to {}.')
                 
         except Exception as e:
             self.global_exception_hook(type(e), e, e.__traceback__)
@@ -1367,6 +1382,7 @@ class Window(MainWindow):
         self.events_list = []
         self.current_file = []
         self.file_name_changed.emit(None)
+        self.print_to_console('Viewer cleared.')
 
 
     def toggle_components_panel(self):
@@ -1377,8 +1393,10 @@ class Window(MainWindow):
         """
         if self.components_panel.isVisible():
             self.components_panel.hide()
+            self.print_to_console('Hiding components panel.')
         else:
             self.components_panel.show()
+            self.print_to_console('Showing components panel.')
 
 
     def toggle_control_panel(self):
@@ -1389,8 +1407,10 @@ class Window(MainWindow):
         """
         if self.control_panel.isVisible():
             self.control_panel.hide()
+            self.print_to_console('Hiding control panel.')
         else:
             self.control_panel.show()
+            self.print_to_console('Showing control panel.')
 
 
     def toggle_background(self):
@@ -1400,6 +1420,7 @@ class Window(MainWindow):
         of the viewer to the opposite of its current value and updating the
         background button.
         """
+        self.print_to_console('Toggling background ' + ['on.','off.'][self.viewer.bkg_on])
         self.viewer.toggle_background()
         self.viewer.plotter.update()
 
@@ -1411,6 +1432,7 @@ class Window(MainWindow):
         of the viewer to the opposite of its current value and updating the
         background color of the viewer.
         """
+        self.print_to_console('Toggling gradient ' + ['on.','off.'][self.viewer.gradient])
         self.viewer.gradient = not self.viewer.gradient
         self.viewer.set_background_color()
 
@@ -1424,12 +1446,15 @@ class Window(MainWindow):
         :param button: The button to open the color picker for.
         :type button: int
         """
-        if button==2:
+        if button == 2:
             self.viewer.bkg_colors = ['lightskyblue', 'midnightblue']
+            self.print_to_console('Resetting background color.')
         else:
             color = QColorDialog.getColor()
             if color.isValid():
                 self.viewer.bkg_colors[button] = color.getRgbF()[:3]
+                hex_color = color.name()
+                self.print_to_console('Setting background color {} to {}.'.format(button + 1, hex_color))
         self.viewer.set_background_color()
 
 
@@ -1442,6 +1467,19 @@ class Window(MainWindow):
         with open('LICENSE') as f:
             license_text = f.read().replace('\n\n', '<>').replace('\n', ' ').replace('<>', '\n\n')
         self.print_to_console('\n' + license_text)
+
+
+    def check_for_updates(self):
+        """Checks for updates.
+
+        This method checks for updates by calling the check_for_updates function
+        from the utils module and printing the result to the console.
+        """
+        updates = utils.check_for_updates()
+        if updates:
+            self.print_to_console(updates)
+        else:
+            self.print_to_console('You are using the latest version of GeViewer.')
 
 
     def show_documentation(self):
@@ -1461,20 +1499,15 @@ class Window(MainWindow):
 class ConsoleRedirect(io.StringIO):
     """Redirects stdout and stderr to a QTextEdit widget.
     """
-    def __init__(self, text_edit):
+    def __init__(self, console):
         """Initializes the console redirect.
 
         :param text_edit: The text edit widget to redirect to.
         :type text_edit: QTextEdit
         """
         super().__init__()
-        self.text_edit = text_edit
-        self.warning_format = QTextCharFormat()
-        self.warning_format.setForeground(QColor('orange'))
-        self.warning_format.setFontWeight(QFont.Bold)
-        self.error_format = QTextCharFormat()
-        self.error_format.setForeground(QColor('red'))
-        self.error_format.setFontWeight(QFont.Bold)
+        self.console = console
+
 
     def write(self, text):
         """Writes to the console.
@@ -1485,11 +1518,12 @@ class ConsoleRedirect(io.StringIO):
         :param text: The text to write to the console.
         :type text: str
         """
-        self.text_edit.moveCursor(QTextCursor.End)
+        self.console.moveCursor(QTextCursor.End)
         text = self.stylize_text(text)
-        self.text_edit.insertHtml(text)
-        self.text_edit.moveCursor(QTextCursor.End)
+        self.console.insertHtml(text)
+        self.console.moveCursor(QTextCursor.End)
         super().write(text)
+
         
     def stylize_text(self, text):
         """Stylizes the text.
@@ -1510,6 +1544,7 @@ class ConsoleRedirect(io.StringIO):
         text = re.sub(r'\b(Error)\b', r'<b style="color: red;">\1</b>', text)
         text = re.sub(r'\b(Success)\b', r'<b style="color: green;">\1</b>', text)
         return text
+
 
     def flush(self):
         pass
