@@ -4,7 +4,7 @@ import traceback
 import webbrowser
 import io
 import re
-from PyQt6.QtCore import QDateTime, QThread, pyqtSignal
+from PyQt6.QtCore import QDateTime, QThread, pyqtSignal, QEventLoop
 
 from PyQt6.QtWidgets import (
     QApplication, QVBoxLayout, QHBoxLayout, QPushButton, QWidget,
@@ -17,7 +17,7 @@ from PyQt6.QtGui import (
     QAction, QFont, QColor, QPalette, QDoubleValidator, QIntValidator,
     QKeySequence, QIcon, QTextCharFormat, QTextCursor
 )
-from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot, QTimer, QSize
+from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot, QTimer, QSize, QObject
 
 from geviewer.geviewer import GeViewer
 import geviewer.utils as utils
@@ -62,6 +62,7 @@ class Window(MainWindow):
         self.checkbox_mapping = {}
         self.events_list = []
         self.figure_size = [1920, 1440]
+        self.file_load_manager = FileLoadManager()
 
         # create the main window
         self.setWindowTitle(self.default_title)
@@ -131,6 +132,21 @@ class Window(MainWindow):
         error_box.setDetailedText(error_message)
         error_box.setWindowTitle('Error')
         error_box.exec()
+
+
+    def load_initial_files(self, files):
+        """Loads initial files after the window has been shown.
+
+        :param files: List of file paths to load
+        :type files: list of str
+        """
+        for file in files:
+            self.load_file(file)
+            
+            # Wait for the file to be loaded completely
+            loop = QEventLoop()
+            self.file_load_manager.file_loaded.connect(loop.quit)
+            loop.exec()
 
 
     ##############################################################
@@ -603,7 +619,6 @@ class Window(MainWindow):
         :type total: int
         """
         self.event_selection_box.setRange(1, max(1, total))
-
 
     ##############################################################
     # Methods for the components panel
@@ -1305,8 +1320,15 @@ class Window(MainWindow):
             self.file_name_changed.emit(file_path)
             self.print_to_console('Loading file: ' + file_path)
             self.worker = Worker(self.viewer.load_files, self.progress_bar, filename=file_path, off_screen=True)
-            self.worker.on_finished(self.add_components)
+            self.worker.on_finished(self.on_file_loaded)
             self.worker.start()
+
+
+    def on_file_loaded(self):
+        """Method to call when a file is loaded.
+        """
+        self.add_components()
+        self.file_load_manager.file_loaded.emit()
 
 
     def save_file_dialog(self):
@@ -1577,7 +1599,16 @@ class Worker(QThread):
         self.finished.connect(func)
 
 
-def launch_app():
+class FileLoadManager(QObject):
+    """A class to manage the loading of multiple files.
+    """
+    file_loaded = pyqtSignal()
+
+    def __init__(self):
+        super().__init__()
+
+
+def launch_app(files_to_load=None):
     """Launches the app.
     """
     app = Application([])
@@ -1586,6 +1617,8 @@ def launch_app():
     window = Window()
     sys.excepthook = window.global_exception_hook
     window.show()
-    app.processEvents()
-    
+
+    if files_to_load:
+        window.load_initial_files(files_to_load)
+
     return app.exec()
