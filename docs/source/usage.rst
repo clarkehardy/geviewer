@@ -239,10 +239,10 @@ plotting. However, this parser has only been tested on a small sample
 set of Geant4 simulation results. If you encounter file parsing errors,
 try using the ``--safe-mode`` command line argument (and create an issue
 to report the problem). This will use a VRML parsing tool from
-```vtk`` <https://vtk.org>`__ which should provide more robustness at
-the expense of some features. In safe mode, the program will be unable
-to distinguish trajectories, step markers, and detector components, and
-for large files the performance may be sluggish due to less efficient
+`VTK <https://vtk.org>`__ which should provide more robustness at the
+expense of some features. In safe mode, the program will be unable to
+distinguish trajectories, step markers, and detector components, and for
+large files the performance may be sluggish due to less efficient
 handling of the mesh data.
 
 Viewing multiple files
