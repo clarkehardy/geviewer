@@ -2,17 +2,20 @@ import sys
 from datetime import datetime
 import traceback
 import webbrowser
+import io
+import re
+from PyQt6.QtCore import QDateTime, QThread, pyqtSignal
 
 from PyQt6.QtWidgets import (
     QApplication, QVBoxLayout, QHBoxLayout, QPushButton, QWidget,
     QCheckBox, QSplitter, QFileDialog, QLabel, QTextEdit, QLineEdit,
     QColorDialog, QMenu, QToolBar, QSpinBox, QFrame, QScrollArea,
     QMessageBox, QGridLayout, QTabWidget, QGroupBox, QSpacerItem,
-    QSizePolicy, QWidgetAction, QGraphicsOpacityEffect
+    QSizePolicy, QWidgetAction, QGraphicsOpacityEffect, QProgressBar
 )
 from PyQt6.QtGui import (
     QAction, QFont, QColor, QPalette, QDoubleValidator, QIntValidator,
-    QKeySequence, QIcon
+    QKeySequence, QIcon, QTextCharFormat, QTextCursor
 )
 from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot, QTimer, QSize
 
@@ -67,42 +70,34 @@ class Window(MainWindow):
         self.main_layout = QHBoxLayout(self.central_widget)
         self.splitter = QSplitter(Qt.Horizontal)
 
-        # add panels, toolbar, and menu bar
-        self.add_viewer_panel()
-        self.add_control_panel()
-        self.add_components_panel()
+        # add panels and menu bar
+        self.create_viewer_panel()
+        self.create_control_panel()
+        self.create_components_panel()
+        self.add_menu_bar()
 
+        # create a splitter and add the panels to it
         self.splitter.addWidget(self.components_panel)
         self.splitter.addWidget(self.viewer_panel)
         self.splitter.addWidget(self.control_panel)
         self.splitter.setChildrenCollapsible(False)
         self.splitter.setSizes([300, 800, 300])
-        
-        self.add_menu_bar()
-
-        # Add the splitter to the layout
         self.main_layout.addWidget(self.splitter)
+
+        # other setup
         self.number_of_events.connect(self.update_event_total)
+        self.file_name_changed.connect(self.update_title)
         self.print_to_console('Welcome to GeViewer!')
         utils.check_for_updates()
-
-        # resize and center the window
         self.resize_window()
-        # Set the window reference
         QApplication.instance().window = self
 
 
     def resize_window(self):
-        # Get the primary screen
+        """Resizes the window to fit the screen.
+        """
         screen = QApplication.primaryScreen()
         screen_geometry = screen.availableGeometry()
-
-        # Get the size hint from the main layout
-        # size_hint = self.main_layout.sizeHint()
-
-        # Ensure the size is not larger than the screen
-        # desired_width = min(size_hint.width(), int(screen_geometry.width() * 0.9))
-        # desired_height = min(size_hint.height(), int(screen_geometry.height() * 0.9))
 
         if int(screen_geometry.width()) < 1920:
             self.showMaximized()
@@ -113,6 +108,11 @@ class Window(MainWindow):
 
 
     def center_on_screen(self, screen_geometry):
+        """Centers the window on the screen.
+
+        :param screen_geometry: The geometry of the screen.
+        :type screen_geometry: QRect
+        """
         frame_geometry = self.frameGeometry()
         center_point = screen_geometry.center()
         frame_geometry.moveCenter(center_point)
@@ -120,7 +120,8 @@ class Window(MainWindow):
 
 
     def global_exception_hook(self, exctype, value, traceback_obj):
-        """Global method to catch unhandled exceptions."""
+        """Global method to catch unhandled exceptions.
+        """
         error_message = ''.join(traceback.format_exception(exctype, value, traceback_obj))
         self.print_to_console('Error:\n' + error_message)
         error_box = QMessageBox()
@@ -132,24 +133,20 @@ class Window(MainWindow):
         error_box.exec()
 
 
-    def add_components_panel(self):
+    ##############################################################
+    # Methods for creating the GUI
+    ##############################################################
+
+    def create_components_panel(self):
         """Adds the components panel to the main window.
         """
         # create a layout for the components panel
         self.components_panel = QWidget()
-        # self.components_panel.setMinimumWidth(256)
         self.object_layout = QVBoxLayout(self.components_panel)
 
         # add a heading
         heading = QLabel('Components')
-        # heading_font = QFont()
-        # heading_font.setPointSize(13)
-        # # heading_font.setWeight(QFont.Light)
-        # # heading_font.setBold(True)
-        # heading.setFont(heading_font)
-        
-
-        tab_height = self.tab_widget.tabBar().height()  # Get the actual height of the tab
+        tab_height = self.tab_widget.tabBar().height()
         heading.setFixedHeight(tab_height)
         heading.setAlignment(Qt.AlignVCenter)
         heading.setStyleSheet("padding-left: 5px;")
@@ -159,6 +156,7 @@ class Window(MainWindow):
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
 
+        # add temporary instructions
         instructions = 'Click "File > Open File..." to add components'
         self.load_instructions = QLabel(instructions)
         load_instructions_font = QFont()
@@ -169,8 +167,8 @@ class Window(MainWindow):
         self.load_instructions.setGraphicsEffect(opacity_effect)
         self.load_instructions.setFont(load_instructions_font)
         self.load_instructions.setWordWrap(True)
-        # self.scroll_area.setWidget(self.load_instructions)
 
+        # create a widget to hold the checkboxes
         self.checkboxes_widget = QWidget()
         self.checkboxes_layout = QVBoxLayout(self.checkboxes_widget)
         self.checkboxes_layout.setAlignment(Qt.AlignTop)
@@ -179,23 +177,12 @@ class Window(MainWindow):
         self.object_layout.addWidget(self.scroll_area)
 
 
-    def add_viewer_panel(self):
+    def create_viewer_panel(self):
         """Adds the viewer panel to the main window.
         """
         # create a layout for the viewer panel
         self.viewer_panel = QWidget()
-        # self.viewer_panel.setMinimumWidth(512)
-        # self.viewer_panel.setMinimumHeight(720)
         self.viewer_layout = QVBoxLayout(self.viewer_panel)
-
-        # # add a heading that updates as files are loaded
-        # self.heading = QLabel('Viewing: ' + self.default_title)
-        # heading_font = QFont()
-        # heading_font.setPointSize(14)
-        # heading_font.setBold(True)
-        # self.heading.setFont(heading_font)
-        self.file_name_changed.connect(self.update_title)
-        # self.viewer_layout.addWidget(self.heading)
 
         # create the viewer
         self.viewer = GeViewer(self.viewer_panel)
@@ -209,12 +196,11 @@ class Window(MainWindow):
         self.viewer_layout.addWidget(self.plotter.interactor)
 
 
-    def add_control_panel(self):
+    def create_control_panel(self):
         """Adds the control panel to the main window.
         """
         # create a layout for the control panel
         self.control_panel = QWidget()
-        # self.control_panel.setMinimumWidth(256)
         self.control_layout = QVBoxLayout(self.control_panel)
 
         # add a heading for the console
@@ -223,14 +209,12 @@ class Window(MainWindow):
         control_panel_heading_font.setPointSize(14)
         control_panel_heading_font.setBold(True)
         control_panel_heading.setFont(control_panel_heading_font)
-        # self.control_layout.addWidget(control_panel_heading)
 
         # Create a tab widget
         self.tab_widget = QTabWidget()
         self.tab_widget.setMinimumWidth(250)
         self.tab_widget.setMinimumHeight(300)
         self.tab_widget.setMaximumHeight(350)
-        # self.tab_widget.setMaximumHeight(350)
 
         # Create tabs
         self.options_tab = QWidget()
@@ -251,32 +235,17 @@ class Window(MainWindow):
         self.add_options_tab()
         self.add_tools_tab()
 
-        # add a separator between the geometry checker and the console
-        # line = QFrame()
-        # line.setFrameShape(QFrame.HLine)
-        # line.setFrameShadow(QFrame.Sunken)
-        # self.control_layout.addWidget(line)
-
-        # Create a QGroupBox for the console
-        # console_group = QGroupBox("Console")
+        # create the console
         console_layout = QVBoxLayout()
-        
-        # Add the console to the group box
         self.console = QTextEdit()
         self.console.setReadOnly(True)
-        sys.stdout = utils.ConsoleRedirect(self.console)
-        sys.stderr = utils.ConsoleRedirect(self.console)
+        sys.stdout = ConsoleRedirect(self.console)
+        sys.stderr = ConsoleRedirect(self.console)
         console_layout.addWidget(self.console)
-        
-        # Set the layout for the group box
-        # console_group.setLayout(console_layout)
-        
-        # Add the group box to the control layout
-        # self.control_layout.addWidget(console_group)
         self.control_layout.addLayout(console_layout)
 
         # Add the progress bar
-        self.progress_bar = utils.ProgressBar()
+        self.progress_bar = ProgressBar()
         self.control_layout.addWidget(self.progress_bar)
 
 
@@ -284,21 +253,19 @@ class Window(MainWindow):
         """Adds camera and figure options to the first tab."""
         grid_layout = QGridLayout()
 
-        # Camera Options section
+        # camera Options section
         heading = QLabel('Camera Options')
         heading_font = QFont()
         heading_font.setPointSize(14)
         heading_font.setBold(True)
         heading.setFont(heading_font)
-        grid_layout.addWidget(heading, 0, 0, 1, 2)  # Spanning 2 columns
-
-        camera_instructions = 'Enter the coordinates as three comma-separated numbers'
+        grid_layout.addWidget(heading, 0, 0, 1, 2)
 
         self.camera_position_label = QLabel('Position:')
         self.camera_position_text = QLineEdit()
         self.camera_position_text.setReadOnly(False)
         self.camera_position_text.editingFinished.connect(self.handle_camera_position_change)
-        self.camera_position_text.setToolTip(camera_instructions)
+        self.camera_position_text.setToolTip('Enter the camera coordinates as three comma-separated numbers')
         grid_layout.addWidget(self.camera_position_label, 1, 0)
         grid_layout.addWidget(self.camera_position_text, 1, 1, 1, 1)
 
@@ -306,7 +273,7 @@ class Window(MainWindow):
         self.camera_focal_text = QLineEdit()
         self.camera_focal_text.setReadOnly(False)
         self.camera_focal_text.editingFinished.connect(self.handle_camera_focal_change)
-        self.camera_focal_text.setToolTip(camera_instructions)
+        self.camera_focal_text.setToolTip('Enter the focal point coordinates as three comma-separated numbers')
         grid_layout.addWidget(self.camera_focal_label, 2, 0)
         grid_layout.addWidget(self.camera_focal_text, 2, 1, 1, 1)
 
@@ -314,17 +281,17 @@ class Window(MainWindow):
         self.camera_up_text = QLineEdit()
         self.camera_up_text.setReadOnly(False)
         self.camera_up_text.editingFinished.connect(self.handle_camera_up_change)
-        self.camera_up_text.setToolTip(camera_instructions)
+        self.camera_up_text.setToolTip('Enter the up vector components as three comma-separated numbers')
         grid_layout.addWidget(self.camera_up_label, 3, 0)
         grid_layout.addWidget(self.camera_up_text, 3, 1, 1, 1)
 
-        # Event Viewer section (moved above Figure Options)
+        # event viewer section
         event_heading = QLabel('Event Viewer')
         event_heading_font = QFont()
         event_heading_font.setPointSize(14)
         event_heading_font.setBold(True)
         event_heading.setFont(event_heading_font)
-        grid_layout.addWidget(event_heading, 4, 0, 1, 2)  # Spanning 2 columns
+        grid_layout.addWidget(event_heading, 4, 0, 1, 2)
 
         self.event_selection_label = QLabel('Show event:')
         self.event_selection_box = QSpinBox()
@@ -335,46 +302,41 @@ class Window(MainWindow):
         grid_layout.addWidget(self.event_selection_label, 5, 0)
         grid_layout.addWidget(self.event_selection_box, 5, 1, 1, 1)
 
-        # Figure Options section
+        # figure options section
         figure_heading = QLabel('Figure Options')
         figure_heading_font = QFont()
         figure_heading_font.setPointSize(14)
         figure_heading_font.setBold(True)
         figure_heading.setFont(figure_heading_font)
-        grid_layout.addWidget(figure_heading, 6, 0, 1, 2)  # Spanning 2 columns
-
-        figure_instructions = 'Enter the figure width and height in pixels as two comma-separated numbers'
+        grid_layout.addWidget(figure_heading, 6, 0, 1, 2)
 
         self.figure_size_label = QLabel('Figure size:')
         self.figure_size_text = QLineEdit()
         self.figure_size_text.setText('{}, {}'.format(*self.figure_size))
         self.figure_size_text.setReadOnly(False)
         self.figure_size_text.editingFinished.connect(self.handle_figure_size_change)
-        self.figure_size_text.setToolTip(figure_instructions)
+        self.figure_size_text.setToolTip('Enter the figure width and height in pixels as two comma-separated numbers')
         grid_layout.addWidget(self.figure_size_label, 7, 0)
         grid_layout.addWidget(self.figure_size_text, 7, 1, 1, 1)
 
         self.save_button = QPushButton('Export Figure', self)
-        self.save_button.clicked.connect(self.save_file_dialog)
-        grid_layout.addWidget(self.save_button, 8, 0, 1, 2)  # Spanning 2 columns
+        self.save_button.clicked.connect(self.export_figure_dialog)
+        grid_layout.addWidget(self.save_button, 8, 0, 1, 2)
 
         self.options_layout.addLayout(grid_layout)
-        
-        # Align the content to the top
-        # self.options_layout.setAlignment(Qt.AlignTop)
 
 
     def add_tools_tab(self):
         """Adds view and geometry options to the second tab."""
         grid_layout = QGridLayout()
 
-        # Overlap Inspector section
+        # overlap inspector section
         overlap_heading = QLabel('Overlap Inspector')
         overlap_heading_font = QFont()
         overlap_heading_font.setPointSize(14)
         overlap_heading_font.setBold(True)
         overlap_heading.setFont(overlap_heading_font)
-        grid_layout.addWidget(overlap_heading, 0, 0, 1, 2)  # Spanning 2 columns
+        grid_layout.addWidget(overlap_heading, 0, 0, 1, 2)
 
         self.tolerance_label = QLabel('Tolerance:')
         self.tolerance_box = QLineEdit()
@@ -397,40 +359,37 @@ class Window(MainWindow):
 
         self.check_button = QPushButton('Find Overlaps')
         self.check_button.clicked.connect(lambda: self.check_geometry(self.tolerance_box.text(), self.samples_box.text()))
-        self.clear_intersections_button = QPushButton('Clear')
-        self.clear_intersections_button.clicked.connect(self.clear_intersections)
+        self.clear_overlaps_button = QPushButton('Clear')
+        self.clear_overlaps_button.clicked.connect(self.clear_overlaps)
         grid_layout.addWidget(self.check_button, 3, 0)
-        grid_layout.addWidget(self.clear_intersections_button, 3, 1, 1, 1)
+        grid_layout.addWidget(self.clear_overlaps_button, 3, 1, 1, 1)
 
+        # measurement tool section
         measurement_heading = QLabel('Measurement Tool')
         measurement_heading_font = QFont()
         measurement_heading_font.setPointSize(14)
         measurement_heading_font.setBold(True)
         measurement_heading.setFont(measurement_heading_font)
-        grid_layout.addWidget(measurement_heading, 4, 0, 1, 2)  # Spanning 2 columns
+        grid_layout.addWidget(measurement_heading, 4, 0, 1, 2)
 
-        # Measurement 1
         self.measure_text = QLabel('Measurement 1:')
         self.measurement_box = QLineEdit()
         self.measurement_box.setReadOnly(True)
         grid_layout.addWidget(self.measure_text, 5, 0)
         grid_layout.addWidget(self.measurement_box, 5, 1, 1, 1)
 
-        # Measurement 2
         self.measure_text_2 = QLabel('Measurement 2:')
         self.measurement_box_2 = QLineEdit()
         self.measurement_box_2.setReadOnly(True)
         grid_layout.addWidget(self.measure_text_2, 6, 0)
         grid_layout.addWidget(self.measurement_box_2, 6, 1, 1, 1)
 
-        # Measurement 3
         self.measure_text_3 = QLabel('Measurement 3:')
         self.measurement_box_3 = QLineEdit()
         self.measurement_box_3.setReadOnly(True)
         grid_layout.addWidget(self.measure_text_3, 7, 0)
         grid_layout.addWidget(self.measurement_box_3, 7, 1, 1, 1)
 
-        # Add and Clear buttons
         self.measure_button = QPushButton('Add Measurement')
         self.measure_button.setMinimumWidth(130)
         self.measure_button.clicked.connect(self.measure_distance)
@@ -439,7 +398,7 @@ class Window(MainWindow):
         grid_layout.addWidget(self.measure_button, 8, 0)
         grid_layout.addWidget(self.clear_measurement_button, 8, 1)
 
-        # Create a timer to update the boxes above with the new values
+        # timer to update the camera settings when the view is changed
         self.update_timer = QTimer()
         self.update_timer.setInterval(200)
         self.update_timer.setSingleShot(True)
@@ -449,9 +408,6 @@ class Window(MainWindow):
         self.monitor_camera_position()
 
         self.tools_layout.addLayout(grid_layout)
-        
-        # Align the content to the top
-        # self.tools_layout.setAlignment(Qt.AlignTop)
 
 
     def add_toolbar(self):
@@ -462,34 +418,26 @@ class Window(MainWindow):
         toolbar includes actions for toggling wireframe mode, transparency,
         parallel projection, and setting different standard views (isometric,
         top, bottom, front, back).
-
-        The toolbar is made movable and the actions are given icons for better visibility.
         """
         self.toolbar = QToolBar('Main Toolbar')
         self.toolbar.setMovable(True)
 
+        # text and button size
         toolbar_font = QFont()
-        toolbar_font.setPointSize(12)  # Adjust this value to change the text size
+        toolbar_font.setPointSize(12)
         action_width = 80
         self.toolbar.setFont(toolbar_font)
 
-        # Create actions
+        # actions that change when clicked
         self.wireframe_action = QAction('Wireframe', self)
-        # self.wireframe_action.setCheckable(True)
         self.wireframe_action.triggered.connect(self.toggle_wireframe)
 
         self.transparent_action = QAction('Transparent', self)
-        # self.transparent_action.setCheckable(True)
         self.transparent_action.triggered.connect(self.toggle_transparent)
 
         self.parallel_action = QAction('Parallel', self)
-        # self.parallel_action.setCheckable(True)
         self.parallel_action.triggered.connect(self.toggle_parallel)
 
-        isometric_action = QAction('Isometric', self)
-        isometric_action.triggered.connect(self.plotter.view_isometric)
-
-        # Add actions to the toolbar
         self.toolbar.addAction(self.wireframe_action)
         tool_button = self.toolbar.widgetForAction(self.wireframe_action)
         tool_button.setFixedWidth(action_width)
@@ -499,14 +447,10 @@ class Window(MainWindow):
         self.toolbar.addAction(self.parallel_action)
         tool_button = self.toolbar.widgetForAction(self.parallel_action)
         tool_button.setFixedWidth(action_width)
-        self.toolbar.addAction(isometric_action)
-        tool_button = self.toolbar.widgetForAction(isometric_action)
-        tool_button.setFixedWidth(action_width)
 
-        # tool_button.setStyleSheet("QToolButton { min-width: 80px; max-width: 80px; }")
-
-        # Create and add actions for view buttons
+        # view actions that don't change when clicked
         view_actions = [
+            ('Isometric', self.plotter.view_isometric),
             ('Top', self.plotter.view_xy),
             ('Bottom', lambda: self.plotter.view_xy(negative=True)),
             ('Front', self.plotter.view_yz),
@@ -549,7 +493,7 @@ class Window(MainWindow):
         open_action.setShortcut(QKeySequence.Open)
         save_action = file_menu.addAction('Save As...')
         save_action.setShortcut(QKeySequence.Save)
-        save_action.triggered.connect(self.save_file)
+        save_action.triggered.connect(self.save_file_dialog)
         close_window_action = file_menu.addAction('Close Window')
         close_window_action.triggered.connect(self.close)
         close_window_action.setShortcut(QKeySequence.Close)
@@ -563,7 +507,7 @@ class Window(MainWindow):
         clear_console_action = edit_menu.addAction('Clear Console')
         clear_console_action.triggered.connect(self.console.clear)
         clear_action = edit_menu.addAction('Clear Viewer')
-        clear_action.triggered.connect(self.clear_meshes)
+        clear_action.triggered.connect(self.clear_viewer)
 
         # create the view menu
         view_menu = menubar.addMenu('View')
@@ -623,6 +567,10 @@ class Window(MainWindow):
         documentation_action = help_menu.addAction('Documentation')
         documentation_action.triggered.connect(self.show_documentation)
 
+
+    ##############################################################
+    # Signals and slots
+    ##############################################################
     
     @pyqtSlot(str)
     def update_title(self, filename):
@@ -657,6 +605,10 @@ class Window(MainWindow):
         self.event_selection_box.setRange(1, max(1, total))
 
 
+    ##############################################################
+    # Methods for the components panel
+    ##############################################################
+
     def generate_checkboxes(self, components, level):
         """Generates checkboxes for the components in the current file.
 
@@ -688,22 +640,19 @@ class Window(MainWindow):
         self.number_of_events.emit(len(self.events_list))
 
 
-    def show_single_event(self, event_index):
-        """Shows a single event in the viewer.
+    def add_components(self):
+        """Adds the components.
 
-        This method shows a single event in the viewer by checking the
-        corresponding checkbox and updating the visibility of the associated
-        actors.
-
-        :param event_index: The index of the event to show.
-        :type event_index: int
+        This method adds the components by creating the plotter and generating
+        the checkboxes for the components.
         """
-        for i, event in enumerate(self.events_list):
-            if i == event_index - 1:
-                self.checkbox_mapping[event].setCheckState(Qt.CheckState.Checked)
-            else:
-                self.checkbox_mapping[event].setCheckState(Qt.CheckState.Unchecked)
-    
+        num_plotted = len(self.viewer.actors.keys())
+        self.viewer.create_plotter(self.progress_bar)
+        checkboxes_to_make = len(self.viewer.actors.keys()) - num_plotted
+        self.progress_bar.reset_progress()
+        self.progress_bar.set_maximum_value(checkboxes_to_make)
+        self.generate_checkboxes(self.viewer.components, 0)
+
 
     def toggle_visibility(self, state, comp):
         """Toggles the visibility of a component in the viewer.
@@ -745,6 +694,95 @@ class Window(MainWindow):
             for child in comp['children']:
                 self.set_visibility_recursive(child, visibility)
 
+    ##############################################################
+    # Methods for updating the viewer
+    ##############################################################
+
+    def show_single_event(self, event_index):
+        """Shows a single event in the viewer.
+
+        This method shows a single event in the viewer by checking the
+        corresponding checkbox and updating the visibility of the associated
+        actors.
+
+        :param event_index: The index of the event to show.
+        :type event_index: int
+        """
+        for i, event in enumerate(self.events_list):
+            if i == event_index - 1:
+                self.checkbox_mapping[event].setCheckState(Qt.CheckState.Checked)
+            else:
+                self.checkbox_mapping[event].setCheckState(Qt.CheckState.Unchecked)
+
+
+    def toggle_parallel(self):
+        """Toggles the parallel projection.
+
+        This method toggles the parallel projection by setting the parallel
+        attribute of the viewer to the opposite of its current value and
+        updating the parallel button.
+        """
+        self.viewer.toggle_parallel_projection()
+        self.parallel_action.setText('Perspective' if self.viewer.parallel else 'Parallel')
+
+
+    def toggle_wireframe(self):
+        """Toggles the wireframe.
+
+        This method toggles the wireframe by setting the wireframe attribute
+        of the viewer to the opposite of its current value and updating the
+        wireframe button.
+        """
+        self.viewer.toggle_wireframe()
+        self.update_wireframe_action()
+
+
+    def toggle_transparent(self):
+        """Toggles the transparency.
+
+        This method toggles the transparency by setting the transparent attribute
+        of the viewer to the opposite of its current value and updating the
+        transparency button.
+        """
+        self.viewer.toggle_transparent()
+        self.transparent_action.setText('Opaque' if self.viewer.transparent else 'Transparent')
+
+
+    def update_wireframe_action(self):
+        """Updates the wireframe button.
+
+        This method updates the wireframe button by setting the text to 'Solid'
+        if the wireframe is enabled, otherwise 'Wireframe'.
+        """
+        self.wireframe_action.setText('Solid' if self.viewer.wireframe else 'Wireframe')
+
+
+    def add_key_events(self):
+        """Adds key events to the plotter.
+
+        This is the simplest way to have the buttons synchronize
+        with whatever key inputs the user provides.
+        """
+        self.plotter.add_key_event('w', lambda: self.synchronize_toolbar(True))
+        self.plotter.add_key_event('s', lambda: self.synchronize_toolbar(False))
+
+
+    def synchronize_toolbar(self, wireframe=True):
+        """Synchronizes the toolbar.
+
+        This method synchronizes the toolbar by setting the wireframe attribute
+        of the viewer to the opposite of its current value and updating the
+        wireframe button.
+
+        :param wireframe: The wireframe state to synchronize.
+        :type wireframe: bool
+        """
+        self.viewer.wireframe = wireframe
+        self.update_wireframe_action()
+
+    ##############################################################
+    # Methods for the options tab
+    ##############################################################
 
     def set_camera_position(self, position):
         """Sets the camera position in the viewer.
@@ -1066,42 +1104,230 @@ class Window(MainWindow):
         self.clear_up_error_state()
 
 
-    def toggle_gradient(self):
-        """Toggles the gradient.
+    def export_figure_dialog(self):
+        """Saves the file dialog.
 
-        This method toggles the gradient by setting the gradient attribute
-        of the viewer to the opposite of its current value and updating the
-        background color of the viewer.
+        This method saves the file dialog by getting the save file name
+        and emitting the save figure event.
         """
-        self.viewer.gradient = not self.viewer.gradient
-        self.viewer.set_background_color()
+        options = QFileDialog.Options()
+        file_types = 'Supported File Types (*.png *.svg *.eps *.ps *.pdf *.tex);; '\
+                     + 'PNG (*.png);;SVG (*.svg);;EPS (*.eps);;PS (*.ps);;PDF (*.pdf);;TEX (*.tex)'
+        file_name, _ = QFileDialog.getSaveFileName(self, 'Save Figure', '', file_types, options=options)
+        
+        if file_name:
+            self.export_figure(file_name, *self.figure_size)
 
+                
+    def export_figure(self, file_name, width, height):
+        """Saves the figure.
 
-    def add_key_events(self):
-        """Adds key events to the plotter.
+        This method saves the figure by creating an off-screen plotter with the
+        desired size and copying the mesh and camera settings to the off-screen
+        plotter.
 
-        This is the simplest way to have the buttons synchronize
-        with whatever key inputs the user provides.
+        :param file_name: The file name to save the figure to.
+        :type file_name: str
+        :param width: The width of the figure.
+        :type width: int
+        :param height: The height of the figure.
+        :type height: int
         """
-        self.plotter.add_key_event('w', lambda: self.synchronize_toolbar(True))
-        self.plotter.add_key_event('s', lambda: self.synchronize_toolbar(False))
+        import pyvista as pv
 
+        # Create an off-screen plotter with the desired size
+        off_screen_plotter = pv.Plotter(off_screen=True, window_size=[width, height])
+        off_screen_plotter.set_background(*self.viewer.bkg_colors)
+        
+        # Copy the mesh and camera settings to the off-screen plotter
+        for actor in self.plotter.renderer.actors.values():
+            off_screen_plotter.add_actor(actor)
+        
+        # Copy camera position
+        off_screen_plotter.camera_position = self.plotter.camera_position
+        off_screen_plotter.enable_anti_aliasing('msaa', multi_samples=16)
 
-    def synchronize_toolbar(self, wireframe=True):
-        """Synchronizes the toolbar.
+        screenshot_extensions = ['png', 'jpeg', 'jpg', 'bmp', 'tif', 'tiff']
+        if file_name.split('.')[-1] in screenshot_extensions:
+            off_screen_plotter.screenshot(file_name)
+        else:
+            off_screen_plotter.save_graphic(file_name, title='GeViewer Figure')
 
-        This method synchronizes the toolbar by setting the wireframe attribute
-        of the viewer to the opposite of its current value and updating the
-        wireframe button.
+        del off_screen_plotter
+        self.print_to_console('Success: figure saved to ' + file_name)
 
-        :param wireframe: The wireframe state to synchronize.
-        :type wireframe: bool
+    ##############################################################
+    # Methods for the tools tab
+    ##############################################################
+
+    def check_geometry(self, tolerance, samples):
+        """Checks the geometry.
+
+        This method checks the geometry by finding the overlaps between
+        the components and updating the overlaps list.
+
+        :param tolerance: The tolerance for the overlaps.
+        :type tolerance: float
+        :param samples: The number of samples to use for the overlaps.
+        :type samples: int
         """
-        self.viewer.wireframe = wireframe
-        self.update_wireframe_action()
+        tolerance = float(tolerance) if tolerance else 0.001
+        samples = int(samples) if samples else 10000
+        if not len(self.viewer.components):
+            self.print_to_console('Error: no components loaded.')
+            return
+        self.print_to_console('Checking {} for overlaps...'.format(self.viewer.components[0]['name']))
+        overlapping_meshes = self.viewer.find_overlaps(tolerance, samples)
+        if len(overlapping_meshes) == 0:
+            self.print_to_console('Success: no overlaps found.')
+        else:
+            self.show_overlaps(overlapping_meshes)
+            self.print_to_console('Done.')
 
-    
-    def clear_meshes(self):
+
+    def show_overlaps(self, overlapping_meshes):
+        """Shows the overlaps.
+
+        This method shows the overlaps by setting the checkboxes to checked
+        for the overlapping meshes and toggling the transparency if it is not
+        already enabled.
+
+        :param overlapping_meshes: The overlapping meshes.
+        :type overlapping_meshes: list
+        """
+        for checkbox in self.checkbox_mapping.values():
+            checkbox.setCheckState(Qt.CheckState.Unchecked)
+        for mesh_id in overlapping_meshes:
+            self.checkbox_mapping[mesh_id].setCheckState(Qt.CheckState.Checked)
+        if not self.viewer.transparent:
+            self.toggle_transparent()
+        self.plotter.view_isometric()
+
+
+    def clear_overlaps(self):
+        """Clears the overlaps.
+
+        This method clears the overlaps by removing all actors from the plotter
+        and clearing the overlaps list.
+        """
+        for actor in self.viewer.overlaps:
+            self.plotter.remove_actor(actor)
+        self.viewer.overlaps = []
+
+
+    def measure_distance(self):
+        """Measures the distance.
+
+        This method measures the distance by adding a measurement widget to the plotter
+        and clearing the measurement box.
+        """
+        self.plotter.add_measurement_widget(self.display_measurement)
+
+
+    def display_measurement(self, point1, point2, distance):
+        """Displays the measurement.
+
+        This method displays the measurement by setting the measurement box
+        to the distance between the two points.
+
+        :param point1: The first point.
+        :type point1: list
+        :param point2: The second point.
+        :type point2: list
+        :param distance: The distance between the two points.
+        :type distance: float
+        """
+        boxes = [self.measurement_box, self.measurement_box_2, self.measurement_box_3]
+        for box in boxes:
+            if box.text() == '':
+                box.setText('{:.3f}'.format(distance))
+                return
+        boxes[0].setText(boxes[1].text())
+        boxes[1].setText(boxes[2].text())
+        boxes[2].setText('{:.3f}'.format(distance))
+
+
+    def clear_measurement(self):
+        """Clears the measurement.
+
+        This method clears the measurement by clearing the measurement box.
+        """
+        self.plotter.clear_measure_widgets()
+        self.measurement_box.setText('')
+        self.measurement_box_2.setText('')
+        self.measurement_box_3.setText('')
+
+    ##############################################################
+    # Methods for the console
+    ##############################################################
+
+    def print_to_console(self, text):
+        """Prints to the console.
+
+        This method prints text to the console with the GeViewer prompt.
+
+        :param text: The text to print to the console.
+        :type text: str
+        """
+        print('[geviewer-prompt]: ' + text)
+
+    ##############################################################
+    # Methods for the menu bar
+    ##############################################################
+
+    def open_file_dialog(self):
+        """Opens the file dialog.
+
+        This method opens the file dialog by getting the open file name
+        and emitting the file name changed event.
+        """
+        try:
+            options = QFileDialog.Options()
+            dialog = QFileDialog(self, 'Open File', '', 
+                                 'All Supported Files (*.wrl *.heprep *.gev);;' +
+                                 'VRML Files (*.wrl);;HepRep Files (*.heprep);;'
+                                 'GEV Files (*.gev)', options=options)
+            dialog.setFileMode(QFileDialog.ExistingFile)
+            dialog.fileSelected.connect(self.load_file)
+            dialog.show()
+        except Exception as e:
+            self.global_exception_hook(type(e), e, e.__traceback__)
+
+
+    def load_file(self, file_path):
+        """Loads the file.
+        
+        :param file_path: The path to the file to load.
+        :type file_path: str
+        """
+        if file_path:
+            self.progress_bar.setValue(0)
+            self.file_name_changed.emit(file_path)
+            self.print_to_console('Loading file: ' + file_path)
+            self.worker = Worker(self.viewer.load_files, self.progress_bar, filename=file_path, off_screen=True)
+            self.worker.on_finished(self.add_components)
+            self.worker.start()
+
+
+    def save_file_dialog(self):
+        """Saves the file.
+
+        This method saves the file by getting the save file name and emitting
+        the save file event.
+        """
+        try:
+            options = QFileDialog.Options()
+            file_types = 'GeViewer File (*.gev);; All Files (*)'
+            file_name, _ = QFileDialog.getSaveFileName(self, 'Save File', 'viewer.gev', file_types, options=options)
+            
+            if file_name:
+                self.viewer.save(file_name)
+                
+        except Exception as e:
+            self.global_exception_hook(type(e), e, e.__traceback__)
+
+
+    def clear_viewer(self):
         """Clears the meshes.
 
         This method clears the meshes by removing all actors from the plotter
@@ -1145,141 +1371,26 @@ class Window(MainWindow):
             self.control_panel.show()
 
 
-    def show_license(self):
-        """Shows the license.
+    def toggle_background(self):
+        """Toggles the background.
 
-        This method shows the license by reading the license file and
-        printing it to the console.
-        """
-        with open('LICENSE') as f:
-            license_text = f.read().replace('\n\n', '<>').replace('\n', ' ').replace('<>', '\n\n')
-        self.print_to_console('\n' + license_text)
-
-
-    def toggle_parallel(self):
-        """Toggles the parallel projection.
-
-        This method toggles the parallel projection by setting the parallel
-        attribute of the viewer to the opposite of its current value and
-        updating the parallel button.
-        """
-        self.viewer.toggle_parallel_projection()
-        self.parallel_action.setText('Perspective' if self.viewer.parallel else 'Parallel')
-
-
-    def toggle_wireframe(self):
-        """Toggles the wireframe.
-
-        This method toggles the wireframe by setting the wireframe attribute
+        This method toggles the background by setting the background attribute
         of the viewer to the opposite of its current value and updating the
-        wireframe button.
+        background button.
         """
-        self.viewer.toggle_wireframe()
-        self.update_wireframe_action()
+        self.viewer.toggle_background()
+        self.viewer.plotter.update()
 
 
-    def toggle_transparent(self):
-        """Toggles the transparency.
+    def toggle_gradient(self):
+        """Toggles the gradient.
 
-        This method toggles the transparency by setting the transparent attribute
+        This method toggles the gradient by setting the gradient attribute
         of the viewer to the opposite of its current value and updating the
-        transparency button.
+        background color of the viewer.
         """
-        self.viewer.toggle_transparent()
-        self.transparent_action.setText('Opaque' if self.viewer.transparent else 'Transparent')
-
-
-    def update_wireframe_action(self):
-        """Updates the wireframe button.
-
-        This method updates the wireframe button by setting the text to 'Solid'
-        if the wireframe is enabled, otherwise 'Wireframe'.
-        """
-        self.wireframe_action.setText('Solid' if self.viewer.wireframe else 'Wireframe')
-
-
-    def open_file_dialog(self):
-        """Opens the file dialog.
-
-        This method opens the file dialog by getting the open file name
-        and emitting the file name changed event.
-        """
-        try:
-            options = QFileDialog.Options()
-            dialog = QFileDialog(self, 'Open File', '', 
-                                 'All Supported Files (*.wrl *.heprep *.gev);;' +
-                                 'VRML Files (*.wrl);;HepRep Files (*.heprep);;'
-                                 'GEV Files (*.gev)', options=options)
-            dialog.setFileMode(QFileDialog.ExistingFile)
-            dialog.fileSelected.connect(self.handle_file_selected)
-            dialog.show()
-        except Exception as e:
-            self.global_exception_hook(type(e), e, e.__traceback__)
-
-    def handle_file_selected(self, file_path):
-        """Handles the selected file."""
-        if file_path:
-            self.progress_bar.setValue(0)
-            self.file_name_changed.emit(file_path)
-            self.print_to_console('Loading file: ' + file_path)
-            self.worker = utils.Worker(self.viewer.load_files, self.progress_bar, filename=file_path, off_screen=True)
-            self.worker.on_finished(self.add_components)
-            self.worker.start()
-
-    def save_file_dialog(self):
-        """Saves the file dialog.
-
-        This method saves the file dialog by getting the save file name
-        and emitting the save figure event.
-        """
-        options = QFileDialog.Options()
-        file_types = 'Supported File Types (*.png *.svg *.eps *.ps *.pdf *.tex);; '\
-                     + 'PNG (*.png);;SVG (*.svg);;EPS (*.eps);;PS (*.ps);;PDF (*.pdf);;TEX (*.tex)'
-        file_name, _ = QFileDialog.getSaveFileName(self, 'Save Figure', '', file_types, options=options)
-        
-        if file_name:
-            try:
-                self.save_figure(file_name, *self.figure_size)
-            except Exception as e:
-                print(e)
-
-                
-    def save_figure(self, file_name, width, height):
-        """Saves the figure.
-
-        This method saves the figure by creating an off-screen plotter with the
-        desired size and copying the mesh and camera settings to the off-screen
-        plotter.
-
-        :param file_name: The file name to save the figure to.
-        :type file_name: str
-        :param width: The width of the figure.
-        :type width: int
-        :param height: The height of the figure.
-        :type height: int
-        """
-        import pyvista as pv
-
-        # Create an off-screen plotter with the desired size
-        off_screen_plotter = pv.Plotter(off_screen=True, window_size=[width, height])
-        off_screen_plotter.set_background(*self.viewer.bkg_colors)
-        
-        # Copy the mesh and camera settings to the off-screen plotter
-        for actor in self.plotter.renderer.actors.values():
-            off_screen_plotter.add_actor(actor)
-        
-        # Copy camera position
-        off_screen_plotter.camera_position = self.plotter.camera_position
-        off_screen_plotter.enable_anti_aliasing('msaa', multi_samples=16)
-
-        screenshot_extensions = ['png', 'jpeg', 'jpg', 'bmp', 'tif', 'tiff']
-        if file_name.split('.')[-1] in screenshot_extensions:
-            off_screen_plotter.screenshot(file_name)
-        else:
-            off_screen_plotter.save_graphic(file_name, title='GeViewer Figure')
-
-        del off_screen_plotter
-        print('Success: figure saved to ' + file_name)
+        self.viewer.gradient = not self.viewer.gradient
+        self.viewer.set_background_color()
 
 
     def open_color_picker(self, button):
@@ -1300,157 +1411,15 @@ class Window(MainWindow):
         self.viewer.set_background_color()
 
 
-    def print_to_console(self, text):
-        """Prints to the console.
+    def show_license(self):
+        """Shows the license.
 
-        This method prints text to the console with the GeViewer prompt.
-
-        :param text: The text to print to the console.
-        :type text: str
+        This method shows the license by reading the license file and
+        printing it to the console.
         """
-        print('[geviewer-prompt]: ' + text)
-
-    
-    def add_components(self):
-        """Adds the components.
-
-        This method adds the components by creating the plotter and generating
-        the checkboxes for the components.
-        """
-        num_plotted = len(self.viewer.actors.keys())
-        self.viewer.create_plotter(self.progress_bar)
-        checkboxes_to_make = len(self.viewer.actors.keys()) - num_plotted
-        self.progress_bar.reset_progress()
-        self.progress_bar.set_maximum_value(checkboxes_to_make)
-        self.generate_checkboxes(self.viewer.components, 0)
-
-
-    def save_file(self):
-        """Saves the file.
-
-        This method saves the file by getting the save file name and emitting
-        the save file event.
-        """
-        try:
-            options = QFileDialog.Options()
-            file_types = 'GeViewer File (*.gev);; All Files (*)'
-            file_name, _ = QFileDialog.getSaveFileName(self, 'Save File', 'viewer.gev', file_types, options=options)
-            
-            if file_name:
-                try:
-                    self.viewer.save(file_name)
-                except Exception as e:
-                    print(e)
-        except Exception as e:
-            self.global_exception_hook(type(e), e, e.__traceback__)
-
-
-    def toggle_background(self):
-        """Toggles the background.
-
-        This method toggles the background by setting the background attribute
-        of the viewer to the opposite of its current value and updating the
-        background button.
-        """
-        self.viewer.toggle_background()
-        self.viewer.plotter.update()
-
-    def check_geometry(self, tolerance, samples):
-        """Checks the geometry.
-
-        This method checks the geometry by finding the intersections between
-        the components and updating the intersections list.
-
-        :param tolerance: The tolerance for the intersections.
-        :type tolerance: float
-        :param samples: The number of samples to use for the intersections.
-        :type samples: int
-        """
-        tolerance = float(tolerance) if tolerance else 0.001
-        samples = int(samples) if samples else 10000
-        if not len(self.viewer.components):
-            self.print_to_console('Error: no components loaded.')
-            return
-        self.print_to_console('Checking {} for intersections...'.format(self.viewer.components[0]['name']))
-        overlapping_meshes = self.viewer.find_intersections(tolerance, samples)
-        if len(overlapping_meshes) == 0:
-            self.print_to_console('Success: no intersections found.')
-        else:
-            self.show_overlaps(overlapping_meshes)
-            self.print_to_console('Done.')
-
-
-    def show_overlaps(self, overlapping_meshes):
-        """Shows the overlaps.
-
-        This method shows the overlaps by setting the checkboxes to checked
-        for the overlapping meshes and toggling the transparency if it is not
-        already enabled.
-
-        :param overlapping_meshes: The overlapping meshes.
-        :type overlapping_meshes: list
-        """
-        for checkbox in self.checkbox_mapping.values():
-            checkbox.setCheckState(Qt.CheckState.Unchecked)
-        for mesh_id in overlapping_meshes:
-            self.checkbox_mapping[mesh_id].setCheckState(Qt.CheckState.Checked)
-        if not self.viewer.transparent:
-            self.toggle_transparent()
-        self.plotter.view_isometric()
-
-
-    def clear_intersections(self):
-        """Clears the intersections.
-
-        This method clears the intersections by removing all actors from the plotter
-        and clearing the intersections list.
-        """
-        for actor in self.viewer.intersections:
-            self.plotter.remove_actor(actor)
-        self.viewer.intersections = []
-
-
-    def measure_distance(self):
-        """Measures the distance.
-
-        This method measures the distance by adding a measurement widget to the plotter
-        and clearing the measurement box.
-        """
-        self.plotter.add_measurement_widget(self.display_measurement)
-
-
-    def clear_measurement(self):
-        """Clears the measurement.
-
-        This method clears the measurement by clearing the measurement box.
-        """
-        self.plotter.clear_measure_widgets()
-        self.measurement_box.setText('')
-        self.measurement_box_2.setText('')
-        self.measurement_box_3.setText('')
-
-
-    def display_measurement(self, point1, point2, distance):
-        """Displays the measurement.
-
-        This method displays the measurement by setting the measurement box
-        to the distance between the two points.
-
-        :param point1: The first point.
-        :type point1: list
-        :param point2: The second point.
-        :type point2: list
-        :param distance: The distance between the two points.
-        :type distance: float
-        """
-        boxes = [self.measurement_box, self.measurement_box_2, self.measurement_box_3]
-        for box in boxes:
-            if box.text() == '':
-                box.setText('{:.3f}'.format(distance))
-                return
-        boxes[0].setText(boxes[1].text())
-        boxes[1].setText(boxes[2].text())
-        boxes[2].setText('{:.3f}'.format(distance))
+        with open('LICENSE') as f:
+            license_text = f.read().replace('\n\n', '<>').replace('\n', ' ').replace('<>', '\n\n')
+        self.print_to_console('\n' + license_text)
 
 
     def show_documentation(self):
@@ -1467,29 +1436,156 @@ class Window(MainWindow):
                 '<a href="' + doc_url + '">' + doc_url + '</a>')
 
 
+class ConsoleRedirect(io.StringIO):
+    """Redirects stdout and stderr to a QTextEdit widget.
+    """
+    def __init__(self, text_edit):
+        """Initializes the console redirect.
+
+        :param text_edit: The text edit widget to redirect to.
+        :type text_edit: QTextEdit
+        """
+        super().__init__()
+        self.text_edit = text_edit
+        self.warning_format = QTextCharFormat()
+        self.warning_format.setForeground(QColor('orange'))
+        self.warning_format.setFontWeight(QFont.Bold)
+        self.error_format = QTextCharFormat()
+        self.error_format.setForeground(QColor('red'))
+        self.error_format.setFontWeight(QFont.Bold)
+
+    def write(self, text):
+        """Writes to the console.
+
+        This method writes to the console by inserting the text into the text
+        edit widget and moving the cursor to the end.
+
+        :param text: The text to write to the console.
+        :type text: str
+        """
+        self.text_edit.moveCursor(QTextCursor.End)
+        text = self.stylize_text(text)
+        self.text_edit.insertHtml(text)
+        self.text_edit.moveCursor(QTextCursor.End)
+        super().write(text)
+        
+    def stylize_text(self, text):
+        """Stylizes the text.
+
+        This method stylizes the text by adding a prompt to the beginning of
+        the text, replacing newlines with HTML line breaks, and replacing
+        warnings, errors, and successes with HTML formatted text.
+
+        :param text: The text to stylize.
+        :type text: str
+        :return: The stylized text.
+        :rtype: str
+        """
+        prompt = QDateTime.currentDateTime().toString('[yyyy-MM-dd HH:mm:ss]: ')
+        text = text.replace('[geviewer-prompt]: ', '<b style="color: blue;">{}</b>'.format(prompt))
+        text = text.replace('\n', '<br>')
+        text = re.sub(r'\b(Warning)\b', r'<b style="color: orange;">\1</b>', text)
+        text = re.sub(r'\b(Error)\b', r'<b style="color: red;">\1</b>', text)
+        text = re.sub(r'\b(Success)\b', r'<b style="color: green;">\1</b>', text)
+        return text
+
+    def flush(self):
+        pass
+
+    
+class ProgressBar(QProgressBar):
+    """A custom progress bar class for the GeViewer application.
+    """
+    progress = pyqtSignal(int)
+    maximum = pyqtSignal(int)
+    finished = pyqtSignal()
+
+    def __init__(self):
+        """Initializes the progress bar.
+        """
+        super().__init__()
+        self.setValue(0)
+        self.setRange(0, 100)
+        self._internal_value = 0
+        self.current_value = 0
+        self.maximum_value = 100
+        self.progress.connect(self.setValue)
+        self.maximum.connect(self.setMaximum)
+        self.finished.connect(lambda: self.setValue(self.maximum_value))
+
+
+    def increment_progress(self):
+        """Increments the progress bar by 1%.
+        """
+        self.current_value += 1
+        if 100*(self.current_value - self._internal_value)/self.maximum_value >= 1:
+            self._internal_value = self.current_value
+            self.progress.emit(self._internal_value)
+
+            
+    def reset_progress(self):
+        """Resets the progress bar to 0%.
+        """
+        self.current_value = 0
+        self._internal_value = 0
+        self.progress.emit(0)
+
+
+    def set_maximum_value(self, value):
+        """Sets the maximum value of the progress bar.
+
+        :param value: The maximum value of the progress bar.
+        :type value: int
+        """
+        self.maximum_value = value
+        self.maximum.emit(value)
+
+
+    def signal_finished(self):
+        """Signals that the progress bar has finished.
+        """
+        self.finished.emit()
+        
+
+class Worker(QThread):
+    """A custom worker class for the GeViewer application.
+    """
+    finished = pyqtSignal()
+
+    def __init__(self, task, progress_bar, **kwargs):
+        """Initializes the worker.
+        """
+        super().__init__()
+        self.task = task
+        self.kwargs = kwargs
+        self.progress_bar = progress_bar
+
+
+    def run(self):
+        """Runs the worker.
+        """
+        self.task(progress_callback=self.progress_bar, **self.kwargs)
+        self.finished.emit()
+
+
+    def on_finished(self, func):
+        """Connects a function to the finished signal.
+
+        :param func: The function to connect to the finished signal.
+        :type func: function
+        """
+        self.finished.connect(func)
+
+
 def launch_app():
-    """Launches the app."""
+    """Launches the app.
+    """
     app = Application([])
     app.setStyle('Fusion')
     
     window = Window()
-    
     sys.excepthook = window.global_exception_hook
-    
     window.show()
-    
-    # Process events before entering the main event loop
     app.processEvents()
     
-    # Use exec() instead of exit() to allow for clean shutdown
     return app.exec()
-
-# Modify the main script to use the return value from launch_app()
-if __name__ == "__main__":
-    sys.exit(launch_app())
-
-
-def global_exception_hook(exctype, value, traceback_obj):
-    error_message = ''.join(traceback.format_exception(exctype, value, traceback_obj))
-    print('Error:')
-    print(error_message)

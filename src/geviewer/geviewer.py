@@ -1,13 +1,13 @@
 import numpy as np
 import pyvista as pv
-import asyncio
 from pathlib import Path
 import os
 import shutil
 import zipfile
 import tempfile
 import json
-from geviewer import utils, parsers, plotter
+from pyvistaqt import QtInteractor
+from geviewer import parsers
 
 
 class GeViewer:
@@ -25,7 +25,7 @@ class GeViewer:
         """
         self.off_screen = False
         if plotter_widget:
-            self.plotter = plotter.Plotter(plotter_widget)
+            self.plotter = QtInteractor(plotter_widget)
         else:
             self.plotter = pv.Plotter()
         self.bkg_colors = ['lightskyblue', 'midnightblue']
@@ -36,7 +36,7 @@ class GeViewer:
         self.gradient = True
         self.parallel = False
         self.components = []
-        self.intersections = []
+        self.overlaps = []
         self.event_ids = []
         self.actors = {}
 
@@ -324,14 +324,14 @@ class GeViewer:
         return False
     
 
-    def do_bounds_intersect(self, mesh1, mesh2):
-        """Checks if the bounds of two meshes intersect.
+    def do_bounds_overlap(self, mesh1, mesh2):
+        """Checks if the bounds of two meshes overlap.
 
         :param mesh1: The first mesh.
         :type mesh1: pyvista.PolyData
         :param mesh2: The second mesh.
         :type mesh2: pyvista.PolyData
-        :return: True if the bounds intersect, False otherwise.
+        :return: True if the bounds overlap, False otherwise.
         :rtype: bool
         """
         bounds1 = mesh1.bounds
@@ -343,18 +343,18 @@ class GeViewer:
         return True
     
     
-    def get_intersection(self, mesh1, mesh2, tolerance=0.001, n_samples=100000):
-        """Gets the intersection between two meshes.
+    def get_overlap(self, mesh1, mesh2, tolerance=0.001, n_samples=100000):
+        """Gets the overlap between two meshes.
 
         :param mesh1: The first mesh.
         :type mesh1: pyvista.PolyData
         :param mesh2: The second mesh.
         :type mesh2: pyvista.PolyData
-        :param tolerance: The tolerance for the intersection.
+        :param tolerance: The tolerance for the overlap.
         :type tolerance: float, optional
         :param n_samples: The number of samples to use.
         :type n_samples: int, optional
-        :return: The points of intersection and the fraction of points that survived.
+        :return: The points of overlap and the fraction of points that survived.
         :rtype: tuple
         """
         points = np.random.uniform(low=mesh1.bounds[::2], \
@@ -381,46 +381,46 @@ class GeViewer:
         return points, overlap_fraction
         
         
-    def find_intersections(self, tolerance=0.001, n_samples=100000):
-        """Finds the intersections between the meshes.
+    def find_overlaps(self, tolerance=0.001, n_samples=100000):
+        """Finds the overlaps between the meshes.
 
-        :param tolerance: The tolerance for the intersection.
+        :param tolerance: The tolerance for the overlap.
         :type tolerance: float, optional
         :param n_samples: The number of samples to use.
         :type n_samples: int, optional
-        :return: The ids of the meshes that intersect.
+        :return: The ids of the meshes that overlap.
         :rtype: list
         """
-        for actor in self.intersections:
+        for actor in self.overlaps:
             self.plotter.remove_actor(actor)
-        self.intersections = []
+        self.overlaps = []
         overlapping_meshes = []
         checked = []
 
 
-        def find_intersections_recursive(components, level=0):
-            """Finds the intersections between the meshes.
+        def find_overlaps_recursive(components, level=0):
+            """Finds the overlaps between the meshes.
 
-            :param components: The components to check for intersections.
+            :param components: The components to check for overlaps.
             :type components: list
             :param level: Keeps track of the recursion level.
             :type level: int, optional
             """
             for comp in components:
                 if comp['mesh'] is not None and not (comp['shape'] == 'Point' or comp['shape'] == 'Line'):
-                    check_for_intersections(comp, components)
+                    check_for_overlaps(comp, components)
                 if len(comp['children']) > 0:
-                    find_intersections_recursive(comp['children'], level + 1)
+                    find_overlaps_recursive(comp['children'], level + 1)
                 checked.append(comp['id'])
                 if level == 0:
                     break
 
-        def check_for_intersections(comp1, components):
-            """Checks for intersections between one component and all other components.
+        def check_for_overlaps(comp1, components):
+            """Checks for overlaps between one component and all other components.
 
             :param comp1: The first component.
             :type comp1: dict
-            :param components: The components to check for intersections.
+            :param components: The components to check for overlaps.
             :type components: list
             """
             for comp2 in components:
@@ -436,31 +436,32 @@ class GeViewer:
                         continue
                     if self.is_mesh_inside(mesh2, mesh1):
                         continue
-                    if not self.do_bounds_intersect(mesh1, mesh2):
+                    if not self.do_bounds_overlap(mesh1, mesh2):
                         continue
                     if mesh1.n_open_edges + mesh2.n_open_edges > 0:
-                        print('Warning: unable to check for intersection between ' + comp1['name'] + ' and ' + comp2['name'])
+                        print('Warning: unable to check for overlap between ' + comp1['name'] + ' and ' + comp2['name'])
                         if mesh1.n_open_edges > 0:
                             print('-> {} has {} open edges.'.format(comp1['name'], mesh1.n_open_edges))
                         else:
                             print('-> {} has {} open edges.'.format(comp2['name'], mesh2.n_open_edges))
                         continue
 
-                    points, overlap_fraction = self.get_intersection(mesh1, mesh2, tolerance, n_samples)
+                    points, overlap_fraction = self.get_overlap(mesh1, mesh2, tolerance, n_samples)
                     threshold = n_samples * tolerance
 
                     if points.n_points > threshold:
                         overlapping_meshes.append(comp1['id'])
                         overlapping_meshes.append(comp2['id'])
                         actor = self.plotter.add_mesh(points, color='red', style='points', show_edges=False)
-                        self.intersections.append(actor)
-                        print('Warning: {} may intersect {} by {:.3f} percent'\
+                        self.overlaps.append(actor)
+                        print('Warning: {} may overlap {} by {:.3f} percent'\
                               .format(comp1['name'], comp2['name'], 100*overlap_fraction))
                 if len(comp2['children']) > 0:
-                    check_for_intersections(comp1, comp2['children'])
+                    check_for_overlaps(comp1, comp2['children'])
 
-        find_intersections_recursive(self.components)
+        find_overlaps_recursive(self.components)
         return np.unique(overlapping_meshes)
+
 
     def clear_meshes(self):
         """Clears the meshes.
@@ -469,6 +470,6 @@ class GeViewer:
             self.plotter.remove_actor(actor)
         self.actors = {}
         self.components = []
-        self.intersections = []
+        self.overlaps = []
         self.event_ids = []
         self.num_to_plot = 0
