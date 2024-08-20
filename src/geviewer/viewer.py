@@ -54,7 +54,7 @@ class GeViewer:
         """
         self.off_screen = off_screen
         if filename.endswith('.gev'):
-            new_components = self.load(filename)
+            new_components = self.load_session(filename)
         elif filename.endswith('.wrl'):
             parser = parsers.VRMLParser(filename)
             parser.parse_file(progress_callback)
@@ -201,7 +201,7 @@ class GeViewer:
             self.plotter.update()
 
 
-    def save(self, filename):
+    def save_session(self, filename):
         """Saves the session to a .gev file.
 
         :param filename: The name of the file to save the session to.
@@ -266,7 +266,7 @@ class GeViewer:
             shutil.copy(tmpdir + '/gevfile.gev', filename)
 
                 
-    def load(self, filename):
+    def load_session(self, filename):
         """Loads the session from a .gev file.
 
         :param filename: The name of the file to load the session from.

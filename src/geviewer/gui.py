@@ -150,7 +150,6 @@ class Window(MainWindow):
             self.file_load_manager.file_loaded.connect(loop.quit)
             loop.exec()
 
-
     ##############################################################
     # Methods for creating the GUI
     ##############################################################
@@ -436,7 +435,7 @@ class Window(MainWindow):
 
         # text and button size
         toolbar_font = QFont()
-        toolbar_font.setPointSize(12)
+        toolbar_font.setPointSize(13)
         action_width = 80
         self.toolbar.setFont(toolbar_font)
 
@@ -583,9 +582,10 @@ class Window(MainWindow):
         license_action.triggered.connect(self.show_license)
         update_action = help_menu.addAction('Check for Updates')
         update_action.triggered.connect(self.check_for_updates)
+        instructions_action = help_menu.addAction('Print Instructions')
+        instructions_action.triggered.connect(self.print_instructions)
         documentation_action = help_menu.addAction('Documentation')
         documentation_action.triggered.connect(self.show_documentation)
-
 
     ##############################################################
     # Signals and slots
@@ -1334,6 +1334,7 @@ class Window(MainWindow):
             self.print_to_console('Loading file: ' + file_path)
             self.worker = Worker(self.viewer.load_file, self.progress_bar, filename=file_path, off_screen=True)
             self.worker.on_finished(self.on_file_loaded)
+            self.worker.error_signal.connect(self.global_exception_hook)
             self.worker.start()
 
 
@@ -1357,8 +1358,8 @@ class Window(MainWindow):
             file_name, _ = QFileDialog.getSaveFileName(self, 'Save File', 'viewer.gev', file_types, options=options)
             
             if file_name:
-                self.viewer.save(file_name)
-                self.print_to_console('Success: file saved to {}.')
+                self.viewer.save_session(file_name)
+                self.print_to_console('Success: file saved to {}.'.format(file_name))
                 
         except Exception as e:
             self.global_exception_hook(type(e), e, e.__traceback__)
@@ -1482,6 +1483,24 @@ class Window(MainWindow):
             self.print_to_console('You are using the latest version of GeViewer.')
 
 
+    def print_instructions(self):
+        """Print the instructions for interacting with the viewer to
+        the console."""
+        import platform
+
+        system = platform.system().lower()
+        button = 'ctrl' if system in ['windows', 'linux'] else 'command'
+
+        instructions = """
+        Instructions:
+        * To rotate the view, click and drag
+        * To zoom in and out, scroll or right click and drag
+        * To pan, shift + click or click the scroll wheel and drag
+        * To roll, {} + click and drag
+        """.format(button)
+        self.print_to_console(instructions)
+
+
     def show_documentation(self):
         """Shows the documentation.
 
@@ -1575,7 +1594,7 @@ class ProgressBar(QProgressBar):
         """Increments the progress bar by 1%.
         """
         self.current_value += 1
-        if 100*(self.current_value - self._internal_value)/self.maximum_value >= 1:
+        if 100*(self.current_value - self._internal_value)/self.maximum_value >= 10:
             self._internal_value = self.current_value
             self.progress.emit(self._internal_value)
 
@@ -1608,6 +1627,7 @@ class Worker(QThread):
     """A custom worker class for the GeViewer application.
     """
     finished = pyqtSignal()
+    error_signal = pyqtSignal(type, Exception, object)
 
     def __init__(self, task, progress_bar, **kwargs):
         """Initializes the worker.
@@ -1621,8 +1641,12 @@ class Worker(QThread):
     def run(self):
         """Runs the worker.
         """
-        self.task(progress_callback=self.progress_bar, **self.kwargs)
-        self.finished.emit()
+        try:
+            self.task(progress_callback=self.progress_bar, **self.kwargs)
+        except Exception as e:
+            self.error_signal.emit(type(e), e, e.__traceback__)
+        finally:
+            self.finished.emit()
 
 
     def on_finished(self, func):
