@@ -6,6 +6,7 @@ import shutil
 import zipfile
 import tempfile
 import json
+import gc
 from pyvistaqt import QtInteractor
 from geviewer import parsers
 
@@ -41,33 +42,32 @@ class GeViewer:
         self.actors = {}
 
 
-    def load_file(self, filename, off_screen=False,\
-                   progress_callback=None):
-        """Loads the files.
+    def load_file(self, filename, off_screen=False, progress_obj=None):
+        """Loads the file into the components list.
 
         :param filename: The name of the file to load.
         :type filename: str
         :param off_screen: If True, the plotter is created without displaying it. Defaults to False.
         :type off_screen: bool, optional
-        :param progress_callback: The callback to use for the progress bar.
-        :type progress_callback: callable, optional
+        :param progress_obj: The progress bar object to use.
+        :type progress_obj: ProgressBar, optional
         """
         self.off_screen = off_screen
         if filename.endswith('.gev'):
-            new_components = self.load(filename)
+            new_components = self.load_session(filename)
         elif filename.endswith('.wrl'):
             parser = parsers.VRMLParser(filename)
-            parser.parse_file(progress_callback)
+            parser.parse_file(progress_obj)
             new_components = [parser.components]
         elif filename.endswith('heprep'):
             parser = parsers.HepRepParser(filename)
-            parser.parse_file(progress_callback)
+            parser.parse_file(progress_obj)
             new_components = parser.components
         self.num_to_plot = self.count_components(new_components)
         self.components.extend(new_components)
 
 
-    def count_components(self, components):
+    def count_components(self, components, exclude_events=False):
         """Counts the number of components in the list of components.
 
         :param components: A list of components.
@@ -77,29 +77,33 @@ class GeViewer:
         """
         count = 0
         for comp in components:
-            count += 1
+            if not (exclude_events and ((comp['mesh'] is None) or (comp['shape'] == 'Point') or (comp['shape'] == 'Line'))):
+                count += 1
             if len(comp['children']) > 0:
-                count += self.count_components(comp['children'])
+                count += self.count_components(comp['children'], exclude_events=exclude_events)
         return count
     
     
     def create_plotter(self, progress_obj=None):
-        """Creates the plotter.
+        """Creates the plotter and plots the meshes.
 
         :param progress_obj: The progress object to use for the plotter.
         :type progress_obj: ProgressBar, optional
         """
-        print('Plotting meshes...')
+        update = 'Plotting meshes...\n'
         if progress_obj:
-            progress_obj.set_maximum_value(self.num_to_plot)
             progress_obj.reset_progress()
+            progress_obj.set_maximum_value(self.num_to_plot)
+            progress_obj.print_update(update)
+        else:
+            print(update)
         self.plot_meshes(self.components, progress_obj=progress_obj)
         if progress_obj:
             progress_obj.signal_finished()
 
 
     def plot_meshes(self, components, level=0, progress_obj=None):
-        """Plots the meshes.
+        """Plots the meshes and saved the actors in a dictionary.
 
         :param components: The components to plot.
         :type components: list
@@ -112,7 +116,11 @@ class GeViewer:
         opacity = 0.3 if self.transparent else 1.
         for comp in components:
             if comp['mesh'] is not None and not comp['has_actor']:
-                print('...'*level + 'Plotting ' + comp['name'] + '...')
+                update = '...'*level + 'Plotting ' + comp['name'] + '...\n'
+                if progress_obj:
+                    progress_obj.print_update(update)
+                else:
+                    print(update)
                 if comp['is_event']:
                     self.event_ids.append(comp['id'])
                     this_opacity = 1
@@ -127,10 +135,14 @@ class GeViewer:
                 if progress_obj:
                     progress_obj.increment_progress()
             if len(comp['children']) > 0:
-                self.plot_meshes(comp['children'], level + 1)
+                self.plot_meshes(comp['children'], level + 1, progress_obj)
         if level == 0:
             self.plotter.view_isometric()
-            print('Done plotting.')
+            update = 'Done plotting.\n'
+            if progress_obj:
+                progress_obj.print_update(update)
+            else:
+                print(update)
             self.num_to_plot = 0
         
 
@@ -201,7 +213,7 @@ class GeViewer:
             self.plotter.update()
 
 
-    def save(self, filename):
+    def save_session(self, filename):
         """Saves the session to a .gev file.
 
         :param filename: The name of the file to save the session to.
@@ -266,7 +278,7 @@ class GeViewer:
             shutil.copy(tmpdir + '/gevfile.gev', filename)
 
                 
-    def load(self, filename):
+    def load_session(self, filename):
         """Loads the session from a .gev file.
 
         :param filename: The name of the file to load the session from.
@@ -364,12 +376,12 @@ class GeViewer:
         points = pv.PolyData(points)
 
         select = points.select_enclosed_points(mesh2, tolerance=1e-6)
-        points = select.points[select['SelectedPoints']>0.5]
+        points = select.points[select['SelectedPoints'] > 0.5]
         points = pv.PolyData(points)
         select = points.compute_implicit_distance(mesh2)
         bounds = mesh2.bounds
-        dimensions = np.array([bounds[1]-bounds[0], bounds[3]-bounds[2], bounds[5]-bounds[4]])
-        points = select.points[np.abs(select['implicit_distance'])>tolerance*np.linalg.norm(dimensions)]
+        dimensions = np.array([bounds[1] - bounds[0], bounds[3] - bounds[2], bounds[5] - bounds[4]])
+        points = select.points[np.abs(select['implicit_distance']) > tolerance*np.linalg.norm(dimensions)]
         points = pv.PolyData(points)
 
         overlap_fraction = points.n_points/n_surviving
@@ -377,7 +389,7 @@ class GeViewer:
         return points, overlap_fraction
         
         
-    def find_overlaps(self, tolerance=0.001, n_samples=100000):
+    def find_overlaps(self, tolerance=0.001, n_samples=100000, progress_obj=None):
         """Finds the overlaps between the meshes.
 
         :param tolerance: The tolerance for the overlap.
@@ -389,83 +401,139 @@ class GeViewer:
         """
         for actor in self.overlaps:
             self.plotter.remove_actor(actor)
-        self.overlaps = []
+        self.overlaps.clear()
         overlapping_meshes = []
         checked = []
 
-
-        def find_overlaps_recursive(components, level=0):
+        def find_overlaps_recursive(components, level=0, progress_obj=None):
             """Finds the overlaps between the meshes.
 
             :param components: The components to check for overlaps.
             :type components: list
             :param level: Keeps track of the recursion level.
             :type level: int, optional
+            :param progress_obj: The progress bar object to use.
+            :type progress_obj: ProgressBar, optional
             """
             for comp in components:
                 if comp['mesh'] is not None and not (comp['shape'] == 'Point' or comp['shape'] == 'Line'):
-                    check_for_overlaps(comp, components)
+                    check_for_overlaps(comp, components, progress_obj)
                 if len(comp['children']) > 0:
-                    find_overlaps_recursive(comp['children'], level + 1)
+                    find_overlaps_recursive(comp['children'], level + 1, progress_obj)
                 checked.append(comp['id'])
-                if level == 0:
-                    break
 
-        def check_for_overlaps(comp1, components):
+        def check_for_overlaps(comp1, components, progress_obj=None):
             """Checks for overlaps between one component and all other components.
 
             :param comp1: The first component.
             :type comp1: dict
             :param components: The components to check for overlaps.
             :type components: list
+            :param progress_obj: The progress bar object to use.
+            :type progress_obj: ProgressBar, optional
             """
             for comp2 in components:
+                if progress_obj:
+                    progress_obj.increment_progress()
+
                 if comp2['mesh'] is not None and not (comp2['shape'] == 'Point' or comp2['shape'] == 'Line') \
                     and (comp1['id'] != comp2['id']) and comp2['id'] not in checked:
                     mesh1 = comp1['mesh']
                     mesh2 = comp2['mesh']
+
+                    skip = False
                     if not mesh1.is_all_triangles:
                         mesh1 = mesh1.triangulate()
                     if not mesh2.is_all_triangles:
                         mesh2 = mesh2.triangulate()
-                    if self.is_mesh_inside(mesh1, mesh2):
-                        continue
-                    if self.is_mesh_inside(mesh2, mesh1):
-                        continue
-                    if not self.do_bounds_overlap(mesh1, mesh2):
-                        continue
-                    if mesh1.n_open_edges + mesh2.n_open_edges > 0:
-                        print('Warning: unable to check for overlap between ' + comp1['name'] + ' and ' + comp2['name'])
+                    if self.is_mesh_inside(mesh1, mesh2) or self.is_mesh_inside(mesh2, mesh1):
+                        skip = True
+                    elif not self.do_bounds_overlap(mesh1, mesh2):
+                        skip = True
+                    elif mesh1.n_open_edges + mesh2.n_open_edges > 0:
+                        skip = True
+                        update = 'Warning: unable to check for overlap between {} and {}\n'.format(comp1['name'], comp2['name'])
                         if mesh1.n_open_edges > 0:
-                            print('-> {} has {} open edges.'.format(comp1['name'], mesh1.n_open_edges))
+                            update += '-> {} has {} open edges.\n'.format(comp1['name'], mesh1.n_open_edges)
                         else:
-                            print('-> {} has {} open edges.'.format(comp2['name'], mesh2.n_open_edges))
-                        continue
+                            update += '-> {} has {} open edges.\n'.format(comp2['name'], mesh2.n_open_edges)
+                        if progress_obj:
+                            progress_obj.print_update(update)
+                        else:
+                            print(update)
 
-                    points, overlap_fraction = self.get_overlap(mesh1, mesh2, tolerance, n_samples)
-                    threshold = n_samples * tolerance
+                    if not skip:
+                        update = 'Checking for overlap between {} and {}...\n'.format(comp1['name'], comp2['name'])
+                        if progress_obj:
+                            # progress_obj.print_update(update)
+                            pass
+                        else:
+                            print(update)
 
-                    if points.n_points > threshold:
-                        overlapping_meshes.append(comp1['id'])
-                        overlapping_meshes.append(comp2['id'])
-                        actor = self.plotter.add_mesh(points, color='red', style='points', show_edges=False)
-                        self.overlaps.append(actor)
-                        print('Warning: {} may overlap {} by {:.3f} percent'\
-                              .format(comp1['name'], comp2['name'], 100*overlap_fraction))
+                        points, overlap_fraction = self.get_overlap(mesh1, mesh2, tolerance, n_samples)
+                        threshold = n_samples * tolerance
+
+                        if points.n_points > threshold:
+                            overlapping_meshes.append(comp1['id'])
+                            overlapping_meshes.append(comp2['id'])
+                            actor = self.plotter.add_mesh(points, color='red', style='points', show_edges=False)
+                            self.overlaps.append(actor)
+                            update = 'Warning: {} may overlap {} by {:.3f} percent'\
+                                    .format(comp1['name'], comp2['name'], 100.*overlap_fraction)
+                            if progress_obj:
+                                progress_obj.print_update(update)
+                            else:
+                                print(update)
+
                 if len(comp2['children']) > 0:
-                    check_for_overlaps(comp1, comp2['children'])
+                    check_for_overlaps(comp1, comp2['children'], progress_obj)
 
-        find_overlaps_recursive(self.components)
+        if progress_obj:
+            progress_obj.reset_progress()
+            num_components = self.count_components(self.components[0]['children'], exclude_events=True)
+            num_checks = int(num_components*(num_components-1)/2)
+            progress_obj.set_maximum_value(num_checks)
+
+        find_overlaps_recursive(self.components[0]['children'], progress_obj=progress_obj)
+
+        if progress_obj:
+            progress_obj.signal_finished()
+
         return np.unique(overlapping_meshes)
 
 
-    def clear_meshes(self):
-        """Clears the meshes.
+    def clear_component_meshes(self, components):
+        """Clears the meshes in the components.
+
+        :param components: The components to clear the meshes from.
+        :type components: list
         """
-        for actor in self.actors.values():
+        for comp in components:
+            children = comp.pop('children', [])
+            comp.clear()
+            comp['children'] = children
+
+            if 'mesh' in comp:
+                comp['mesh'] = None
+
+            if children:
+                self.clear_component_meshes(children)
+    
+    
+    def clear_meshes(self):
+        """Clears the meshes and frees associated memory."""
+
+        for actor in list(self.plotter.renderer.actors.values()):
             self.plotter.remove_actor(actor)
-        self.actors = {}
-        self.components = []
-        self.overlaps = []
-        self.event_ids = []
+        
+        self.actors.clear()
+        self.clear_component_meshes(self.components)
+        self.components.clear()
+        self.overlaps.clear()
+        self.event_ids.clear()
         self.num_to_plot = 0
+
+        gc.collect()
+
+        if not self.off_screen:
+            self.plotter.update()

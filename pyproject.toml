@@ -17,7 +17,8 @@ license = {file = 'LICENSE'}
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = ["PyQt6",
-                "pyvistaqt"]
+                "pyvistaqt",
+                "lxml"]
 keywords = ["geant4",
             "viewer",
             "visualizer",
@@ -33,15 +34,8 @@ keywords = ["geant4",
             "vrml",
             "heprep"]
 
-[project.optional-dependencies]
-extras = ["nest_asyncio",
-          "trame",
-          "trame_vuetify",
-          "trame_vtk"]
-
 [project.scripts]
 geviewer = "geviewer.main:main"
-geviewer-gui = "geviewer.main:launch"
 
 [project.urls]
 repository = "https://github.com/clarkehardy/geviewer.git"

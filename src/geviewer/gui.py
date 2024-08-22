@@ -3,6 +3,10 @@ import traceback
 import webbrowser
 import io
 import re
+from pathlib import Path
+import time
+import gc
+from pyvistaqt import MainWindow
 
 from PyQt6.QtCore import QDateTime, QThread, pyqtSignal, QEventLoop
 
@@ -21,7 +25,6 @@ from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot, QTimer, QSize, QObject
 
 from geviewer.viewer import GeViewer
 import geviewer.utils as utils
-from pyvistaqt import MainWindow
 
 
 class Application(QApplication):
@@ -62,6 +65,7 @@ class Window(MainWindow):
         self.checkbox_mapping = {}
         self.events_list = []
         self.figure_size = [1920, 1440]
+        self.worker_running = False
         self.file_load_manager = FileLoadManager()
 
         # create the main window
@@ -127,13 +131,6 @@ class Window(MainWindow):
         """
         error_message = ''.join(traceback.format_exception(exctype, value, traceback_obj))
         self.print_to_console('Error:\n' + error_message)
-        error_box = QMessageBox()
-        error_box.setIcon(QMessageBox.Icon.Critical)
-        error_box.setText('An unexpected error occurred.')
-        error_box.setInformativeText(str(value))
-        error_box.setDetailedText(error_message)
-        error_box.setWindowTitle('Error')
-        error_box.exec()
 
 
     def load_initial_files(self, files):
@@ -149,7 +146,6 @@ class Window(MainWindow):
             loop = QEventLoop()
             self.file_load_manager.file_loaded.connect(loop.quit)
             loop.exec()
-
 
     ##############################################################
     # Methods for creating the GUI
@@ -436,7 +432,7 @@ class Window(MainWindow):
 
         # text and button size
         toolbar_font = QFont()
-        toolbar_font.setPointSize(12)
+        toolbar_font.setPointSize(13)
         action_width = 80
         self.toolbar.setFont(toolbar_font)
 
@@ -583,9 +579,10 @@ class Window(MainWindow):
         license_action.triggered.connect(self.show_license)
         update_action = help_menu.addAction('Check for Updates')
         update_action.triggered.connect(self.check_for_updates)
+        instructions_action = help_menu.addAction('Print Instructions')
+        instructions_action.triggered.connect(self.print_instructions)
         documentation_action = help_menu.addAction('Documentation')
         documentation_action.triggered.connect(self.show_documentation)
-
 
     ##############################################################
     # Signals and slots
@@ -604,7 +601,7 @@ class Window(MainWindow):
         """
         if filename:
             self.current_file.append(filename)
-            title = self.default_title + ' - ' + self.current_file[0] \
+            title = self.default_title + ' - ' + str(Path(self.current_file[0]).resolve()) \
                     + ['',' + {} more'.format(len(self.current_file) - 1)][len(self.current_file) > 1]
         else:
             title = self.default_title
@@ -640,36 +637,21 @@ class Window(MainWindow):
         :type level: int
         """
         self.checkboxes_layout.removeWidget(self.load_instructions)
+        self.load_instructions.setParent(None)
         self.load_instructions.hide()
-        self.load_instructions.parentWidget().update()
         for comp in components:
             if comp['id'] not in self.checkbox_mapping:
                 checkbox = QCheckBox(comp['name'])
                 checkbox.setCheckState(Qt.CheckState.Checked)
                 checkbox.stateChanged.connect(lambda state, comp=comp: self.toggle_visibility(state, comp))
                 self.checkboxes_layout.addWidget(checkbox)
-                checkbox.setStyleSheet(f"padding-left: {20 * level}px")
+                checkbox.setStyleSheet('padding-left: {}px'.format(20 * level))
                 self.checkbox_mapping[comp['id']] = checkbox
-                self.progress_bar.increment_progress()
                 if comp['is_event'] and 'Event' in comp['name']:
                     self.events_list.append(comp['id'])
                 if 'children' in comp and comp['children']:
                     self.generate_checkboxes(comp['children'], level + 1)
         self.number_of_events.emit(len(self.events_list))
-
-
-    def add_components(self):
-        """Adds the components.
-
-        This method adds the components by creating the plotter and generating
-        the checkboxes for the components.
-        """
-        num_plotted = len(self.viewer.actors.keys())
-        self.viewer.create_plotter(self.progress_bar)
-        checkboxes_to_make = len(self.viewer.actors.keys()) - num_plotted
-        self.progress_bar.reset_progress()
-        self.progress_bar.set_maximum_value(checkboxes_to_make)
-        self.generate_checkboxes(self.viewer.components, 0)
 
 
     def toggle_visibility(self, state, comp):
@@ -1196,37 +1178,43 @@ class Window(MainWindow):
         :param samples: The number of samples to use for the overlaps.
         :type samples: int
         """
+        if self.worker_running:
+            self.print_to_console('Error: wait for the current process to finish.')
+            return
         tolerance = float(tolerance) if tolerance else 0.001
         samples = int(samples) if samples else 10000
         if not len(self.viewer.components):
             self.print_to_console('Error: no components loaded.')
             return
         self.print_to_console('Checking {} for overlaps...'.format(self.viewer.components[0]['name']))
-        overlapping_meshes = self.viewer.find_overlaps(tolerance, samples)
-        if len(overlapping_meshes) == 0:
-            self.print_to_console('Success: no overlaps found.')
-        else:
-            self.show_overlaps(overlapping_meshes)
-            self.print_to_console('Done checking geometry.')
+        self.worker = Worker(self.viewer.find_overlaps, self.progress_bar, tolerance=tolerance, n_samples=samples)
+        self.worker.on_finished(self.show_overlaps)
+        self.worker.error_signal.connect(self.global_exception_hook)
+        self.worker_running = True
+        self.worker.start()
 
 
-    def show_overlaps(self, overlapping_meshes):
+    def show_overlaps(self):
         """Shows the overlaps.
 
         This method shows the overlaps by setting the checkboxes to checked
         for the overlapping meshes and toggling the transparency if it is not
         already enabled.
-
-        :param overlapping_meshes: The overlapping meshes.
-        :type overlapping_meshes: list
         """
-        for checkbox in self.checkbox_mapping.values():
-            checkbox.setCheckState(Qt.CheckState.Unchecked)
-        for mesh_id in overlapping_meshes:
-            self.checkbox_mapping[mesh_id].setCheckState(Qt.CheckState.Checked)
-        if not self.viewer.transparent:
-            self.viewer.toggle_transparent()
-        self.plotter.view_isometric()
+        overlapping_meshes = self.worker.get_result()
+        self.worker.deleteLater()
+        self.worker_running = False
+        if len(overlapping_meshes) == 0:
+            self.print_to_console('Success: no overlaps found.')
+        else:
+            for checkbox in self.checkbox_mapping.values():
+                checkbox.setCheckState(Qt.CheckState.Unchecked)
+            for mesh_id in overlapping_meshes:
+                self.checkbox_mapping[mesh_id].setCheckState(Qt.CheckState.Checked)
+            if not self.viewer.transparent:
+                self.viewer.toggle_transparent()
+            self.plotter.view_isometric()
+            self.print_to_console('Done checking geometry.')
 
 
     def clear_overlaps(self):
@@ -1329,20 +1317,49 @@ class Window(MainWindow):
         :type file_path: str
         """
         if file_path:
+            if self.worker_running:
+                self.print_to_console('Error: wait for the current process to finish.')
+                return
+            start_time = time.time()
             self.progress_bar.setValue(0)
             self.file_name_changed.emit(file_path)
-            self.print_to_console('Loading file: ' + file_path)
-            self.worker = Worker(self.viewer.load_file, self.progress_bar, filename=file_path, off_screen=True)
-            self.worker.on_finished(self.on_file_loaded)
+            self.print_to_console('Loading file: {}\n'.format(file_path))
+            self.worker = Worker(self.load_and_plot, self.progress_bar, filename=file_path)
+            self.worker.on_finished(lambda: self.on_file_loaded(start_time))
+            self.worker.error_signal.connect(self.global_exception_hook)
+            self.worker.finished.connect(self.worker.deleteLater)
+            self.worker_running = True
             self.worker.start()
 
 
-    def on_file_loaded(self):
-        """Method to call when a file is loaded.
+    def load_and_plot(self, progress_obj, filename):
+        """The function to call when a file is loaded.
+
+        :param progress_obj: The progress object to use.
+        :type progress_obj: ProgressBar
+        :param filename: The path to the file to load.
+        :type filename: str
         """
-        self.add_components()
-        self.file_load_manager.file_loaded.emit()
-        self.print_to_console('Success: file loaded.')
+        self.viewer.load_file(filename=filename, progress_obj=progress_obj, off_screen=True)
+        self.viewer.create_plotter(progress_obj=progress_obj)
+
+
+    def on_file_loaded(self, start_time=None):
+        """Method to call when a file is loaded.
+
+        :param start_time: The start time of the file loading.
+        :type start_time: float, optional
+        """
+        self.worker_running = False
+        self.generate_checkboxes(self.viewer.components, 0)
+        time_str = ''
+        time_elapsed = 0
+        if start_time:
+            time_elapsed = time.time() - start_time
+            time_str = ' in {:.2f} seconds'.format(time_elapsed)
+        self.print_to_console('Success: file loaded' + time_str + '.')
+        if time_elapsed > 10:
+            self.print_to_console('Hint: save as .gev to speed up loading next time.')
 
 
     def save_file_dialog(self):
@@ -1357,8 +1374,8 @@ class Window(MainWindow):
             file_name, _ = QFileDialog.getSaveFileName(self, 'Save File', 'viewer.gev', file_types, options=options)
             
             if file_name:
-                self.viewer.save(file_name)
-                self.print_to_console('Success: file saved to {}.')
+                self.viewer.save_session(file_name)
+                self.print_to_console('Success: file saved to {}.'.format(file_name))
                 
         except Exception as e:
             self.global_exception_hook(type(e), e, e.__traceback__)
@@ -1370,18 +1387,26 @@ class Window(MainWindow):
         This method clears the meshes by removing all actors from the plotter
         and clearing the checkbox mapping.
         """
-        for actor in list(self.plotter.renderer.actors.values()):
-            self.plotter.remove_actor(actor)
-        self.checkbox_mapping = {}
+        self.viewer.clear_meshes()
+        self.plotter.clear()
+        self.plotter.reset_camera()
+        for checkbox in self.checkbox_mapping.values():
+            checkbox.setParent(None)
+            checkbox.deleteLater()
+        self.checkbox_mapping.clear()
         while self.checkboxes_layout.count() > 0:
             item = self.checkboxes_layout.takeAt(0)
             item.widget().deleteLater()
         self.checkboxes_layout.addWidget(self.load_instructions)
+        self.load_instructions.setParent(self.checkboxes_layout.parentWidget())
         self.load_instructions.show()
-        self.viewer.clear_meshes()
-        self.events_list = []
-        self.current_file = []
+        self.events_list.clear()
+        self.current_file.clear()
         self.file_name_changed.emit(None)
+        self.event_selection_box.setRange(1, 1)
+        self.event_selection_box.setValue(1)
+        self.clear_measurement()
+        gc.collect()
         self.print_to_console('Viewer cleared.')
 
 
@@ -1482,6 +1507,24 @@ class Window(MainWindow):
             self.print_to_console('You are using the latest version of GeViewer.')
 
 
+    def print_instructions(self):
+        """Print the instructions for interacting with the viewer to
+        the console."""
+        import platform
+
+        system = platform.system().lower()
+        button = 'ctrl' if system in ['windows', 'linux'] else 'command'
+
+        instructions = """
+        Instructions:
+        * To rotate the view, click and drag
+        * To zoom in and out, scroll or right click and drag
+        * To pan, shift + click or click the scroll wheel and drag
+        * To roll, {} + click and drag
+        """.format(button)
+        self.print_to_console(instructions)
+
+
     def show_documentation(self):
         """Shows the documentation.
 
@@ -1543,6 +1586,7 @@ class ConsoleRedirect(io.StringIO):
         text = re.sub(r'\b(Warning)\b', r'<b style="color: orange;">\1</b>', text)
         text = re.sub(r'\b(Error)\b', r'<b style="color: red;">\1</b>', text)
         text = re.sub(r'\b(Success)\b', r'<b style="color: green;">\1</b>', text)
+        text = re.sub(r'\b(Hint)\b', r'<b style="color: purple;">\1</b>', text)
         return text
 
 
@@ -1556,6 +1600,8 @@ class ProgressBar(QProgressBar):
     progress = pyqtSignal(int)
     maximum = pyqtSignal(int)
     finished = pyqtSignal()
+    update = pyqtSignal(str)
+    run_timer = pyqtSignal(bool)
 
     def __init__(self):
         """Initializes the progress bar.
@@ -1566,9 +1612,15 @@ class ProgressBar(QProgressBar):
         self._internal_value = 0
         self.current_value = 0
         self.maximum_value = 100
-        self.progress.connect(self.setValue)
-        self.maximum.connect(self.setMaximum)
-        self.finished.connect(lambda: self.setValue(self.maximum_value))
+        self.update_buffer = []
+        self.new_progress = False
+        self.progress.connect(self.setValue, Qt.QueuedConnection)
+        self.maximum.connect(self.setMaximum, Qt.QueuedConnection)
+        self.finished.connect(lambda: self.setValue(self.maximum_value), Qt.QueuedConnection)
+        self.update.connect(print)
+        self.run_timer.connect(self.start_or_stop_timer)
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.send_updates)
 
 
     def increment_progress(self):
@@ -1577,7 +1629,7 @@ class ProgressBar(QProgressBar):
         self.current_value += 1
         if 100*(self.current_value - self._internal_value)/self.maximum_value >= 1:
             self._internal_value = self.current_value
-            self.progress.emit(self._internal_value)
+            self.new_progress = True
 
             
     def reset_progress(self):
@@ -1586,6 +1638,7 @@ class ProgressBar(QProgressBar):
         self.current_value = 0
         self._internal_value = 0
         self.progress.emit(0)
+        self.run_timer.emit(True)
 
 
     def set_maximum_value(self, value):
@@ -1601,13 +1654,48 @@ class ProgressBar(QProgressBar):
     def signal_finished(self):
         """Signals that the progress bar has finished.
         """
+        self.send_updates()
+        self.run_timer.emit(False)
         self.finished.emit()
+
+
+    def start_or_stop_timer(self, start):
+        """Starts or stops the timer in the main thread.
+
+        :param start: Whether to start the timer.
+        :type start: bool
+        """
+        if start:
+            self.timer.start(100)
+        else:
+            self.timer.stop()
+
+
+    def print_update(self, text):
+        """Adds an update to the update buffer.
+        """
+        if self.timer.isActive():
+            self.update_buffer.append(text)
+        else:
+            self.update.emit(text)
+
+
+    def send_updates(self):
+        """Flushes the update buffer.
+        """
+        if self.new_progress:
+            self.progress.emit(self._internal_value)
+            self.new_progress = False
+        if self.update_buffer:
+            self.update.emit('\n'.join(self.update_buffer))
+            self.update_buffer.clear()
         
 
 class Worker(QThread):
     """A custom worker class for the GeViewer application.
     """
     finished = pyqtSignal()
+    error_signal = pyqtSignal(type, Exception, object)
 
     def __init__(self, task, progress_bar, **kwargs):
         """Initializes the worker.
@@ -1616,13 +1704,18 @@ class Worker(QThread):
         self.task = task
         self.kwargs = kwargs
         self.progress_bar = progress_bar
+        self.result = None
 
 
     def run(self):
         """Runs the worker.
         """
-        self.task(progress_callback=self.progress_bar, **self.kwargs)
-        self.finished.emit()
+        try:
+            self.result = self.task(progress_obj=self.progress_bar, **self.kwargs)
+        except Exception as e:
+            self.error_signal.emit(type(e), e, e.__traceback__)
+        finally:
+            self.finished.emit()
 
 
     def on_finished(self, func):
@@ -1632,6 +1725,28 @@ class Worker(QThread):
         :type func: function
         """
         self.finished.connect(func)
+
+
+    def get_result(self):
+        """Returns the result of the worker.
+        """
+        return self.result
+
+
+    def cleanup(self):
+        """Cleans up the resources used by the worker.
+        """
+        self.task = None
+        self.kwargs.clear()
+        self.progress_bar = None
+        self.result = None
+
+
+    def deleteLater(self):
+        """Overrides the deleteLater method to clean up the resources used by the worker.
+        """
+        self.cleanup()
+        super().deleteLater()
 
 
 class FileLoadManager(QObject):

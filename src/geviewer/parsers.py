@@ -1,9 +1,10 @@
 import numpy as np
 import pyvista as pv
-import xml.etree.ElementTree as ET
+from lxml import etree
 import re
 import uuid
 import time
+import threading
 
 from geviewer import utils, geometry
 
@@ -50,14 +51,20 @@ class Parser:
         :return: The combined points, cells, and colors.
         :rtype: tuple
         """
+
         offsets = np.cumsum([0] + [len(p) for p in points[:-1]]).astype(int)
         points = np.concatenate(points)
+        
         for i, cell in enumerate(cells):
             j = 0
             while j < len(cell):
-                k = cell[j]
-                cell[j + 1:j + k + 1] = (np.array(cell[j + 1:j + k + 1]) + offsets[i]).tolist()
+                k = int(cell[j])
+                start_idx = j + 1
+                end_idx = j + k + 1
+                
+                cell[start_idx:end_idx] = (np.array(cell[start_idx:end_idx]) + int(offsets[i])).tolist()
                 j += k + 1
+        
         cells = np.concatenate(cells).astype(int)
         colors = np.concatenate(colors)
 
@@ -74,6 +81,11 @@ class VRMLParser(Parser):
         :param progress_obj: The progress object to use.
         :type progress_obj: geviewer.gui.GeProgressBar, optional
         """
+        update = 'Reading VRML file...\n'
+        if progress_obj:
+            progress_obj.print_update(update)
+        else:
+            print(update)
         data = utils.read_file(self.filename)
         viewpoint_block, polyline_blocks, marker_blocks, solid_blocks = self.extract_blocks(data, progress_obj=progress_obj)
         self.viewpoint_block = viewpoint_block
@@ -107,7 +119,11 @@ class VRMLParser(Parser):
         :return: The created meshes.
         :rtype: tuple
         """
-        print('Building meshes...')
+        update = 'Building meshes...\n'
+        if progress_obj:
+            progress_obj.print_update(update)
+        else:
+            print(update)
 
         total = len(polyline_blocks) + len(marker_blocks) + len(solid_blocks)
         if progress_obj:
@@ -116,6 +132,7 @@ class VRMLParser(Parser):
         polyline_mesh = self.build_mesh(polyline_blocks, 'polyline', progress_obj)
         marker_mesh = self.build_markers(marker_blocks, progress_obj)
         solid_mesh = self.build_mesh(solid_blocks, 'solid', progress_obj)
+
         if progress_obj:
             progress_obj.signal_finished()
 
@@ -219,8 +236,11 @@ class VRMLParser(Parser):
             - A list of solid blocks as strings.
         :rtype: tuple
         """
-
-        print('Parsing VRML file...')
+        update = 'Parsing VRML file...\n'
+        if progress_obj:
+            progress_obj.print_update(update)
+        else:
+            print(update)
 
         polyline_blocks = []
         marker_blocks = []
@@ -547,47 +567,76 @@ class HepRepParser(Parser):
 
     def parse_file(self, progress_obj=None):
         """Parses the HepRep file and creates the meshes.
+
+        :param progress_obj: The progress object to use for the progress bar.
+        :type progress_obj: ProgressBar, optional
         """
-        self.root, total_elements = self.parse_geometry(self.filename)
+        if progress_obj:
+            print_func = progress_obj.print_update
+        else:
+            print_func = print
+
+        print_func('Parsing HepRep file...\n')
+        if progress_obj:
+            progress_obj.reset_progress()
+            progress_obj.set_maximum_value(0)
+
+        # approximate total number of elements from number of lines in file
+        with open(self.filename, 'r') as f:
+            total_elements = sum(1 for _ in f) // 2
+
+        if total_elements > 1e6:
+            print_func('This should take less than {:.0f} seconds.\n'.format(total_elements/1e6))
+
+        self.root = self.parse_xml(self.filename)
+        if progress_obj:
+            progress_obj.signal_finished()
+
         component_name = self.filename.split('/')[-1].split('.')[0]
-        self.components = [self.initialize_template(component_name)]
+        seed_component = self.initialize_template(component_name)
         self.event_number = 0
         self.num_components = 0
-        print('Parsing HepRep file...')
+        print_func('Extracting components...\n')
+
         if progress_obj:
             progress_obj.reset_progress()
             progress_obj.set_maximum_value(total_elements)
-        self.populate_meshes(self.root, self.components, progress_obj=progress_obj)
+
+        self.populate_meshes(self.root, seed_component, progress_obj=progress_obj)
+        self.components = [seed_component]
+
         if progress_obj:
             progress_obj.signal_finished()
-        print('Building meshes...')
+        
+        print_func('Building meshes...\n')
+
         if progress_obj:
             progress_obj.reset_progress()
             progress_obj.set_maximum_value(self.num_components)
+        
         self.create_meshes(self.components, progress_obj=progress_obj)
         self.reduce_components(self.components)
-        self.build_mesh(self.components)
+        self.build_mesh_objects(self.components)
+
         if progress_obj:
             progress_obj.signal_finished()
 
 
-    def parse_geometry(self, xml_file):
+    def parse_xml(self, xml_file):
         """Parses the HepRep file and returns the root element.
         """
-        tree = ET.parse(xml_file)
+        tree = etree.parse(xml_file)
         root = tree.getroot()
-        # approximation for the sake of the progress bar
-        total_elements = len(root.findall('.//*'))
-        return root, total_elements
+        return root
 
 
-    def populate_meshes(self, element, components, level=-1, progress_obj=None):
+    def populate_meshes(self, element, component, level=-1, progress_obj=None):
         """Populates the meshes for the given element.
 
         :param element: The element to populate.
         :type element: xml.etree.ElementTree.Element
-        :param components: The list of components to populate.
-        :type components: list
+        :param component: The component to populate.
+        :type component: dict
         :param level: The recursion level.
         :type level: int
         :param progress_obj: The progress object to use for the progress bar.
@@ -595,63 +644,125 @@ class HepRepParser(Parser):
         """
         if progress_obj:
             progress_obj.increment_progress()
-        for child in element:
-            if progress_obj:
-                progress_obj.increment_progress()
-            index = 0
-            if child.tag.endswith('instance'):
-                self.populate_meshes(child, components, level + 1, progress_obj)
-            elif child.tag.endswith('attvalue') and child.attrib['name'] == 'DrawAs':
-                components[index]['shape'] = child.attrib['value']
-            elif child.tag.endswith('attvalue') and child.attrib['name'] == 'LineColor':
-                color_str = child.attrib['value']
-                color = [float(i)/255. for i in color_str.split(',')]
-                components[index]['colors'].append(color)
-            elif child.tag.endswith('attvalue') and child.attrib['name'] == 'MarkColor':
-                color_str = child.attrib['value']
-                color = [float(i)/255. for i in color_str.split(',')]
-                components[index]['colors'].append(color)
-                components[index]['is_dot'] = True
-            elif child.tag.endswith('attvalue') and child.attrib['name'] == 'Visibility':
-                components[index]['visible'] = child.attrib['value'] == 'True'
-            elif child.tag.endswith('primitive'):
-                points = []
-                for grandchild in child:
-                    if progress_obj:
-                        progress_obj.increment_progress()
-                    if grandchild.tag.endswith('point'):
-                        points.append([float(grandchild.attrib['x']), \
-                                       float(grandchild.attrib['y']), \
-                                       float(grandchild.attrib['z'])])
-                    elif grandchild.tag.endswith('attvalue') and grandchild.attrib['name'].startswith('Radius'):
-                        points.append(float(grandchild.attrib['value']))
-                components[index]['points'].append(points)
-            elif child.tag.endswith('type'):
-                is_event = False
-                name_split = child.attrib['name'].split('_')
-                if name_split[-1].isnumeric():
-                    name = '_'.join(name_split[:-1])
-                else:
-                    name = child.attrib['name']
-                if name == 'Event Data':
-                    self.event_number += 1
-                if self.event_number > 0 and (name == 'TransientPolylines' or \
-                                              name == 'Hits'):
-                    # these seem to contain the same information as trajectories
-                    # so skip them for now
-                    continue
-                elif self.event_number > 0 and name == 'Trajectories':
-                    name = 'Event {} '.format(self.event_number) + name
-                    is_event = True
-                    self.event_number += 1
-                elif self.event_number > 0 and name == 'Trajectory Step Points':
-                    is_event = True
-                child_component = self.initialize_template(name)
-                self.num_components += 1
-                child_component['is_event'] = is_event
-                self.populate_meshes(child, [child_component], level + 1, progress_obj)
-                components[index]['children'].append(child_component)
-                index += 1
+        
+        if element.tag.endswith('instance'):
+            # children of instances are attvalues and one primitive
+            # loop through the attvalues and set the attributes
+            for child in element:
+                if progress_obj:
+                    progress_obj.increment_progress()
+
+                # get the attributes
+                if child.tag.endswith('attvalue'):
+                    self.process_attvalue(child, component)
+
+                # now get the point data from the primitive
+                elif child.tag.endswith('primitive'):
+                    points = []
+                    for grandchild in child:
+                        if progress_obj:
+                            progress_obj.increment_progress()
+                            
+                        if grandchild.tag.endswith('point'):
+                            points.append([float(grandchild.attrib['x']), \
+                                           float(grandchild.attrib['y']), \
+                                           float(grandchild.attrib['z'])])
+                        elif grandchild.tag.endswith('attvalue') and grandchild.attrib['name'].startswith('Radius'):
+                            points.append(float(grandchild.attrib['value']))
+                    component['points'].append(points)
+
+                # if the child is a type, call the function recursively
+                elif child.tag.endswith('type'):
+                    self.populate_meshes(child, component, level, progress_obj)
+
+        elif element.tag.endswith('type'):
+            # children of types are instances or attvalues
+            is_event = False
+            name_split = element.attrib['name'].split('_')
+            if name_split[-1].isnumeric():
+                name = '_'.join(name_split[:-1])
+            else:
+                name = element.attrib['name']
+            if name == 'Event Data':
+                self.event_number += 1
+            if self.event_number > 0 and (name == 'TransientPolylines' or \
+                                          name == 'Hits'):
+                # these seem to contain the same information as trajectories
+                # so skip them for now
+                return
+            elif self.event_number > 0 and name == 'Trajectories':
+                name = 'Event {} '.format(self.event_number) + name
+                is_event = True
+                self.event_number += 1
+            elif self.event_number > 0 and name == 'Trajectory Step Points':
+                is_event = True
+
+            child_component = self.initialize_template(name)
+            child_component['is_event'] = is_event
+
+            for child in element:
+                if progress_obj:
+                    progress_obj.increment_progress()
+
+                if child.tag.endswith('attvalue'):
+                    self.process_attvalue(child, child_component)
+
+                elif child.tag.endswith('instance'):
+                    self.num_components += 1
+                    instance_component = self.initialize_template(name)
+                    instance_component['is_event'] = is_event
+
+                    # copy attributes from child_component to instance_component
+                    self.copy_parent_attvalues(child_component, instance_component)
+
+                    self.populate_meshes(child, instance_component, level, progress_obj)
+                    component['children'].append(instance_component)
+
+            # if no instances were found, add the child_component itself
+            if not component['children']:
+                component['children'].append(child_component)
+
+        # if not dealing with an instance, try again with each of the children
+        else:
+            for child in element:
+                self.populate_meshes(child, component, level, progress_obj)
+
+        
+    def process_attvalue(self, child, component):
+        """Processes the attvalue to set the attributes of the component.
+
+        :param child: The attvalue to process.
+        :type child: xml.etree.ElementTree.Element
+        :param component: The component to set the attributes for.
+        :type component: dict
+        """
+        if child.attrib['name'] == 'DrawAs':
+            component['shape'] = child.attrib['value']
+        elif child.attrib['name'] == 'LineColor':
+            color_str = child.attrib['value']
+            color = [float(i)/255. for i in color_str.split(',')]
+            component['colors'] = [color]
+        elif child.attrib['name'] == 'MarkColor':
+            color_str = child.attrib['value']
+            color = [float(i)/255. for i in color_str.split(',')]
+            component['colors'] = [color]
+            component['is_dot'] = True
+        elif child.attrib['name'] == 'Visibility':
+            component['visible'] = child.attrib['value'] == 'True'
+
+
+    def copy_parent_attvalues(self, parent, child):
+        """Copies the parent attributes to the child.
+
+        :param parent: The parent component.
+        :type parent: dict
+        :param child: The child component.
+        :type child: dict
+        """
+        child['shape'] = parent['shape']
+        child['colors'] = [] if not parent['colors'] else [parent['colors'][0]]
+        child['is_dot'] = parent['is_dot']
+        child['visible'] = parent['visible']
 
 
     def create_meshes(self, components, progress_obj=None):
@@ -663,8 +774,7 @@ class HepRepParser(Parser):
         for comp in components:
             if progress_obj:
                 progress_obj.increment_progress()
-            if len(comp['children']) > 0:
-                self.create_meshes(comp['children'], progress_obj)
+
             if comp['shape'] == 'Prism':
                 comp['mesh_points'] = np.array(comp['points'])
                 comp['mesh_inds'] = [[4, 0, 1, 2, 3,\
@@ -680,15 +790,17 @@ class HepRepParser(Parser):
                 inds = []
                 scalars = []
                 if len(comp['points']) == 1:
-                    pt, ind = geometry.create_cylinder_mesh(comp['points'][0][2], comp['points'][0][3], \
-                                                            comp['points'][0][0], comp['points'][0][1])
+                    pt, ind = geometry.create_cylinder_mesh(
+                        comp['points'][0][2], comp['points'][0][3], \
+                        comp['points'][0][0], comp['points'][0][1])
                     points.append(pt)
                     inds.append(ind)
                     scalars.append(comp['colors']*len(pt))
                 elif len(comp['points']) == 2:
-                    pt, ind = geometry.create_annular_cylinder_mesh(comp['points'][0][2], comp['points'][0][3], \
-                                                                    comp['points'][0][0], comp['points'][0][1],\
-                                                                    comp['points'][1][0], comp['points'][1][1])
+                    pt, ind = geometry.create_annular_cylinder_mesh(
+                        comp['points'][0][2], comp['points'][0][3], \
+                        comp['points'][0][0], comp['points'][0][1], \
+                        comp['points'][1][0], comp['points'][1][1])
                     points.append(pt)
                     inds.append(ind)
                     scalars.append(comp['colors']*len(pt))
@@ -736,8 +848,11 @@ class HepRepParser(Parser):
                 comp['scalars'] = [np.concatenate([[color]*len(point) for color, point in \
                                                    zip(comp['colors'], comp['points'])])]
 
+            if len(comp['children']) > 0:
+                self.create_meshes(comp['children'], progress_obj)
 
-    def build_mesh(self, components):
+
+    def build_mesh_objects(self, components):
         """Draws the meshes for the given components.
 
         :param components: The list of components to draw meshes for.
@@ -745,7 +860,8 @@ class HepRepParser(Parser):
         """
         for comp in components:
             if len(comp['children']) > 0:
-                self.build_mesh(comp['children'])
+                self.build_mesh_objects(comp['children'])
+            shape = None
             if comp['shape'] == 'Prism' and len(comp['mesh_points']) > 0 and comp['visible']:
                 for i, points in enumerate(comp['mesh_points']):
                     shape = pv.PolyData(points, faces=comp['mesh_inds'][i])
@@ -767,10 +883,53 @@ class HepRepParser(Parser):
                     shape = pv.PolyData(points, lines=comp['mesh_inds'][i])
             else:
                 continue
-            
-            shape.point_data.set_scalars(comp['scalars'][i], name='color')
-            shape = shape.clean()
-            comp['mesh'] = shape
+
+            if shape is not None:
+                shape.point_data.set_scalars(comp['scalars'][i], name='color')
+
+                if shape.n_open_edges > 0:
+                    shape, success = self.repair_mesh(shape)
+
+                comp['mesh'] = shape
+
+
+    def repair_mesh(self, mesh):
+        """Attempts to repair the given mesh.
+        
+        :param mesh: The mesh to repair.
+        :type mesh: pv.PolyData
+        :return: A tuple containing the repaired mesh and a boolean indicating
+        whether the mesh was repaired.
+        :rtype: tuple
+        """
+
+        cleaned = mesh.clean()
+        if cleaned.n_open_edges == 0:
+            return cleaned, True
+        triangulated = mesh.triangulate()
+        if triangulated.n_open_edges == 0:
+            return triangulated, True
+        else:
+            cleaned = triangulated.clean()
+            if cleaned.n_open_edges == 0:
+                return cleaned, True
+        surface = mesh.extract_surface()
+        if surface.n_open_edges == 0:
+            return surface, True
+        else:
+            cleaned = surface.clean()
+            if cleaned.n_open_edges == 0:
+                return cleaned, True
+        length = np.linalg.norm(mesh.bounds[1] - mesh.bounds[0])
+        filled = mesh.fill_holes(1e-2*length)
+        if filled.n_open_edges == 0:
+            return filled, True
+        else:
+            cleaned = filled.clean()
+            if cleaned.n_open_edges == 0:
+                return cleaned, True
+
+        return mesh, False
 
 
     def combine_dicts(self, dicts):
@@ -790,17 +949,19 @@ class HepRepParser(Parser):
         # combine elements in a single dictionary first
         for j in range(len(dicts)):
             if len(dicts[j]['mesh_points']) > 1:
-                points, cells, colors = self.combine_mesh_arrays([dicts[j]['mesh_points'][i] for i in range(len(dicts[j]['mesh_points']))],\
-                                                                 [dicts[j]['mesh_inds'][i] for i in range(len(dicts[j]['mesh_points']))],\
-                                                                 [dicts[j]['scalars'][i] for i in range(len(dicts[j]['mesh_points']))])
+                points, cells, colors = self.combine_mesh_arrays(
+                    [dicts[j]['mesh_points'][i] for i in range(len(dicts[j]['mesh_points']))],
+                    [dicts[j]['mesh_inds'][i] for i in range(len(dicts[j]['mesh_points']))],
+                    [dicts[j]['scalars'][i] for i in range(len(dicts[j]['mesh_points']))])
                 dicts[j]['mesh_points'] = [points]
                 dicts[j]['mesh_inds'] = [cells]
                 dicts[j]['scalars'] = [colors]
 
         # then combine the dictionaries
-        points, cells, colors = self.combine_mesh_arrays([dicts[i]['mesh_points'][0] for i in range(len(dicts))],\
-                                                         [dicts[i]['mesh_inds'][0] for i in range(len(dicts))],\
-                                                         [dicts[i]['scalars'][0] for i in range(len(dicts))])
+        points, cells, colors = self.combine_mesh_arrays(
+            [dicts[i]['mesh_points'][0] for i in range(len(dicts))],
+            [dicts[i]['mesh_inds'][0] for i in range(len(dicts))],
+            [dicts[i]['scalars'][0] for i in range(len(dicts))])
         result['mesh_points'] = [points]
         result['mesh_inds'] = [cells]
         result['scalars'] = [colors]
