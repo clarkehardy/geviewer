@@ -65,6 +65,7 @@ class Window(MainWindow):
         self.checkbox_mapping = {}
         self.events_list = []
         self.figure_size = [1920, 1440]
+        self.worker_running = False
         self.file_load_manager = FileLoadManager()
 
         # create the main window
@@ -1177,6 +1178,9 @@ class Window(MainWindow):
         :param samples: The number of samples to use for the overlaps.
         :type samples: int
         """
+        if self.worker_running:
+            self.print_to_console('Error: wait for the current process to finish.')
+            return
         tolerance = float(tolerance) if tolerance else 0.001
         samples = int(samples) if samples else 10000
         if not len(self.viewer.components):
@@ -1186,7 +1190,7 @@ class Window(MainWindow):
         self.worker = Worker(self.viewer.find_overlaps, self.progress_bar, tolerance=tolerance, n_samples=samples)
         self.worker.on_finished(self.show_overlaps)
         self.worker.error_signal.connect(self.global_exception_hook)
-        # self.worker.finished.connect(self.worker.deleteLater)
+        self.worker_running = True
         self.worker.start()
 
 
@@ -1199,6 +1203,7 @@ class Window(MainWindow):
         """
         overlapping_meshes = self.worker.get_result()
         self.worker.deleteLater()
+        self.worker_running = False
         if len(overlapping_meshes) == 0:
             self.print_to_console('Success: no overlaps found.')
         else:
@@ -1312,6 +1317,9 @@ class Window(MainWindow):
         :type file_path: str
         """
         if file_path:
+            if self.worker_running:
+                self.print_to_console('Error: wait for the current process to finish.')
+                return
             start_time = time.time()
             self.progress_bar.setValue(0)
             self.file_name_changed.emit(file_path)
@@ -1320,6 +1328,7 @@ class Window(MainWindow):
             self.worker.on_finished(lambda: self.on_file_loaded(start_time))
             self.worker.error_signal.connect(self.global_exception_hook)
             self.worker.finished.connect(self.worker.deleteLater)
+            self.worker_running = True
             self.worker.start()
 
 
@@ -1341,6 +1350,7 @@ class Window(MainWindow):
         :param start_time: The start time of the file loading.
         :type start_time: float, optional
         """
+        self.worker_running = False
         self.generate_checkboxes(self.viewer.components, 0)
         time_str = ''
         time_elapsed = 0

@@ -81,8 +81,6 @@ class GeViewer:
                 count += 1
             if len(comp['children']) > 0:
                 count += self.count_components(comp['children'], exclude_events=exclude_events)
-        if count == 0:
-            print('No components to plot')
         return count
     
     
@@ -378,12 +376,12 @@ class GeViewer:
         points = pv.PolyData(points)
 
         select = points.select_enclosed_points(mesh2, tolerance=1e-6)
-        points = select.points[select['SelectedPoints']>0.5]
+        points = select.points[select['SelectedPoints'] > 0.5]
         points = pv.PolyData(points)
         select = points.compute_implicit_distance(mesh2)
         bounds = mesh2.bounds
-        dimensions = np.array([bounds[1]-bounds[0], bounds[3]-bounds[2], bounds[5]-bounds[4]])
-        points = select.points[np.abs(select['implicit_distance'])>tolerance*np.linalg.norm(dimensions)]
+        dimensions = np.array([bounds[1] - bounds[0], bounds[3] - bounds[2], bounds[5] - bounds[4]])
+        points = select.points[np.abs(select['implicit_distance']) > tolerance*np.linalg.norm(dimensions)]
         points = pv.PolyData(points)
 
         overlap_fraction = points.n_points/n_surviving
@@ -467,7 +465,8 @@ class GeViewer:
                     if not skip:
                         update = 'Checking for overlap between {} and {}...\n'.format(comp1['name'], comp2['name'])
                         if progress_obj:
-                            progress_obj.print_update(update)
+                            # progress_obj.print_update(update)
+                            pass
                         else:
                             print(update)
 
