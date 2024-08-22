@@ -1,6 +1,3 @@
-from pathlib import Path
-
-
 def read_file(filename):
     """Reads the content of a file.
 
@@ -9,7 +6,6 @@ def read_file(filename):
     :return: A single string containing the content of the file.
     :rtype: str
     """
-    print('Reading data from ' + str(Path(filename).resolve())+ '...')
     data = []
     with open(filename, 'r') as f:
         for line in f:
