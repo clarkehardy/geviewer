@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 def check_files(files):
-    """Check if the files are valid.
+    """Checks if the file paths are valid.
     """
     for file in files:
         file = str(Path(file).resolve())

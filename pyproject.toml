@@ -36,7 +36,7 @@ keywords = ["geant4",
             "heprep"]
 
 [project.scripts]
-geviewer = "geviewer.main:main"
+geviewer = "geviewer.geviewer:main"
 gev-converter = "geviewer.converter:main"
 
 [project.urls]
