@@ -6,7 +6,7 @@ import uuid
 import time
 import threading
 
-from geviewer import utils, geometry
+from geviewer import geometry
 
 
 class Parser:
@@ -86,7 +86,7 @@ class VRMLParser(Parser):
             progress_obj.print_update(update)
         else:
             print(update)
-        data = utils.read_file(self.filename)
+        data = read_file(self.filename)
         viewpoint_block, polyline_blocks, marker_blocks, solid_blocks = self.extract_blocks(data, progress_obj=progress_obj)
         self.viewpoint_block = viewpoint_block
         now = time.time()
@@ -100,6 +100,24 @@ class VRMLParser(Parser):
             component['children'].append(comp)
 
         self.components = component
+
+
+    def read_file(filename):
+        """Reads the content of a file.
+
+        :param filename: The path to the file to read.
+        :type filename: str
+        :return: A single string containing the content of the file.
+        :rtype: str
+        """
+        data = []
+        with open(filename, 'r') as f:
+            for line in f:
+                # don't read comments
+                if not line.strip().startswith('#'):
+                    data.append(line)
+        data = ''.join(data)
+        return data
     
 
     def create_meshes(self, polyline_blocks, marker_blocks, solid_blocks, progress_obj=None):
