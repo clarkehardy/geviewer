@@ -579,8 +579,6 @@ class Window(MainWindow):
         license_action.triggered.connect(self.show_license)
         update_action = help_menu.addAction('Check for Updates')
         update_action.triggered.connect(self.check_for_updates)
-        instructions_action = help_menu.addAction('Print Instructions')
-        instructions_action.triggered.connect(self.print_instructions)
         documentation_action = help_menu.addAction('Documentation')
         documentation_action.triggered.connect(self.show_documentation)
 
@@ -1505,24 +1503,6 @@ class Window(MainWindow):
             self.print_to_console(updates)
         else:
             self.print_to_console('You are using the latest version of GeViewer.')
-
-
-    def print_instructions(self):
-        """Print the instructions for interacting with the viewer to
-        the console."""
-        import platform
-
-        system = platform.system().lower()
-        button = 'ctrl' if system in ['windows', 'linux'] else 'command'
-
-        instructions = """
-        Instructions:
-        * To rotate the view, click and drag
-        * To zoom in and out, scroll or right click and drag
-        * To pan, shift + click or click the scroll wheel and drag
-        * To roll, {} + click and drag
-        """.format(button)
-        self.print_to_console(instructions)
 
 
     def show_documentation(self):
