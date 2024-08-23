@@ -1117,8 +1117,9 @@ class Window(MainWindow):
         and emitting the save figure event.
         """
         options = QFileDialog.Options()
-        file_types = 'Supported File Types (*.png *.svg *.eps *.ps *.pdf *.tex);; '\
-                     + 'PNG (*.png);;SVG (*.svg);;EPS (*.eps);;PS (*.ps);;PDF (*.pdf);;TEX (*.tex)'
+        file_types = 'Supported File Types (*.png *.jpeg *.jpg *.bmp *.tif *.tiff *.svg *.eps *.ps *.pdf *.tex);; '\
+                     + 'PNG (*.png);;JPEG (*.jpeg);;JPG (*.jpg);;BMP (*.bmp);;TIF (*.tif);;TIFF (*.tiff);;'\
+                     + 'SVG (*.svg);;EPS (*.eps);;PS (*.ps);;PDF (*.pdf);;TEX (*.tex)'
         file_name, _ = QFileDialog.getSaveFileName(self, 'Save Figure', '', file_types, options=options)
         
         if file_name:
@@ -1143,7 +1144,14 @@ class Window(MainWindow):
 
         # create an off-screen plotter with the given size
         off_screen_plotter = pv.Plotter(off_screen=True, window_size=[width, height])
-        off_screen_plotter.set_background(*self.viewer.bkg_colors)
+
+        if self.viewer.bkg_on:
+            if self.viewer.gradient:
+                off_screen_plotter.set_background(*self.viewer.bkg_colors)
+            else:
+                off_screen_plotter.set_background(self.viewer.bkg_colors[0])
+        else:
+            off_screen_plotter.set_background('white')
         
         # copy the mesh and camera settings to the off-screen plotter
         for actor in self.plotter.renderer.actors.values():
