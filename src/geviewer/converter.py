@@ -10,26 +10,31 @@ class ProgressBar:
     def __init__(self):
         self.pbar = None
         self.total = 0
+        self.interactive = sys.stdout.isatty()
 
     def reset_progress(self):
-        self.pbar = None
-        self.total = 0
+        if self.interactive:
+            self.pbar = None
+            self.total = 0
 
     def increment_progress(self):
-        if self.pbar is None and self.total > 0:
-            self.pbar = tqdm(total=self.total)
-        if self.pbar is not None:
-            if self.pbar.n + 1 < self.total:
-                self.pbar.update(1)
+        if self.interactive:
+            if self.pbar is None and self.total > 0:
+                self.pbar = tqdm(total=self.total)
+            if self.pbar is not None:
+                if self.pbar.n + 1 < self.total:
+                    self.pbar.update(1)
 
     def set_maximum_value(self, value):
-        self.total = value
+        if self.interactive:
+            self.total = value
 
     def signal_finished(self):
-        if self.pbar is not None:
-            self.pbar.n = self.total
-            self.pbar = None
-            print()
+        if self.interactive:
+            if self.pbar is not None:
+                self.pbar.n = self.total
+                self.pbar = None
+                print()
 
     def print_update(self, text):
         print(text)
