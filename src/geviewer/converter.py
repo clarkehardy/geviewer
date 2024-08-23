@@ -6,18 +6,30 @@ from pathlib import Path
 from geviewer.utils import check_files, print_banner
 from geviewer.viewer import GeViewer
 
+
 class ProgressBar:
+    """A progress bar for the converter.
+    """
+
     def __init__(self):
+        """Initializes the progress bar.
+        """
         self.pbar = None
         self.total = 0
         self.interactive = sys.stdout.isatty()
 
+
     def reset_progress(self):
+        """Resets the progress bar.
+        """
         if self.interactive:
             self.pbar = None
             self.total = 0
 
+
     def increment_progress(self):
+        """Increments the progress bar.
+        """
         if self.interactive:
             if self.pbar is None and self.total > 0:
                 self.pbar = tqdm(total=self.total)
@@ -25,18 +37,27 @@ class ProgressBar:
                 if self.pbar.n + 1 < self.total:
                     self.pbar.update(1)
 
+
     def set_maximum_value(self, value):
+        """Sets the maximum value of the progress bar.
+        """
         if self.interactive:
             self.total = value
 
+
     def signal_finished(self):
+        """Signals that the progress bar is finished.
+        """
         if self.interactive:
             if self.pbar is not None:
                 self.pbar.n = self.total
                 self.pbar = None
                 print()
 
+
     def print_update(self, text):
+        """Prints text sent to the progress bar.
+        """
         print(text)
 
 
