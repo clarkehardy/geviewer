@@ -18,7 +18,8 @@ readme = "README.md"
 requires-python = ">=3.8"
 dependencies = ["PyQt6",
                 "pyvistaqt",
-                "lxml"]
+                "lxml",
+                "tqdm"]
 keywords = ["geant4",
             "viewer",
             "visualizer",
@@ -36,6 +37,7 @@ keywords = ["geant4",
 
 [project.scripts]
 geviewer = "geviewer.main:main"
+gev-converter = "geviewer.converter:main"
 
 [project.urls]
 repository = "https://github.com/clarkehardy/geviewer.git"
