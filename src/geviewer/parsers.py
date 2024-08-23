@@ -86,7 +86,7 @@ class VRMLParser(Parser):
             progress_obj.print_update(update)
         else:
             print(update)
-        data = read_file(self.filename)
+        data = self.read_file(self.filename)
         viewpoint_block, polyline_blocks, marker_blocks, solid_blocks = self.extract_blocks(data, progress_obj=progress_obj)
         self.viewpoint_block = viewpoint_block
         now = time.time()
@@ -102,7 +102,7 @@ class VRMLParser(Parser):
         self.components = component
 
 
-    def read_file(filename):
+    def read_file(self, filename):
         """Reads the content of a file.
 
         :param filename: The path to the file to read.
