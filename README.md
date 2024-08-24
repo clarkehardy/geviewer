@@ -151,11 +151,11 @@ The default background is a gradient from light sky blue to navy blue. Under the
 #### Camera view parameters
 While the camera view can be set completely using the mouse, more precise control can be achieved using the text fields in the Options tab of the control panel. Each of the following are set with vectors of three floating-point numbers, representing $x$, $y$, and $z$:
 
-* **Camera Position:** The position of the camera in world coordinates.
+* **Camera position:** The position of the camera in world coordinates.
 
 * **Camera focal point:** The point in world coordinates that the camera is looking at.
 
-* **Camera Up Vector:** The direction in world coordinates that is considered "up" for the camera.
+* **Camera up vector:** The direction in world coordinates that is considered "up" for the camera.
 
 These text fields will be continually updated as the view is manipulated, allowing the user to use the view parameters displayed as a reference when setting them manually.
 
@@ -175,7 +175,7 @@ The Tools tab on the control panel contains the overlap inspector and a measurem
 
 * The overlap inspector checks for overlaps in the **meshes as produced by Geant4**, which may not reflect the **true geometry defined by the user**. When a mesh is exported from Geant4, smooth surfaces are approximated with many discrete faces. This may introduce spurious overlaps, as demonstrated in the figure below.
 
-![Spurious Overlaps](docs/source/_static/overlaps.png)
+![Spurious Overlaps](https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/overlaps.png)
 
 The overlap inspector works by iterating through all possible pairs of components and checking each pair for overlaps. The overlap checking is done first by determining if the bounding boxes overlap. If they do, a set of sample points is generated within one of the bounding boxes. The number of points is set by the text field in the Tools tab of the control panel. The subset of these points that falls inside the mesh are then kept, while the others are thrown out. The surviving points, which approximate the solid body of one of the meshes, are then checked to determine if any fall inside the other mesh. If they do, the overlap will be reported and the points in the overlapping region will be shown in red, with all but the overlapping components hidden to highlight the location of the overlap.
 
