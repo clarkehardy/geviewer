@@ -87,6 +87,10 @@ def create_annular_cylinder_mesh(p1, p2, r1_outer, r2_outer, r1_inner, r2_inner,
     :param num_segments: The number of segments to use.
     :type num_segments: int
     """
+
+    if r1_inner == 0 and r2_inner == 0:
+        return create_cylinder_mesh(p1, p2, r1_outer, r2_outer, num_segments)
+
     # Convert endpoints to numpy arrays
     p1 = np.array(p1)
     p2 = np.array(p2)
