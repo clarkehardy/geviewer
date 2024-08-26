@@ -23,6 +23,27 @@ without the hassle of setting up OpenGL or installing outdated software.
 
 * **Fast performance:** Enjoy smooth, responsive rendering even with large and complex detector geometries
 
+### Images
+<figure>
+   <p align="center">
+     <img src="https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/ui.png" alt="The GeViewer UI" width="1000">
+   </p>
+   <figcaption>The GeViewer UI</figcaption>
+</figure>
+<figure>
+  <div style="display: flex; justify-content: center;">
+    <div style="margin-right: 10px;">
+      <img src="https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/nexo.png" alt="nEXO detector" width="500"/>
+      <figcaption><em>(a) nEXO detector</em></figcaption>
+    </div>
+    <div>
+      <img src="https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/tms.png" alt="TMS detector" width="500"/>
+      <figcaption><em>(b) XeNu detector</em></figcaption>
+    </div>
+  </div>
+  <figcaption>Sample figures produced using GeViewer</figcaption>
+</figure>
+
 ## Setup
 ### Dependencies
 The following packages are required:
@@ -169,24 +190,33 @@ At any time, the current view can be exported by clicking the Export Figure butt
 #### Overlap inspector
 The Tools tab on the control panel contains the overlap inspector and a measurement tool. The overlap inspector can be used to check for overlaps between detector components, will a few essential caveats:
 
-* If a component is contained entirely within another, the overlap will not be reported
+* If a component is contained entirely within another, the overlap will not be reported.
 
 * If a component's mesh is not closed, it cannot be checked for overlaps. Meshes written to HepRep files by Geant4 occasionally have open edges. Small defects will be repaired when a file is loaded into GeViewer, but larger openings cannot be fixed. These components will be skipped during overlap checking.
 
 * The overlap inspector checks for overlaps in the **meshes as produced by Geant4**, which may not reflect the **true geometry defined by the user**. When a mesh is exported from Geant4, smooth surfaces are approximated with many discrete faces. This may introduce spurious overlaps, as demonstrated in the figure below.
 
-![Spurious Overlaps](https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/overlaps.png)
+<figure>
+   <p align="center">
+     <img src="https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/overlaps.png" alt="Spurious overlaps" width="600">
+   </p>
+   <figcaption>Spurious overlaps introduced during mesh export</figcaption>
+</figure>
+
+* Only components from the first file loaded that are visible will be checked for overlaps.
 
 The overlap inspector works by iterating through all possible pairs of components and checking each pair for overlaps. The overlap checking is done first by determining if the bounding boxes overlap. If they do, a set of sample points is generated within one of the bounding boxes. The number of points is set by the text field in the Tools tab of the control panel. The subset of these points that falls inside the mesh are then kept, while the others are thrown out. The surviving points, which approximate the solid body of one of the meshes, are then checked to determine if any fall inside the other mesh. If they do, the overlap will be reported and the points in the overlapping region will be shown in red, with all but the overlapping components hidden to highlight the location of the overlap.
+
+If the file includes many identical components which have been grouped together during loading, these will have to be individually checked for overlaps with all other components. This has the potential to be a very time-consuming operation for large arrays of identical components (e.g. thousands of SiPMs), so use good judgement when selecting which components to include in overlap checking.
 
 #### Measurement tool
 The Measurement Tool, on the Tools tab of the control panel, can be used to measure the distance between any two points. To use the tool, click Add measurement, then click two points in the viewer to measure the distance between them. The measurement will be shown on the viewer and will also be reported in the text field in the Tools tab. Up to three distance measurements will be shown in the Tools tab at a time. As new measurements are added, the oldest will be removed to keep the total number of measurements displayed at three.
 
 ### Additional options
 #### Saving files
-HepRep files that are particularly large (>1 GB) can take a minute or more to parse and load. Fortunately, this step needs to be done only once. After a file is loaded, it can be saved in a more convenient format for much faster loading in the future. With a file open, click File > Save As... in the menu bar. This will open a dialog allowing for a destination file path to be provided. The file must be saved with the `.gev` extension in order for GeViewer to recognize it. GeViewer sessions with multiple open files can similarly be saved and loaded.
+HepRep files that are particularly large (>1 GB) can take a minute or more to parse and load. Fortunately, this step needs to be done only once. After a file is loaded, it can be saved in a more convenient format for much faster loading in the future. With a file open, click **File > Save As...** in the menu bar. This will open a dialog allowing for a destination file path to be provided. The file must be saved with the `.gev` extension in order for GeViewer to recognize it. GeViewer sessions with multiple open files can similarly be saved and loaded.
 
-### File converter utility
+#### File converter utility
 The file parsing and loading steps can be called from the command line, or from within a Geant4 macro, to avoid the need to manually start the process when GeViewer is launched. This is done using the `gev-converter` command line utility, which is installed automatically along with GeViewer. To use the utility, call it with the path to a file to be converted and the path to a destination file with the `.gev` extension.
 ```bash
 gev-converter /path/to/file.heprep /path/to/file.gev
@@ -197,9 +227,16 @@ This command can be issued from within a Geant4 macro:
 ```
 The `gev-converter` utility does not have an interactive component and can therefore be run on a remote machine over `ssh`.
 
+#### Other options
+* [Depth peeling](https://en.wikipedia.org/wiki/Depth_peeling) is a technique for rendering transparent objects. It is disabled by default as it often slows down rendering. To enable depth peeling, click the **View > Use Depth Peeling** menu item.
+
+* Most operations in GeViewer will be reported in the console on the control panel, as will any errors or warnings. The console can be cleared by clicking **Edit > Clear Console**, and the contents of the console can be copied to the clipboard by clicking **Edit > Copy Console**.
+
+* Operations can be aborted by clicking **Edit > Abort Process**. This can be useful if, for example, you start checking for overlaps without unselecting a component with many subcomponents. Needless to say, this should be done sparingly.
+
 ## Additional Info
 ### Contributing
-GeViewer has been developed and tested using a limited number of Geant4 detector geometries, so the HepRep and VRML parsing functionalities are not yet exhaustive. If you find that a particular geometry or component is not being parsed correctly, please open an issue on the [GitHub repository](https://github.com/clarkehardy/geviewer/issues) and provide the file snippet in question, or fix the issue yourself and submit a pull request. Other suggestions, feature requests, or improvements are also welcome.
+GeViewer has been developed and tested using a limited number of Geant4 detector geometries, so the HepRep and VRML parsing functionalities are not yet exhaustive. If you find that a particular geometry or component is not being parsed correctly, please [open an issue](https://github.com/clarkehardy/geviewer/issues) on the GitHub repository and provide the file snippet in question, or fix the issue yourself and submit a pull request. Other suggestions, feature requests, or improvements are also welcome.
 
 ### License
 Distributed under the MIT License. See [LICENSE](https://github.com/clarkehardy/geviewer/blob/main/LICENSE) for more information.
