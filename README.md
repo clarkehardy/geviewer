@@ -73,7 +73,7 @@ geviewer /path/to/file1.heprep /path/to/file2.wrl
 The next section describes how to produce files that can be read by GeViewer using Geant4.
 
 ### Instructions for Geant4
-To produce Geant4 outputs that can be read by GeViewer, you must tell Geant4 to save the visualization either as a [HepRep file](https://www.slac.stanford.edu/~perl/heprep/index.html) or a [VRML file](https://en.wikipedia.org/wiki/VRML). HepRep files are preferred, as they allow you to turn on or off components or events individually. You can do this by putting the following in your Macro file:
+To produce Geant4 outputs that can be read by GeViewer, you must tell Geant4 to save the visualization either as a [HepRep file](https://www.slac.stanford.edu/~perl/heprep/index.html) or a [VRML file](https://en.wikipedia.org/wiki/VRML). HepRep files are preferred, as they allow you to turn on or off components or events individually. You can do this by putting the following in your macro file:
 ```
 # this line should come BEFORE the /run/beamOn command
 /vis/open HepRepFile
