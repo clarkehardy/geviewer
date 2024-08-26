@@ -1,6 +1,5 @@
 import numpy as np
 import pyvista as pv
-from pathlib import Path
 import os
 import shutil
 import zipfile
@@ -18,6 +17,7 @@ class GeViewer:
     offers various functionalities such as toggling display options and saving
     sessions.
     """
+
     def __init__(self, plotter_widget=None):
         """Initializes the GeViewer object.
 
@@ -67,7 +67,7 @@ class GeViewer:
         self.components.extend(new_components)
 
 
-    def count_components(self, components, exclude_events=False):
+    def count_components(self, components, exclude_events=False, exclude_invisible=False):
         """Counts the number of components in the list of components.
 
         :param components: A list of components.
@@ -75,12 +75,16 @@ class GeViewer:
         :return: The number of components in the list.
         :rtype: int
         """
+        if self.off_screen:
+            exclude_invisible = False
         count = 0
         for comp in components:
-            if not (exclude_events and ((comp['mesh'] is None) or (comp['shape'] == 'Point') or (comp['shape'] == 'Line'))):
+            if not (exclude_events and ((comp['mesh'] is None) or (comp['shape'] == 'Point') or \
+                (comp['shape'] == 'Line')) or (exclude_invisible and not self.actors[comp['id']].GetVisibility())):
                 count += 1
             if len(comp['children']) > 0:
-                count += self.count_components(comp['children'], exclude_events=exclude_events)
+                count += self.count_components(comp['children'], exclude_events=exclude_events, \
+                                               exclude_invisible=exclude_invisible)
         return count
     
     
@@ -94,7 +98,7 @@ class GeViewer:
         if progress_obj:
             progress_obj.reset_progress()
             progress_obj.set_maximum_value(self.num_to_plot)
-            progress_obj.print_update(update)
+            if progress_obj.sync_status(update=update): return
         else:
             print(update)
         self.plot_meshes(self.components, progress_obj=progress_obj)
@@ -118,7 +122,7 @@ class GeViewer:
             if comp['mesh'] is not None and not comp['has_actor']:
                 update = '...'*level + 'Plotting ' + comp['name'] + '...\n'
                 if progress_obj:
-                    progress_obj.print_update(update)
+                    if progress_obj.sync_status(update=update): return
                 else:
                     print(update)
                 if comp['is_event']:
@@ -130,17 +134,19 @@ class GeViewer:
                                               render_points_as_spheres=comp['is_dot'], \
                                               point_size=5*comp['is_dot'], style=style, \
                                               opacity=this_opacity, name=comp['id'])
+                if comp['name'] == '/nEXO/TPCInternals/LXe/ActiveRegion':
+                    self.bad_actor = comp['mesh']
                 self.actors[comp['id']] = actor
                 comp['has_actor'] = True
                 if progress_obj:
-                    progress_obj.increment_progress()
+                    if progress_obj.sync_status(increment=True): return
             if len(comp['children']) > 0:
                 self.plot_meshes(comp['children'], level + 1, progress_obj)
         if level == 0:
             self.plotter.view_isometric()
             update = 'Done plotting.\n'
             if progress_obj:
-                progress_obj.print_update(update)
+                if progress_obj.sync_status(update=update): return
             else:
                 print(update)
             self.num_to_plot = 0
@@ -200,13 +206,11 @@ class GeViewer:
         """
         self.transparent = not self.transparent
         if self.transparent:
-            self.plotter.enable_depth_peeling()
             for id, actor in self.actors.items():
                 if id in self.event_ids:
                     continue
                 actor.GetProperty().SetOpacity(0.3)
         else:
-            self.plotter.disable_depth_peeling()
             for actor in self.actors.values():
                 actor.GetProperty().SetOpacity(1)
         if not self.off_screen:
@@ -326,32 +330,32 @@ class GeViewer:
         bounds1 = mesh1.bounds
         bounds2 = mesh2.bounds
         if bounds1[0] >= bounds2[0] and bounds1[1] <= bounds2[1] and \
-            bounds1[2] >= bounds2[2] and bounds1[3] <= bounds2[3] and \
-            bounds1[4] >= bounds2[4] and bounds1[5] <= bounds2[5]:
+           bounds1[2] >= bounds2[2] and bounds1[3] <= bounds2[3] and \
+           bounds1[4] >= bounds2[4] and bounds1[5] <= bounds2[5]:
             return True
         return False
     
 
     def do_bounds_overlap(self, mesh1, mesh2):
-        """Checks if the bounds of two meshes overlap.
+        """Checks if the bounds of two meshes overlap in all three dimensions.
 
         :param mesh1: The first mesh.
         :type mesh1: pyvista.PolyData
         :param mesh2: The second mesh.
         :type mesh2: pyvista.PolyData
-        :return: True if the bounds overlap, False otherwise.
+        :return: True if the bounds overlap in all dimensions, False otherwise.
         :rtype: bool
         """
         bounds1 = mesh1.bounds
         bounds2 = mesh2.bounds
-        if bounds1[0] >= bounds2[1] or bounds1[1] <= bounds2[0] or \
-            bounds1[2] >= bounds2[3] or bounds1[3] <= bounds2[2] or \
-            bounds1[4] >= bounds2[5] or bounds1[5] <= bounds2[4]:
-            return False
-        return True
+        x_overlap = bounds1[0] <= bounds2[1] and bounds2[0] <= bounds1[1]
+        y_overlap = bounds1[2] <= bounds2[3] and bounds2[2] <= bounds1[3]
+        z_overlap = bounds1[4] <= bounds2[5] and bounds2[4] <= bounds1[5]
+        
+        return x_overlap and y_overlap and z_overlap
     
     
-    def get_overlap(self, mesh1, mesh2, tolerance=0.001, n_samples=100000):
+    def get_overlap(self, mesh1, mesh2, tolerance=0.001, n_samples=100000, progress_obj=None):
         """Gets the overlap between two meshes.
 
         :param mesh1: The first mesh.
@@ -365,26 +369,79 @@ class GeViewer:
         :return: The points of overlap and the fraction of points that survived.
         :rtype: tuple
         """
-        points = np.random.uniform(low=mesh1.bounds[::2], \
-                                    high=mesh1.bounds[1::2], \
-                                    size=(n_samples, 3))
-        
-        points = pv.PolyData(points)
-        select = points.select_enclosed_points(mesh1, tolerance=1e-6)
-        points = select.points[select['SelectedPoints']>0.5]
-        n_surviving = points.shape[0]
-        points = pv.PolyData(points)
 
-        select = points.select_enclosed_points(mesh2, tolerance=1e-6)
-        points = select.points[select['SelectedPoints'] > 0.5]
-        points = pv.PolyData(points)
-        select = points.compute_implicit_distance(mesh2)
-        bounds = mesh2.bounds
-        dimensions = np.array([bounds[1] - bounds[0], bounds[3] - bounds[2], bounds[5] - bounds[4]])
-        points = select.points[np.abs(select['implicit_distance']) > tolerance*np.linalg.norm(dimensions)]
-        points = pv.PolyData(points)
+        # get the disparate regions in mesh 1
+        connected_components_1 = mesh1.connectivity()
+        num_regions_1 = connected_components_1['RegionId'].max()
+        if num_regions_1 == 0:
+            separated_meshes_1 = [mesh1]
+        else:
+            separated_meshes_1 = []
+            for i in range(num_regions_1):
+                region_mesh = connected_components_1.threshold([i, i], scalars="RegionId")
+                separated_meshes_1.append(region_mesh)
 
-        overlap_fraction = points.n_points/n_surviving
+        # get the disparate regions in mesh 2
+        connected_components_2 = mesh2.connectivity()
+        num_regions_2 = connected_components_2['RegionId'].max()
+        if num_regions_2 == 0:
+            separated_meshes_2 = [mesh2]
+        else:
+            separated_meshes_2 = []
+            for i in range(num_regions_2):
+                region_mesh = connected_components_2.threshold([i, i], scalars="RegionId")
+                separated_meshes_2.append(region_mesh)
+
+        total_checks = len(separated_meshes_1)*len(separated_meshes_2)
+
+        # check for overlaps between all regions in mesh 1 and all regions in mesh 2
+        points = []
+        n_surviving = 0
+        current_check = 0
+        for mesh1 in separated_meshes_1:
+            for mesh2 in separated_meshes_2:
+
+                if total_checks > 200 and current_check % 100 == 0:
+                    update = 'Starting check {}/{}...{}'.format(current_check + 1, total_checks, \
+                                                                ['','\n'][total_checks - current_check < 100])
+                    if progress_obj:
+                        if progress_obj.sync_status(update=update): return
+                    else:
+                        print(update)
+
+                mesh1 = mesh1.extract_surface()
+                mesh2 = mesh2.extract_surface()
+
+                if not self.do_bounds_overlap(mesh1, mesh2):
+                    continue
+
+                mc_points = np.random.uniform(low=mesh1.bounds[::2], \
+                                              high=mesh1.bounds[1::2], \
+                                              size=(n_samples, 3))
+                
+                mc_points = pv.PolyData(mc_points)
+                select = mc_points.select_enclosed_points(mesh1, tolerance=1e-6)
+                mc_points = select.points[select['SelectedPoints'].astype(bool)]
+                n_surviving += mc_points.shape[0]
+                mc_points = pv.PolyData(mc_points)
+
+                select = mc_points.select_enclosed_points(mesh2, tolerance=1e-6)
+                mc_points = select.points[select['SelectedPoints'].astype(bool)]
+                mc_points = pv.PolyData(mc_points)
+                select = mc_points.compute_implicit_distance(mesh2)
+                bounds = mesh2.bounds
+                dimensions = np.array([bounds[1] - bounds[0], bounds[3] - bounds[2], bounds[5] - bounds[4]])
+                mc_points = select.points[np.abs(select['implicit_distance']) > tolerance*np.linalg.norm(dimensions)]
+                points.append(mc_points)
+
+                current_check += 1
+
+        if len(points) > 0:
+            points = pv.PolyData(np.concatenate(points))
+        else:
+            points = pv.PolyData()
+
+        overlap_fraction = None if n_surviving == 0 else points.n_points/n_surviving
 
         return points, overlap_fraction
         
@@ -417,7 +474,7 @@ class GeViewer:
             """
             for comp in components:
                 if comp['mesh'] is not None and not (comp['shape'] == 'Point' or comp['shape'] == 'Line'):
-                    check_for_overlaps(comp, components, progress_obj)
+                    check_for_overlaps(comp, self.components[0]['children'], progress_obj)
                 if len(comp['children']) > 0:
                     find_overlaps_recursive(comp['children'], level + 1, progress_obj)
                 checked.append(comp['id'])
@@ -433,55 +490,66 @@ class GeViewer:
             :type progress_obj: ProgressBar, optional
             """
             for comp2 in components:
-                if progress_obj:
-                    progress_obj.increment_progress()
 
                 if comp2['mesh'] is not None and not (comp2['shape'] == 'Point' or comp2['shape'] == 'Line') \
-                    and (comp1['id'] != comp2['id']) and comp2['id'] not in checked:
+                    and (comp1['id'] != comp2['id']) and (comp1['id'] not in checked) and (comp2['id'] not in checked):
+
                     mesh1 = comp1['mesh']
                     mesh2 = comp2['mesh']
 
                     skip = False
-                    if not mesh1.is_all_triangles:
-                        mesh1 = mesh1.triangulate()
-                    if not mesh2.is_all_triangles:
-                        mesh2 = mesh2.triangulate()
-                    if self.is_mesh_inside(mesh1, mesh2) or self.is_mesh_inside(mesh2, mesh1):
+                    if not self.off_screen and not (self.actors[comp1['id']].GetVisibility() and \
+                                                    self.actors[comp2['id']].GetVisibility()):
                         skip = True
-                    elif not self.do_bounds_overlap(mesh1, mesh2):
-                        skip = True
-                    elif mesh1.n_open_edges + mesh2.n_open_edges > 0:
-                        skip = True
-                        update = 'Warning: unable to check for overlap between {} and {}\n'.format(comp1['name'], comp2['name'])
-                        if mesh1.n_open_edges > 0:
-                            update += '-> {} has {} open edges.\n'.format(comp1['name'], mesh1.n_open_edges)
-                        else:
-                            update += '-> {} has {} open edges.\n'.format(comp2['name'], mesh2.n_open_edges)
+                    if not skip:
+                        update = 'Checking {} and {}...\n'.format(comp1['name'], comp2['name'])
                         if progress_obj:
-                            progress_obj.print_update(update)
+                            if progress_obj.sync_status(update=update, increment=True): return
+                        else:
+                            print(update)
+                    if not skip and not mesh1.is_all_triangles:
+                        mesh1 = mesh1.triangulate()
+                    if not skip and not mesh2.is_all_triangles:
+                        mesh2 = mesh2.triangulate()
+                    if not skip and (self.is_mesh_inside(mesh1, mesh2) or self.is_mesh_inside(mesh2, mesh1)):
+                        skip = True
+                    if not skip and not self.do_bounds_overlap(mesh1, mesh2):
+                        skip = True
+                    if not skip and (mesh1.n_open_edges + mesh2.n_open_edges > 0):
+                        skip = True
+                        if mesh1.n_open_edges > 0:
+                            update = 'Warning: unable to check {} for overlaps\n'.format(comp1['name'])
+                            update += '-> {} has {} open edges.\n'.format(comp1['name'], mesh1.n_open_edges)
+                            checked.append(comp1['id'])
+                        else:
+                            update = 'Warning: unable to check {} for overlaps\n'.format(comp2['name'])
+                            update += '-> {} has {} open edges.\n'.format(comp2['name'], mesh2.n_open_edges)
+                            checked.append(comp2['id'])
+                        if progress_obj:
+                            if progress_obj.sync_status(update=update): return
                         else:
                             print(update)
 
                     if not skip:
-                        update = 'Checking for overlap between {} and {}...\n'.format(comp1['name'], comp2['name'])
-                        if progress_obj:
-                            # progress_obj.print_update(update)
-                            pass
-                        else:
-                            print(update)
-
-                        points, overlap_fraction = self.get_overlap(mesh1, mesh2, tolerance, n_samples)
+                        points, overlap_fraction = self.get_overlap(mesh1, mesh2, tolerance, n_samples, progress_obj)
                         threshold = n_samples * tolerance
 
-                        if points.n_points > threshold:
+                        if overlap_fraction is None:
+                            update = 'Warning: insufficient sample points to check for overlap between {} and {}\n'\
+                                     .format(comp1['name'], comp2['name'])
+                            if progress_obj:
+                                if progress_obj.sync_status(update=update): return
+                            else:
+                                print(update)
+                        elif points.n_points > threshold:
                             overlapping_meshes.append(comp1['id'])
                             overlapping_meshes.append(comp2['id'])
                             actor = self.plotter.add_mesh(points, color='red', style='points', show_edges=False)
                             self.overlaps.append(actor)
-                            update = 'Warning: {} may overlap {} by {:.3f} percent'\
+                            update = 'Warning: {} may overlap {} by {:.3f} percent\n'\
                                     .format(comp1['name'], comp2['name'], 100.*overlap_fraction)
                             if progress_obj:
-                                progress_obj.print_update(update)
+                                if progress_obj.sync_status(update=update): return
                             else:
                                 print(update)
 
@@ -490,8 +558,9 @@ class GeViewer:
 
         if progress_obj:
             progress_obj.reset_progress()
-            num_components = self.count_components(self.components[0]['children'], exclude_events=True)
-            num_checks = int(num_components*(num_components-1)/2)
+            num_components = self.count_components(self.components[0]['children'], exclude_events=True, \
+                                                   exclude_invisible=True)
+            num_checks = int(num_components*(num_components - 1)/2)
             progress_obj.set_maximum_value(num_checks)
 
         find_overlaps_recursive(self.components[0]['children'], progress_obj=progress_obj)
@@ -521,8 +590,8 @@ class GeViewer:
     
     
     def clear_meshes(self):
-        """Clears the meshes and frees associated memory."""
-
+        """Clears the meshes and frees associated memory.
+        """
         for actor in list(self.plotter.renderer.actors.values()):
             self.plotter.remove_actor(actor)
         

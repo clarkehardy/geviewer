@@ -5,55 +5,96 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/clarkehardy/geviewer?logo=GitHub)
 ![GitHub License](https://img.shields.io/github/license/clarkehardy/geviewer)
 
-GeViewer is a lightweight, Python-based visualization tool for Geant4. It provides a convenient way to view detector geometries and particle trajectories, with smooth rendering in an interactive window.
+GeViewer is a lightweight, Python-based visualization tool for Geant4. It provides a convenient way to
+check detector geometries, view events, and produce publication-quality visuals,
+without the hassle of setting up OpenGL or installing outdated software.
 
 ### Features
 
-* **Physics-focused visuals:** See color-coded particle trajectories in a 3D-rendered detector
+* **Physics-focused visuals:** See color-coded particle trajectories and hits in a 3D-rendered detector
 
 * **Intuitive controls:** Use your mouse to rotate, zoom, pan, and interact with the geomery
 
-* **Customizable viewing:** Toggle through different viewing options with simple key commands
+* **Customizable viewing:** Adjust the viewing perspective, rendering style, and background for optimal visibility
 
 * **High-quality graphics:** Produce publication-quality visuals of detectors and events
 
+* **Robust geometry inspection:** Use simple tools to turn components on or off, measure distances, and check for overlaps
+
 * **Fast performance:** Enjoy smooth, responsive rendering even with large and complex detector geometries
+
+### Images
+<figure>
+   <p align="center">
+     <img src="https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/ui.png" alt="The GeViewer UI" width="1000">
+   </p>
+   <figcaption>The GeViewer UI</figcaption>
+</figure>
+<figure>
+  <div style="display: flex; justify-content: center;">
+    <div style="margin-right: 10px;">
+      <img src="https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/nexo.png" alt="nEXO detector" width="500"/>
+      <figcaption><em>(a) nEXO detector</em></figcaption>
+    </div>
+    <div>
+      <img src="https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/tms.png" alt="TMS detector" width="500"/>
+      <figcaption><em>(b) XeNu detector</em></figcaption>
+    </div>
+  </div>
+  <figcaption>Sample figures produced using GeViewer</figcaption>
+</figure>
 
 ## Setup
 ### Dependencies
 The following packages are required:
 
-* `numpy`
+* `PyQt6`
+
+* `pyvistaqt`
+
+* `lxml`
 
 * `tqdm`
 
-* `pyvista`
-
 ### Installation
-GeViewer can be installed using `pip` as follows:
-```bash
-pip install geviewer
+To ensure there are no conflicts with existing packages, it is recommended that you install GeViewer in a new Python environment.
 ```
-To uninstall:
+python -m venv geviewer-env
+source geviewer-env/bin/activate
+```
+The GeViewer version 0.2.0 beta can then be installed using `pip` as follows:
 ```bash
-pip uninstall geviewer
+pip install --pre geviewer
+```
+To avoid having to manually activate the environment each time you want to launch GeViewer, you can add the following line to your `.bashrc` file:
+```bash
+alias geviewer='/path/to/geviewer-env/bin/python /path/to/geviewer-env/bin/geviewer'
+```
+If you wish to uninstall GeViewer, you can use `pip uninstall geviewer`, or you can simply delete the environment containing the installation:
+```bash
+rm -rf geviewer-env
 ```
 
 ## Usage
-### Quick start
-GeViewer is intended to be used primarily as a command line tool. To run the program, you should have already produced one or more [VRML files](https://en.wikipedia.org/wiki/VRML) from Geant4 simulations. See the section below for instructions on what to put in your Geant4 macro. If you already have a VRML file, you can view it using:
+### Quick Start
+Following installation, you can launch GeViewer from the command line:
 ```bash
-geviewer /path/to/file.wrl
+geviewer
 ```
-This will load the meshes described in `/path/to/file.wrl` and display them in an interactive window. The viewing perspective can be changed by clicking, dragging, and scrolling in the window, while other functions can be activated using key commands. More specific instructions for use will print in the terminal window when the program is launched.
+This will open a new window where you can then load files to view. Alternatively, you can provide a list of files to load from the command line:
+```bash
+geviewer /path/to/file1.heprep /path/to/file2.wrl
+```
+The next section describes how to produce files that can be read by GeViewer using Geant4.
 
 ### Instructions for Geant4
-To produce Geant4 outputs that can be read by GeViewer, you must tell Geant4 to save the visualization as a VRML file. You can do this by putting the following in your Macro file:
+To produce Geant4 outputs that can be read by GeViewer, you must tell Geant4 to save the visualization either as a [HepRep file](https://www.slac.stanford.edu/~perl/heprep/index.html) or a [VRML file](https://en.wikipedia.org/wiki/VRML). HepRep files are preferred, as they allow you to turn on or off components or events individually. You can do this by putting the following in your Macro file:
 ```
 # this line should come BEFORE the /run/beamOn command
-/vis/open VRML2FILE
+/vis/open HEPREPFILE
+# you can also use /vis/open VRML2FILE
 ```
-Following this, you can add the geometry, trajectories, and step markers. Any of these can be omitted if they are not needed.
+Following this, you can add the geometry, trajectories, and step markers. Any of these can be omitted if they are not needed, but note that without first adding trajectories, step markers will not be visible.
 ```
 # now ensure that the geometry is displayed
 /vis/drawVolume
@@ -77,115 +118,126 @@ Finally, refresh the viewer to ensure that the events generated have been added.
 ```
 /vis/viewer/flush
 ```
-By default, the VRML file will be saved as `g4_00.wrl` in the working directory, but it can easily be renamed from within the macro by issuing a shell command.
+By default, the file will be saved in the working directory (as `G4Data0.heprep` for HepRep files and `g4_00.wrl` for VRML files), but it can easily be renamed from within the macro by issuing a shell command.
 ```
-/control/shell mv g4_00.wrl /new/path/to/file.wrl
+/control/shell mv G4Data0.heprep /new/path/to/file.heprep
 ```
-If you are using your local computer, you can even pipe the VRML file directly to GeViewer to have the interactive window open automatically following the simulation.
+If you are using your local computer, you can even pipe the output file directly to GeViewer to have the application load the file automatically following the simulation.
 ```
-/control/shell geviewer /new/path/to/file.wrl
+/control/shell geviewer /new/path/to/file.heprep
 ```
-Note that this will not work if you are running Geant4 on a remote machine over `ssh`, as GeViewer cannot be run using X11 forwarding. If that is your use case, you can download the resulting VRML file to open on your local computer, or you can add the `-o` and `-d` flags to the command above to save a GeViewer session to disk. This will be discussed more in a later section.
+Note that this will not work if you are running Geant4 on a remote machine over `ssh`, as GeViewer cannot be run using X11 forwarding. If that is your use case, you can download the resulting visualization file to open on your local computer.
 
-### Interacting with the viewer
-The following instructions for interacting with the viewer will display when the program is launched:
+### Viewing Files
 
-* Click and drag to rotate the view, `shift` + click
-  and drag to pan,  `ctrl` + click and drag to roll,
-  and scroll to zoom
+#### Loading files
+To load a file, click **File > Open File...** in the menu bar. This will open a dialog where you can select the file to load. Repeat this process to load multiple files simultaneously. To clear the currently loaded files, click **Edit > Clear Viewer**.
 
-* Press `c` to capture a screenshot of the current view
+When a file is loaded, a list of checkboxes will appear in the components panel on the left, allowing individual components to be toggled on or off. For HepRep files, this list will include all individual detector components and events in a hierarchy as defined in Geant4. Components with identical names, or components with the same names up to a numerical suffix, will be grouped together. This is necessary to show larger geometries containing too many components to render individually while maintaining performance (e.g. a detector with 100,000 identical SiPMs). For VRML files, the list will contain three components: the geometry, the trajectories, and the step markers. Each of these can only be toggled on or off as a whole.
 
-* Press `t` to toggle the trajectories on or off
+Clicking a checkbox will toggle the visibility of the corresponding component and all of its children. By working from the top of the hierarchy downwards, and combination of visibilities can be achieved.
 
-* Press `m` to toggle the step markers on or off
+#### Interacting with the viewer
 
-* Press `b` to toggle the background on or off
+Most of the interactive controls should be intuitive, but a brief summary is provided below:
 
-* Press `w` to toggle between wireframe and solid modes
+* To rotate the view, click and drag
+* To zoom in and out, scroll or right click and drag
+* To pan, shift + click or click the scroll wheel and drag
+* To roll, ctrl + click and drag on Windows or command + click and drag on Mac and Linux
 
-* Press `v` to switch to an isometric view
+#### Toolbar view options
 
-* Press `d` to set the display window size
+The toolbar provides a number of additional options for customizing the view. These include:
+ * Toggling between wireframe and solid rendering modes
 
-* Press `i` to set the camera viewpoint
+ * Toggling between opaque and transparent rendering modes. As HepRep files do not contain transparency information, this will affect all components simultaneously. For VRML files, which do contain transparency information, this will scale the transparency of all components uniformly.
 
-* Press `p` to print the current display settings
+ * Toggling between perspective and parallel projection modes. Perspective projection appears most natural and is therefore the default. For a true compoarison of object sizes independent of distance, however, parallel projection may be more useful.
 
-* Press `h` to export the viewer to an HTML file
+ * Switching to common views, including:
+    * Isometric view
+    * Top view
+    * Bottom view
+    * Left view
+    * Right view
+    * Front view
+    * Back view
 
-* Press `q` to quit the viewer
+#### Customizing the background
+The default background is a gradient from light sky blue to navy blue. Under the View menu, both of these colors can be changed, the gradient can be turned on or off, and the background can be reset to the default.
 
-While the primary interface is with the viewer window, some commands require text entry in the terminal window. Any saving commands will require the user to enter a file path in the terminal. Some of these functions have been specifically designed to provide more precise control of the viewer than can be achieved using the mouse alone.
+### View Options
 
-#### Saving figures
-Producing high-quality figures is a key feature of GeViewer. When creating figures for papers or presentations, it's often important to get a repeatable view to compare multiple geometries or events from the same perspective. Using the `p` and `i` commands, you can print your preferred view and later reset the viewpoint to those exact settings. Or, you can use `v` to go to an isometric view.
+#### Camera view parameters
+While the camera view can be set completely using the mouse, more precise control can be achieved using the text fields in the Options tab of the control panel. Each of the following are set with vectors of three floating-point numbers, representing $x$, $y$, and $z$:
 
-Additionally, it's frequently necessary to produce figures of a specific resolution. The `d` command allows you to specify the exact resolution of the plotting window before capturing the view with the `c` command.
+* **Camera position:** The position of the camera in world coordinates.
 
-GeViewer supports saving figures in various file formats. The file format is determined by the extension you provide when entering the filename in the terminal window after pressing `c`. The supported formats are `.png`, `.svg`, `.eps`, `.ps`, `.pdf`, and `.tex`.
+* **Camera focal point:** The point in world coordinates that the camera is looking at.
 
-#### Exporting to HTML
-Once a file has been loaded with GeViewer, the interactive session can be saved to an HTML file, allowing for later viewing in a web browser (with some features missing). Saving to HTML requires some additional packages:
+* **Camera up vector:** The direction in world coordinates that is considered "up" for the camera.
 
-* `nest-asyncio`
+These text fields will be continually updated as the view is manipulated, allowing the user to use the view parameters displayed as a reference when setting them manually.
 
-* `trame`
+#### Event viewer
+When a file is loaded, all events are shown simultaneously. To view an individual event, the spin box on the Options tab of the control panel can be used. This will turn off all other trajectories and trajectory step points, leaving only the selected event visible. Clicking the arrow buttons on the spin box, or using the arrow keys on your keyboard with the spin box selected, will cycle through the events.
 
-* `trame-vuetify`
+#### Exporting figures
+At any time, the current view can be exported by clicking the Export Figure button on the Options tab of the control panel. Any of the following file formats are supported: `.png`, `.jpeg`, `.jpg`, `.bmp`, `.tif`, `.tiff`, `.svg`, `.eps`, `.ps`, `.pdf`, `.tex`. When exporting a figure, the figure size in pixels can be set by providing the width and height in the Figure size text field. The default figure size is 1920x1440 pixels, which corresponds to a 6.4 inch by 4.8 inch figure at 300 dpi.
 
-* `trame-vtk`
+### Geometry Tools
+#### Overlap inspector
+The Tools tab on the control panel contains the overlap inspector and a measurement tool. The overlap inspector can be used to check for overlaps between detector components, will a few essential caveats:
 
-These packages can be installed automatically using:
-```
-pip install geviewer[extras]
-```
+* If a component is contained entirely within another, the overlap will not be reported.
+
+* If a component's mesh is not closed, it cannot be checked for overlaps. Meshes written to HepRep files by Geant4 occasionally have open edges. Small defects will be repaired when a file is loaded into GeViewer, but larger openings cannot be fixed. These components will be skipped during overlap checking.
+
+* The overlap inspector checks for overlaps in the **meshes as produced by Geant4**, which may not reflect the **true geometry defined by the user**. When a mesh is exported from Geant4, smooth surfaces are approximated with many discrete faces. This may introduce spurious overlaps, as demonstrated in the figure below.
+
+<figure>
+   <p align="center">
+     <img src="https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/overlaps.png" alt="Spurious overlaps" width="600">
+   </p>
+   <figcaption>Spurious overlaps introduced during mesh export</figcaption>
+</figure>
+
+* Only components from the first file loaded that are visible will be checked for overlaps.
+
+The overlap inspector works by iterating through all possible pairs of components and checking each pair for overlaps. The overlap checking is done first by determining if the bounding boxes overlap. If they do, a set of sample points is generated within one of the bounding boxes. The number of points is set by the text field in the Tools tab of the control panel. The subset of these points that falls inside the mesh are then kept, while the others are thrown out. The surviving points, which approximate the solid body of one of the meshes, are then checked to determine if any fall inside the other mesh. If they do, the overlap will be reported and the points in the overlapping region will be shown in red, with all but the overlapping components hidden to highlight the location of the overlap.
+
+If the file includes many identical components which have been grouped together during loading, these will have to be individually checked for overlaps with all other components. This has the potential to be a very time-consuming operation for large arrays of identical components (e.g. thousands of SiPMs), so use good judgement when selecting which components to include in overlap checking.
+
+#### Measurement tool
+The Measurement Tool, on the Tools tab of the control panel, can be used to measure the distance between any two points. To use the tool, click Add measurement, then click two points in the viewer to measure the distance between them. The measurement will be shown on the viewer and will also be reported in the text field in the Tools tab. Up to three distance measurements will be shown in the Tools tab at a time. As new measurements are added, the oldest will be removed to keep the total number of measurements displayed at three.
 
 ### Additional options
-The full list of command-line options can be displayed using the `--help` flag:
-```console
-$ geviewer --help
+#### Saving files
+HepRep files that are particularly large (>1 GB) can take a minute or more to parse and load. Fortunately, this step needs to be done only once. After a file is loaded, it can be saved in a more convenient format for much faster loading in the future. With a file open, click **File > Save As...** in the menu bar. This will open a dialog allowing for a destination file path to be provided. The file must be saved with the `.gev` extension in order for GeViewer to recognize it. GeViewer sessions with multiple open files can similarly be saved and loaded.
 
-usage: geviewer [-h] [-d [DESTINATION]] [-o] [-s] [-w] filenames [filenames ...]
-
-View Geant4 simulation results.
-
-positional arguments:
-  filenames             the file or list of files to be displayed
-
-options:
-  -h, --help            show this help message and exit
-  -d [DESTINATION], --destination [DESTINATION]
-                        save the session to this location
-  -o, --off-screen      run in offscreen mode.
-  -s, --safe-mode       use more robust VRML parsing at the expense of some interactive features
-  -w, --no-warnings     do not pause the program to display warnings
-```
-Detailed descriptions of selected options are provided below.
-
-#### Saving and loading
-Once a VRML file has been parsed and meshes have been built from it, it can be saved in a more convenient format for faster loading in the future. This is only relevant for very large files (>1 million meshes) which take more than a few seconds to load. Saving is done when launching GeViewer using the ```--destination``` (or `-d`) flag, optionally followed by the output filename (ending in `.gev`). If no filename is provided, the session will be saved in the working directory as `viewer.gev`. To reload this session, run the program again, passing the `.gev` file as the `filenames` argument.
+#### File converter utility
+The file parsing and loading steps can be called from the command line, or from within a Geant4 macro, to avoid the need to manually start the process when GeViewer is launched. This is done using the `gev-converter` command line utility, which is installed automatically along with GeViewer. To use the utility, call it with the path to a file to be converted and the path to a destination file with the `.gev` extension.
 ```bash
-geviewer viewer.gev
+gev-converter /path/to/file.heprep /path/to/file.gev
 ```
+This command can be issued from within a Geant4 macro:
+```
+/control/shell gev-converter G4Data0.heprep /path/to/file.gev
+```
+The `gev-converter` utility does not have an interactive component and can therefore be run on a remote machine over `ssh`.
 
-#### Running offscreen
-It is often convenient to run the VRML parsing and mesh construction routine offscreen and save the resulting session for later. This can be done using the `--off-screen` (or `-o`) flag. This flag must be paired with the `--destination` flag in order for the session to be saved. As mentioned above, you can add the following line to your macro file to automatically run this process at the end of a simulation.
-```
-/control/shell geviewer /name/of/file.wrl -d /output/session/name.gev -o
-```
+#### Other options
+* [Depth peeling](https://en.wikipedia.org/wiki/Depth_peeling) is a technique for rendering transparent objects. It is disabled by default as it often slows down rendering. To enable depth peeling, click the **View > Use Depth Peeling** menu item.
 
-#### Safe mode
-By default, GeViewer uses its own VRML parser to extract the meshes for plotting. However, this parser has only been tested on a small sample set of Geant4 simulation results. If you encounter file parsing errors, try using the `--safe-mode` command line argument (and create an issue to report the problem). This will use a VRML parsing tool from [VTK](https://vtk.org) which should provide more robustness at the expense of some features. In safe mode, the program will be unable to distinguish trajectories, step markers, and detector components, and for large files the performance may be sluggish due to less efficient handling of the mesh data.
+* Most operations in GeViewer will be reported in the console on the control panel, as will any errors or warnings. The console can be cleared by clicking **Edit > Clear Console**, and the contents of the console can be copied to the clipboard by clicking **Edit > Copy Console**.
 
-#### Viewing multiple files
-If you want to view multiple files in the same viewer (e.g. to directly compare two geometries), pass in a list of filenames rather than a single argument.
-```bash
-geviewer /path/to/file1.wrl /path/to/file2.wrl /path/to/file3.wrl
-```
-This function only works for VRML files; previous GeViewer sessions cannot be opened simultaneously. However, you can always load multiple VRML files, save the session, and revisit it later as you would when viewing a single file.
+* Operations can be aborted by clicking **Edit > Abort Process**. This can be useful if, for example, you start checking for overlaps without unselecting a component with many subcomponents. Needless to say, this should be done sparingly.
 
 ## Additional Info
+### Contributing
+GeViewer has been developed and tested using a limited number of Geant4 detector geometries, so the HepRep and VRML parsing functionalities are not yet exhaustive. If you find that a particular geometry or component is not being parsed correctly, please [open an issue](https://github.com/clarkehardy/geviewer/issues) on the GitHub repository and provide the file snippet in question, or fix the issue yourself and submit a pull request. Other suggestions, feature requests, or improvements are also welcome.
+
 ### License
 Distributed under the MIT License. See [LICENSE](https://github.com/clarkehardy/geviewer/blob/main/LICENSE) for more information.
 

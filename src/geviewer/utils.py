@@ -1,19 +1,20 @@
-def read_file(filename):
-    """Reads the content of a file.
+import os
+from pathlib import Path
 
-    :param filename: The path to the file to read.
-    :type filename: str
-    :return: A single string containing the content of the file.
-    :rtype: str
+
+def check_files(files):
+    """Checks if the file paths are valid.
     """
-    data = []
-    with open(filename, 'r') as f:
-        for line in f:
-            # don't read comments
-            if not line.strip().startswith('#'):
-                data.append(line)
-    data = ''.join(data)
-    return data
+    for file in files:
+        file = str(Path(file).resolve())
+        if not os.path.exists(file):
+            print('Error: {} does not exist'.format(file))
+            return False
+        if not (file.endswith('.gev') or file.endswith('.heprep') or file.endswith('.wrl')):
+            print('Error: {} is not a valid file'.format(file))
+            print('Valid file types are .gev, .heprep, and .wrl')
+            return False
+    return True
 
 
 def check_for_updates():
@@ -39,3 +40,19 @@ def check_for_updates():
     except:
         # don't want this to interrupt regular use if there's a problem
         return
+
+
+def print_banner():
+    """Prints the banner to the terminal.
+    """
+    print()
+    print('###################################################')
+    print('#    _____   __      ___                          #')
+    print('#   / ____|  \\ \\    / (_)                         #')
+    print('#  | |  __  __\\ \\  / / _  _____      _____ _ __   #')
+    print('#  | | |_ |/ _ \\ \\/ / | |/ _ \\ \\ /\\ / / _ \\  __|  #')
+    print('#  | |__| |  __/\\  /  | |  __/\\ V  V /  __/ |     #')
+    print('#   \\_____|\\___| \\/   |_|\\___| \\_/\\_/ \\___|_|     #')
+    print('#                                                 #')
+    print('###################################################')
+    print()

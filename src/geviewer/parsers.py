@@ -6,7 +6,7 @@ import uuid
 import time
 import threading
 
-from geviewer import utils, geometry
+from geviewer import geometry
 
 
 class Parser:
@@ -83,10 +83,10 @@ class VRMLParser(Parser):
         """
         update = 'Reading VRML file...\n'
         if progress_obj:
-            progress_obj.print_update(update)
+            if progress_obj.sync_status(update=update): return
         else:
             print(update)
-        data = utils.read_file(self.filename)
+        data = self.read_file(self.filename)
         viewpoint_block, polyline_blocks, marker_blocks, solid_blocks = self.extract_blocks(data, progress_obj=progress_obj)
         self.viewpoint_block = viewpoint_block
         now = time.time()
@@ -100,6 +100,24 @@ class VRMLParser(Parser):
             component['children'].append(comp)
 
         self.components = component
+
+
+    def read_file(self, filename):
+        """Reads the content of a file.
+
+        :param filename: The path to the file to read.
+        :type filename: str
+        :return: A single string containing the content of the file.
+        :rtype: str
+        """
+        data = []
+        with open(filename, 'r') as f:
+            for line in f:
+                # don't read comments
+                if not line.strip().startswith('#'):
+                    data.append(line)
+        data = ''.join(data)
+        return data
     
 
     def create_meshes(self, polyline_blocks, marker_blocks, solid_blocks, progress_obj=None):
@@ -121,7 +139,7 @@ class VRMLParser(Parser):
         """
         update = 'Building meshes...\n'
         if progress_obj:
-            progress_obj.print_update(update)
+            if progress_obj.sync_status(update=update): return
         else:
             print(update)
 
@@ -167,7 +185,7 @@ class VRMLParser(Parser):
             points[i], cells[i], color = func(block)
             colors[i] = [color]*len(points[i])
             if progress_obj:
-                progress_obj.increment_progress()
+                if progress_obj.sync_status(increment=True): return
 
         if len(points) == 0:
             return None
@@ -208,7 +226,7 @@ class VRMLParser(Parser):
             mesh.append(pv.Sphere(radius=radii[i], center=centers[i]))
             colors[i] = [colors[i]]*mesh[-1].n_points
             if progress_obj:
-                progress_obj.increment_progress()
+                if progress_obj.sync_status(increment=True): return
 
         colors = np.concatenate(colors)
         mesh = mesh.combine()
@@ -238,7 +256,7 @@ class VRMLParser(Parser):
         """
         update = 'Parsing VRML file...\n'
         if progress_obj:
-            progress_obj.print_update(update)
+            if progress_obj.sync_status(update=update): return
         else:
             print(update)
 
@@ -284,7 +302,7 @@ class VRMLParser(Parser):
                     inside_block = False
 
             if progress_obj:
-                progress_obj.increment_progress()
+                if progress_obj.sync_status(increment=True): return
 
         if progress_obj:
             progress_obj.signal_finished()
@@ -586,7 +604,7 @@ class HepRepParser(Parser):
             total_elements = sum(1 for _ in f) // 2
 
         if total_elements > 1e6:
-            print_func('This should take less than {:.0f} seconds.\n'.format(total_elements/1e6))
+            print_func('This step should take less than {:.0f} seconds.\n'.format(total_elements/1e6))
 
         self.root = self.parse_xml(self.filename)
         if progress_obj:
@@ -643,14 +661,14 @@ class HepRepParser(Parser):
         :type progress_obj: ProgressBar, optional
         """
         if progress_obj:
-            progress_obj.increment_progress()
+            if progress_obj.sync_status(increment=True): return
         
         if element.tag.endswith('instance'):
             # children of instances are attvalues and one primitive
             # loop through the attvalues and set the attributes
             for child in element:
                 if progress_obj:
-                    progress_obj.increment_progress()
+                    if progress_obj.sync_status(increment=True): return
 
                 # get the attributes
                 if child.tag.endswith('attvalue'):
@@ -661,7 +679,7 @@ class HepRepParser(Parser):
                     points = []
                     for grandchild in child:
                         if progress_obj:
-                            progress_obj.increment_progress()
+                            if progress_obj.sync_status(increment=True): return
                             
                         if grandchild.tag.endswith('point'):
                             points.append([float(grandchild.attrib['x']), \
@@ -702,7 +720,7 @@ class HepRepParser(Parser):
 
             for child in element:
                 if progress_obj:
-                    progress_obj.increment_progress()
+                    if progress_obj.sync_status(increment=True): return
 
                 if child.tag.endswith('attvalue'):
                     self.process_attvalue(child, child_component)
@@ -773,7 +791,7 @@ class HepRepParser(Parser):
         """
         for comp in components:
             if progress_obj:
-                progress_obj.increment_progress()
+                if progress_obj.sync_status(increment=True): return
 
             if comp['shape'] == 'Prism':
                 comp['mesh_points'] = np.array(comp['points'])
