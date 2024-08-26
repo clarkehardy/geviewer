@@ -16,16 +16,16 @@ Features
    and hits in a 3D-rendered detector
 
 -  **Intuitive controls:** Use your mouse to rotate, zoom, pan, and
-   interact with the geomery
+   interact with the geometry
 
--  **Customizable viewing:** Adjust the viewing perspective, rendering
+-  **Customizable viewing:** Choose the viewing perspective, rendering
    style, and background for optimal visibility
 
 -  **High-quality graphics:** Produce publication-quality visuals of
    detectors and events
 
--  **Robust geometry inspection:** Use simple tools to turn components
-   on or off, measure distances, and check for overlaps
+-  **Geometry inspection:** Check for overlaps, measure distances, and
+   toggle visibility component-by-component
 
 -  **Fast performance:** Enjoy smooth, responsive rendering even with
    large and complex detector geometries

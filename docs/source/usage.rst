@@ -247,9 +247,9 @@ overlaps between detector components, will a few essential caveats:
    overlaps, as demonstrated in the figure below.
 
 .. figure:: _static/overlaps.png
-   :alt: Spurious overlaps
+   :alt: Spurious overlaps resulting from mesh approximation
 
-   Spurious overlaps
+   Spurious overlaps resulting from mesh approximation
 
 -  Only components from the first file loaded that are visible will be
    checked for overlaps.
