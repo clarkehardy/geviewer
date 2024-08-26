@@ -1238,7 +1238,7 @@ class Window(MainWindow):
                 if not self.viewer.transparent:
                     self.viewer.toggle_transparent()
                 self.plotter.view_isometric()
-                self.print_to_console('Done checking geometry.')
+                self.print_to_console('Found {} potential overlaps.'.format(len(overlapping_meshes)))
         else:
             self.print_to_console('Error: overlap check failed.')
         self.success = True
