@@ -13,13 +13,13 @@ without the hassle of setting up OpenGL or installing outdated software.
 
 * **Physics-focused visuals:** See color-coded particle trajectories and hits in a 3D-rendered detector
 
-* **Intuitive controls:** Use your mouse to rotate, zoom, pan, and interact with the geomery
+* **Intuitive controls:** Use your mouse to rotate, zoom, pan, and interact with the geometry
 
-* **Customizable viewing:** Adjust the viewing perspective, rendering style, and background for optimal visibility
+* **Customizable viewing:** Choose the viewing perspective, rendering style, and background for optimal visibility
 
 * **High-quality graphics:** Produce publication-quality visuals of detectors and events
 
-* **Robust geometry inspection:** Use simple tools to turn components on or off, measure distances, and check for overlaps
+* **Geometry inspection:** Check for overlaps, measure distances, and toggle visibility component-by-component
 
 * **Fast performance:** Enjoy smooth, responsive rendering even with large and complex detector geometries
 
@@ -181,7 +181,7 @@ The Tools tab on the control panel contains the overlap inspector and a measurem
 
 * The overlap inspector checks for overlaps in the **meshes as produced by Geant4**, which may not reflect the **true geometry defined by the user**. When a mesh is exported from Geant4, smooth surfaces are approximated with many discrete faces. This may introduce spurious overlaps, as demonstrated in the figure below.
 
-![Spurious overlaps](https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/overlaps.png)
+![Spurious overlaps resulting from mesh approximation](https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/overlaps.png)
 
 * Only components from the first file loaded that are visible will be checked for overlaps.
 
