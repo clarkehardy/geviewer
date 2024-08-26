@@ -557,10 +557,10 @@ class Window(MainWindow):
         view_menu.addAction(gradient_action)
 
         # create the depth peeling action
-        depth_peeling_action = QAction('Use Depth Peeling', self, checkable=True)
-        depth_peeling_action.setChecked(False)
-        depth_peeling_action.triggered.connect(self.toggle_depth_peeling)
-        view_menu.addAction(depth_peeling_action)
+        self.depth_peeling_action = QAction('Use Depth Peeling', self, checkable=True)
+        self.depth_peeling_action.setChecked(False)
+        self.depth_peeling_action.triggered.connect(self.toggle_depth_peeling)
+        view_menu.addAction(self.depth_peeling_action)
 
         # create the background color menu
         color_menu = QMenu('Background Colors', self)
@@ -1165,6 +1165,9 @@ class Window(MainWindow):
                 off_screen_plotter.set_background(self.viewer.bkg_colors[0])
         else:
             off_screen_plotter.set_background('white')
+
+        if self.depth_peeling_action.isChecked():
+            off_screen_plotter.enable_depth_peeling()
         
         # copy the mesh and camera settings to the off-screen plotter
         for actor in self.plotter.renderer.actors.values():
