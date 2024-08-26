@@ -23,26 +23,11 @@ without the hassle of setting up OpenGL or installing outdated software.
 
 * **Fast performance:** Enjoy smooth, responsive rendering even with large and complex detector geometries
 
-### Images
-<figure>
-   <p align="center">
-     <img src="https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/ui.png" alt="The GeViewer UI" width="1000">
-   </p>
-   <figcaption>The GeViewer UI</figcaption>
-</figure>
-<figure>
-  <div style="display: flex; justify-content: center;">
-    <div style="margin-right: 10px;">
-      <img src="https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/nexo.png" alt="nEXO detector" width="500"/>
-      <figcaption><em>(a) nEXO detector</em></figcaption>
-    </div>
-    <div>
-      <img src="https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/tms.png" alt="TMS detector" width="500"/>
-      <figcaption><em>(b) XeNu detector</em></figcaption>
-    </div>
-  </div>
-  <figcaption>Sample figures produced using GeViewer</figcaption>
-</figure>
+### User Interface
+
+![The GeViewer UI in light mode with transparency enabled](https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/sample1.png)
+
+![The GeViewer UI in dark mode with wireframe rendering enabled](https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/sample2.png)
 
 ## Setup
 ### Dependencies
@@ -196,12 +181,7 @@ The Tools tab on the control panel contains the overlap inspector and a measurem
 
 * The overlap inspector checks for overlaps in the **meshes as produced by Geant4**, which may not reflect the **true geometry defined by the user**. When a mesh is exported from Geant4, smooth surfaces are approximated with many discrete faces. This may introduce spurious overlaps, as demonstrated in the figure below.
 
-<figure>
-   <p align="center">
-     <img src="https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/overlaps.png" alt="Spurious overlaps" width="600">
-   </p>
-   <figcaption>Spurious overlaps introduced during mesh export</figcaption>
-</figure>
+![Spurious overlaps](https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/overlaps.png)
 
 * Only components from the first file loaded that are visible will be checked for overlaps.
 
@@ -212,7 +192,7 @@ If the file includes many identical components which have been grouped together 
 #### Measurement tool
 The Measurement Tool, on the Tools tab of the control panel, can be used to measure the distance between any two points. To use the tool, click Add measurement, then click two points in the viewer to measure the distance between them. The measurement will be shown on the viewer and will also be reported in the text field in the Tools tab. Up to three distance measurements will be shown in the Tools tab at a time. As new measurements are added, the oldest will be removed to keep the total number of measurements displayed at three.
 
-### Additional options
+### Additional Options
 #### Saving files
 HepRep files that are particularly large (>1 GB) can take a minute or more to parse and load. Fortunately, this step needs to be done only once. After a file is loaded, it can be saved in a more convenient format for much faster loading in the future. With a file open, click **File > Save As...** in the menu bar. This will open a dialog allowing for a destination file path to be provided. The file must be saved with the `.gev` extension in order for GeViewer to recognize it. GeViewer sessions with multiple open files can similarly be saved and loaded.
 

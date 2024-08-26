@@ -4,7 +4,15 @@ GeViewer package
 Interactive viewer
 ------------------------
 
-.. automodule:: geviewer.geviewer
+.. automodule:: geviewer.viewer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+User interface
+---------------
+
+.. automodule:: geviewer.gui
    :members:
    :undoc-members:
    :show-inheritance:
@@ -17,18 +25,10 @@ Command-line interface
    :undoc-members:
    :show-inheritance:
 
-VRML parser
------------
+File parsers
+-------------
 
-.. automodule:: geviewer.parser
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Plotter
--------
-
-.. automodule:: geviewer.plotter
+.. automodule:: geviewer.parsers
    :members:
    :undoc-members:
    :show-inheritance:
@@ -37,6 +37,14 @@ Utilities
 ---------
 
 .. automodule:: geviewer.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Geometry
+----------
+
+.. automodule:: geviewer.geometry
    :members:
    :undoc-members:
    :show-inheritance:
