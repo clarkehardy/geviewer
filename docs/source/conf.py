@@ -24,6 +24,7 @@ with open('../../README.md', 'r') as file:
             section += 1
         if 'https://github.com/clarkehardy/geviewer/blob/main/docs/source/' in line:
             line = line.replace('https://github.com/clarkehardy/geviewer/blob/main/docs/source/', '')
+            line = line.replace('?raw=true', '')
         lines[section].append(line)
 
 for i,section in enumerate(sections):

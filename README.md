@@ -25,9 +25,9 @@ without the hassle of setting up OpenGL or installing outdated software.
 
 ### User Interface
 
-![The GeViewer UI in light mode with transparency enabled](https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/sample1.png)
+![The GeViewer UI in light mode with transparency enabled](https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/sample1.png?raw=true)
 
-![The GeViewer UI in dark mode with wireframe rendering enabled](https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/sample2.png)
+![The GeViewer UI in dark mode with wireframe rendering enabled](https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/sample2.png?raw=true)
 
 ## Setup
 ### Dependencies
@@ -181,7 +181,7 @@ The Tools tab on the control panel contains the overlap inspector and a measurem
 
 * The overlap inspector checks for overlaps in the **meshes as produced by Geant4**, which may not reflect the **true geometry defined by the user**. When a mesh is exported from Geant4, smooth surfaces are approximated with many discrete faces. This may introduce spurious overlaps, as demonstrated in the figure below.
 
-![Spurious overlaps resulting from mesh approximation](https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/overlaps.png)
+![Spurious overlaps resulting from mesh approximation](https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/overlaps.png?raw=true)
 
 * Only components from the first file loaded that are visible will be checked for overlaps.
 
