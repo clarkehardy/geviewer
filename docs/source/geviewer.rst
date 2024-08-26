@@ -17,10 +17,10 @@ User interface
    :undoc-members:
    :show-inheritance:
 
-Command-line interface
-----------------------
+Application launcher
+---------------------
 
-.. automodule:: geviewer.main
+.. automodule:: geviewer.geviewer
    :members:
    :undoc-members:
    :show-inheritance:
@@ -29,6 +29,14 @@ File parsers
 -------------
 
 .. automodule:: geviewer.parsers
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+File converter
+---------------
+
+.. automodule:: geviewer.converter
    :members:
    :undoc-members:
    :show-inheritance:
