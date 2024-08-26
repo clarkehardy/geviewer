@@ -5,6 +5,7 @@
 
 import os
 import sys
+import re
 sys.path.insert(0, os.path.abspath('../../geviewer/src/'))
 import pypandoc
 import geviewer
@@ -14,6 +15,7 @@ import geviewer
 sections = ['about', 'setup', 'usage', 'info']
 lines = [[] for i in range(len(sections))]
 section = 0
+github_path = r'https://github.com/clarkehardy/geviewer/blob/.*?/docs/source/'
 with open('../../README.md', 'r') as file:
     for i,line in enumerate(file):
         if i == 0:
@@ -22,8 +24,8 @@ with open('../../README.md', 'r') as file:
         if section < len(sections) - 1 and sections[section + 1] in line.lower() \
         and line.startswith('#'):
             section += 1
-        if 'https://github.com/clarkehardy/geviewer/blob/main/docs/source/' in line:
-            line = line.replace('https://github.com/clarkehardy/geviewer/blob/main/docs/source/', '')
+        line = re.sub(github_path, '', line)
+        line = re.sub(r'\?raw=true', '', line)
         lines[section].append(line)
 
 for i,section in enumerate(sections):

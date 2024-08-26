@@ -25,9 +25,9 @@ without the hassle of setting up OpenGL or installing outdated software.
 
 ### User Interface
 
-![The GeViewer UI in light mode with transparency enabled](https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/sample1.png)
+![The GeViewer UI in light mode with transparency enabled](https://github.com/clarkehardy/geviewer/blob/v0.2.0b1/docs/source/_static/sample1.png?raw=true)
 
-![The GeViewer UI in dark mode with wireframe rendering enabled](https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/sample2.png)
+![The GeViewer UI in dark mode with wireframe rendering enabled](https://github.com/clarkehardy/geviewer/blob/v0.2.0b1/docs/source/_static/sample2.png?raw=true)
 
 ## Setup
 ### Dependencies
@@ -76,7 +76,7 @@ The next section describes how to produce files that can be read by GeViewer usi
 To produce Geant4 outputs that can be read by GeViewer, you must tell Geant4 to save the visualization either as a [HepRep file](https://www.slac.stanford.edu/~perl/heprep/index.html) or a [VRML file](https://en.wikipedia.org/wiki/VRML). HepRep files are preferred, as they allow you to turn on or off components or events individually. You can do this by putting the following in your Macro file:
 ```
 # this line should come BEFORE the /run/beamOn command
-/vis/open HEPREPFILE
+/vis/open HepRepFile
 # you can also use /vis/open VRML2FILE
 ```
 Following this, you can add the geometry, trajectories, and step markers. Any of these can be omitted if they are not needed, but note that without first adding trajectories, step markers will not be visible.
@@ -181,7 +181,7 @@ The Tools tab on the control panel contains the overlap inspector and a measurem
 
 * The overlap inspector checks for overlaps in the **meshes as produced by Geant4**, which may not reflect the **true geometry defined by the user**. When a mesh is exported from Geant4, smooth surfaces are approximated with many discrete faces. This may introduce spurious overlaps, as demonstrated in the figure below.
 
-![Spurious overlaps resulting from mesh approximation](https://github.com/clarkehardy/geviewer/blob/main/docs/source/_static/overlaps.png)
+![Spurious overlaps resulting from mesh approximation](https://github.com/clarkehardy/geviewer/blob/v0.2.0b1/docs/source/_static/overlaps.png?raw=true)
 
 * Only components from the first file loaded that are visible will be checked for overlaps.
 

@@ -63,6 +63,11 @@ class ProgressBar:
 
     def sync_status(self, update=None, increment=False):
         """Synchronizes the status of the task with the progress bar.
+
+        :param update: The update to be printed
+        :type update: str
+        :param increment: Whether to increment the progress bar
+        :type increment: bool
         """
         if update:
             self.print_update(update)
