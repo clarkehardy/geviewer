@@ -206,13 +206,11 @@ class GeViewer:
         """
         self.transparent = not self.transparent
         if self.transparent:
-            # self.plotter.enable_depth_peeling()
             for id, actor in self.actors.items():
                 if id in self.event_ids:
                     continue
                 actor.GetProperty().SetOpacity(0.3)
         else:
-            # self.plotter.disable_depth_peeling()
             for actor in self.actors.values():
                 actor.GetProperty().SetOpacity(1)
         if not self.off_screen:

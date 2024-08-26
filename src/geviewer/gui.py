@@ -556,6 +556,12 @@ class Window(MainWindow):
         gradient_action.triggered.connect(self.toggle_gradient)
         view_menu.addAction(gradient_action)
 
+        # create the depth peeling action
+        depth_peeling_action = QAction('Use Depth Peeling', self, checkable=True)
+        depth_peeling_action.setChecked(False)
+        depth_peeling_action.triggered.connect(self.toggle_depth_peeling)
+        view_menu.addAction(depth_peeling_action)
+
         # create the background color menu
         color_menu = QMenu('Background Colors', self)
         color_action_1 = QAction('Set Primary Color...', self)
@@ -1505,6 +1511,18 @@ class Window(MainWindow):
         self.print_to_console('Toggling gradient ' + ['on.','off.'][self.viewer.gradient])
         self.viewer.gradient = not self.viewer.gradient
         self.viewer.set_background_color()
+
+
+    def toggle_depth_peeling(self, on=False):
+        """Toggles depth peeling.
+
+        This method turns on or off depth peeling for the plotter.
+        """
+        self.print_to_console('Turning {} depth peeling.'.format(['off','on'][on]))
+        if on:
+            self.plotter.enable_depth_peeling()
+        else:
+            self.plotter.disable_depth_peeling()
 
 
     def open_color_picker(self, button):
