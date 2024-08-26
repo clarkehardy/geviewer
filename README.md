@@ -76,7 +76,7 @@ The next section describes how to produce files that can be read by GeViewer usi
 To produce Geant4 outputs that can be read by GeViewer, you must tell Geant4 to save the visualization either as a [HepRep file](https://www.slac.stanford.edu/~perl/heprep/index.html) or a [VRML file](https://en.wikipedia.org/wiki/VRML). HepRep files are preferred, as they allow you to turn on or off components or events individually. You can do this by putting the following in your Macro file:
 ```
 # this line should come BEFORE the /run/beamOn command
-/vis/open HEPREPFILE
+/vis/open HepRepFile
 # you can also use /vis/open VRML2FILE
 ```
 Following this, you can add the geometry, trajectories, and step markers. Any of these can be omitted if they are not needed, but note that without first adding trajectories, step markers will not be visible.
