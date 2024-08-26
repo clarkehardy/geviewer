@@ -917,7 +917,7 @@ class HepRepParser(Parser):
         :param mesh: The mesh to repair.
         :type mesh: pv.PolyData
         :return: A tuple containing the repaired mesh and a boolean indicating
-        whether the mesh was repaired.
+            whether the mesh was repaired.
         :rtype: tuple
         """
 
