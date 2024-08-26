@@ -8,7 +8,7 @@ from geviewer.viewer import GeViewer
 
 
 class ProgressBar:
-    """A progress bar for the converter.
+    """A progress bar for the converter utility.
     """
 
     def __init__(self):
@@ -59,6 +59,15 @@ class ProgressBar:
         """Prints text sent to the progress bar.
         """
         print(text)
+
+
+    def sync_status(self, update=None, increment=False):
+        """Synchronizes the status of the task with the progress bar.
+        """
+        if update:
+            self.print_update(update)
+        if increment:
+            self.increment_progress()
 
 
 def main():
