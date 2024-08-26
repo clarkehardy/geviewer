@@ -51,8 +51,17 @@ class Application(QApplication):
 class Window(MainWindow):
     """A custom main window class for the GeViewer application.
     """
+    #: Signal emitted when the file name changes
+    #:
+    #: :param str: The new file name
     file_name_changed = pyqtSignal(str)
+
+    #: Signal emitted when the number of events changes
+    #:
+    #: :param int: The new number of events
     number_of_events = pyqtSignal(int)
+
+    #: Signal emitted when a file is loaded
     file_loaded = pyqtSignal()
 
     def __init__(self):
@@ -1649,10 +1658,27 @@ class ProgressBar(QProgressBar):
     the GUI, including updating the progress bar, sending text updates,
     and interrupting the worker threads if necessary.
     """
+    #: Signal emitted to update the progress value
+    #:
+    #: :param int: The new progress value
     progress = pyqtSignal(int)
+
+    #: Signal emitted to set the maximum value of the progress bar
+    #:
+    #: :param int: The new maximum value
     maximum = pyqtSignal(int)
+
+    #: Signal emitted when the task is finished
     finished = pyqtSignal()
+
+    #: Signal emitted to send status updates
+    #:
+    #: :param str: The update text
     update = pyqtSignal(str)
+
+    #: Signal emitted to start or stop the timer
+    #:
+    #: :param bool: True to start the timer, False to stop
     run_timer = pyqtSignal(bool)
 
     def __init__(self):
@@ -1736,7 +1762,12 @@ class ProgressBar(QProgressBar):
     def sync_status(self, update=None, increment=False):
         """Synchronizes the status of the worker with that of the user interface.
         This should be called in the following format:
-        `if ProgressBar.sync_status(update, increment): return`
+
+        .. code-block:: python
+
+            pbar = ProgressBar()
+            if pbar.sync_status(update, increment): return
+        
         where `update` is a string and `increment` is a boolean.
         This will pass the status updates to the user interface and return True
         if the worker should be interrupted.
@@ -1776,11 +1807,24 @@ class ProgressBar(QProgressBar):
 class Worker(QThread):
     """A custom worker class for the GeViewer application.
     """
+    #: Signal emitted when the worker has finished its task
     finished = pyqtSignal()
+
+    #: Signal emitted when an error occurs during the worker's task
+    #:
+    #: :param type: The type of the exception
+    #: :param Exception: The exception instance
+    #: :param object: The traceback object
     error_signal = pyqtSignal(type, Exception, object)
 
     def __init__(self, task, progress_bar, **kwargs):
         """Initializes the worker.
+
+        :param task: The task to be executed by the worker
+        :type task: callable
+        :param progress_bar: The progress bar to update during the task
+        :type progress_bar: ProgressBar
+        :param kwargs: Additional keyword arguments for the task
         """
         super().__init__()
         self.task = task
