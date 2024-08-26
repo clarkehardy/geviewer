@@ -1,6 +1,6 @@
 import numpy as np
 
-def create_cylinder_mesh(p1, p2, r1, r2, num_segments=25):
+def create_cylinder_mesh(p1, p2, r1, r2, num_segments=100):
     """Creates a mesh for a cylinder.
 
     :param p1: The first endpoint.
@@ -69,7 +69,7 @@ def create_cylinder_mesh(p1, p2, r1, r2, num_segments=25):
     return points, indices
 
 
-def create_annular_cylinder_mesh(p1, p2, r1_outer, r2_outer, r1_inner, r2_inner, num_segments=25):
+def create_annular_cylinder_mesh(p1, p2, r1_outer, r2_outer, r1_inner, r2_inner, num_segments=100):
     """Creates a mesh for an annular cylinder.
 
     :param p1: The first endpoint.
