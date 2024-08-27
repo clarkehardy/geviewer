@@ -447,8 +447,8 @@ class Window(MainWindow):
 
         # text and button size
         toolbar_font = QFont()
-        toolbar_font.setPointSize(13)
-        action_width = 80
+        toolbar_font.setPointSize(12)
+        action_width = 95
         self.toolbar.setFont(toolbar_font)
 
         # actions that change when clicked
@@ -494,7 +494,7 @@ class Window(MainWindow):
             action.triggered.connect(callback)
             self.toolbar.addAction(action)
             tool_button = self.toolbar.widgetForAction(action)
-            tool_button.setFixedWidth(60)
+            tool_button.setFixedWidth(75)
 
         self.viewer_layout.addWidget(self.toolbar)
 
