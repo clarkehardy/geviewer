@@ -4,7 +4,8 @@ Setup
 Dependencies
 ~~~~~~~~~~~~
 
-The following packages are required:
+The following packages are required, and will be installed
+automatically:
 
 -  ``PyQt6``
 
@@ -25,12 +26,11 @@ recommended that you install GeViewer in a new Python environment.
    python -m venv geviewer-env
    source geviewer-env/bin/activate
 
-The GeViewer version 0.2.0 beta can then be installed using ``pip`` as
-follows:
+GeViewer can then be installed using ``pip`` as follows:
 
 .. code:: bash
 
-   pip install --pre geviewer
+   pip install geviewer
 
 To avoid having to manually activate the environment each time you want
 to launch GeViewer, you can add the following line to your ``.bashrc``
@@ -40,9 +40,8 @@ file:
 
    alias geviewer='/path/to/geviewer-env/bin/python /path/to/geviewer-env/bin/geviewer'
 
-If you wish to uninstall GeViewer, you can use
-``pip uninstall geviewer``, or you can simply delete the environment
-containing the installation:
+To uninstall GeViewer, you can use ``pip uninstall geviewer``, or you
+can simply delete the environment containing the installation:
 
 .. code:: bash
 
