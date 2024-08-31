@@ -42,6 +42,20 @@ def check_for_updates():
         return
 
 
+def get_license():
+    """Gets the LICENSE file from the distribution.
+    """
+    try:
+        from importlib import metadata
+        dist = metadata.distribution('geviewer')
+        license_file = [f for f in dist.files if f.name.upper() == 'LICENSE'][0]
+        with license_file.locate().open('r') as f:
+            license_raw = f.read()
+        return license_raw
+    except:
+        return 'Error: license file not found. Try a clean install of GeViewer.'
+
+
 def print_banner():
     """Prints the banner to the terminal.
     """
