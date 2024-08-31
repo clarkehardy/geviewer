@@ -1222,14 +1222,8 @@ class Window(MainWindow):
         if not len(self.viewer.components):
             self.print_to_console('Error: no components loaded.')
             return
-        selected = [self.checkbox_mapping[comp['id']].isChecked() for comp in self.viewer.components]
-        if sum(selected) > 1:
-            self.print_to_console('Warning: multiple top-level components are selected. Only checking the first one.')
-            index = 0
-        else:
-            index = selected.index(True)
-        self.print_to_console('Checking {} for overlaps...'.format(self.viewer.components[index]['name']))
-        self.worker = Worker(self.viewer.find_overlaps, self.progress_bar, index=index, tolerance=tolerance, n_samples=samples)
+        self.print_to_console('Checking selected components for overlaps...')
+        self.worker = Worker(self.viewer.find_overlaps, self.progress_bar, tolerance=tolerance, n_samples=samples)
         self.worker.on_finished(self.show_overlaps)
         self.worker.error_signal.connect(self.global_exception_hook)
         self.worker_running = True
@@ -1389,7 +1383,7 @@ class Window(MainWindow):
         :param filename: The path to the file to load.
         :type filename: str
         """
-        self.viewer.load_file(filename=filename, progress_obj=progress_obj, off_screen=True)
+        self.viewer.load_file(filename=filename, progress_obj=progress_obj, off_screen=False)
         self.viewer.create_plotter(progress_obj=progress_obj)
 
 

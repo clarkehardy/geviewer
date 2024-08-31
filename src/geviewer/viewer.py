@@ -444,7 +444,7 @@ class GeViewer:
         return points, overlap_fraction
         
         
-    def find_overlaps(self, tolerance=0.001, n_samples=100000, index=0, progress_obj=None):
+    def find_overlaps(self, tolerance=0.001, n_samples=100000, progress_obj=None):
         """Finds the overlaps between the meshes.
 
         :param tolerance: The tolerance for the overlap.
@@ -471,8 +471,8 @@ class GeViewer:
             :type progress_obj: ProgressBar, optional
             """
             for comp in components:
-                if comp['mesh'] is not None and not (comp['shape'] == 'Point' or comp['shape'] == 'Line'):
-                    check_for_overlaps(comp, self.components[index]['children'], progress_obj)
+                if comp['mesh'] is not None and not comp['is_event']:
+                    check_for_overlaps(comp, self.components, progress_obj)
                 if len(comp['children']) > 0:
                     find_overlaps_recursive(comp['children'], level + 1, progress_obj)
                 checked.append(comp['id'])
@@ -489,7 +489,7 @@ class GeViewer:
             """
             for comp2 in components:
 
-                if comp2['mesh'] is not None and not (comp2['shape'] == 'Point' or comp2['shape'] == 'Line') \
+                if comp2['mesh'] is not None and not comp2['is_event'] \
                     and (comp1['id'] != comp2['id']) and (comp1['id'] not in checked) and (comp2['id'] not in checked):
 
                     mesh1 = comp1['mesh']
@@ -556,12 +556,12 @@ class GeViewer:
 
         if progress_obj:
             progress_obj.reset_progress()
-            num_components = self.count_components(self.components[index]['children'], exclude_events=True, \
+            num_components = self.count_components(self.components, exclude_events=True, \
                                                    exclude_invisible=True)
             num_checks = int(num_components*(num_components - 1)/2)
             progress_obj.set_maximum_value(num_checks)
 
-        find_overlaps_recursive(self.components[index]['children'], progress_obj=progress_obj)
+        find_overlaps_recursive(self.components, progress_obj=progress_obj)
 
         if progress_obj:
             progress_obj.signal_finished()
