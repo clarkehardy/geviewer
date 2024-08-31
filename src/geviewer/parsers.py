@@ -94,9 +94,11 @@ class VRMLParser(Parser):
         component_name = self.filename.split('/')[-1].split('.')[0]
         component = self.initialize_template(component_name)
         names = ['Trajectories', 'Step Markers', 'Geometry']
-        for i,mesh in enumerate([polyline_mesh, marker_mesh, solid_mesh]):
+        for i, mesh in enumerate([polyline_mesh, marker_mesh, solid_mesh]):
             comp = self.initialize_template(names[i])
             comp['mesh'] = mesh
+            if i<2:
+                comp['is_event'] = True
             component['children'].append(comp)
 
         self.components = component
