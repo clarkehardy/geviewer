@@ -84,7 +84,7 @@ class TestGeViewer(unittest.TestCase):
 
     def test_toggle_transparent(self):
         """Tests the toggle_transparent method."""
-        self.gev.load_file('tests/sample.wrl', off_screen=True)
+        self.gev.load_file('tests/sample.heprep', off_screen=True)
         self.gev.create_plotter()
         self.gev.toggle_transparent()
         self.assertEqual(next(iter(self.gev.actors.values())).GetProperty().GetOpacity(), 0.3)
