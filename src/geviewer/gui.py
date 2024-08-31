@@ -760,14 +760,15 @@ class Window(MainWindow):
         self.update_wireframe_action()
 
 
-    def toggle_transparent(self):
+    def toggle_transparent(self, print=True):
         """Toggles the transparency.
 
         This method toggles the transparency by setting the transparent attribute
         of the viewer to the opposite of its current value and updating the
         transparency button.
         """
-        self.print_to_console('Switching to ' + ['transparent', 'opaque'][self.viewer.transparent] + ' mode.')
+        if print:
+            self.print_to_console('Switching to ' + ['transparent', 'opaque'][self.viewer.transparent] + ' mode.')
         self.viewer.toggle_transparent()
         self.transparent_action.setText('Opaque' if self.viewer.transparent else 'Transparent')
 
@@ -1221,8 +1222,14 @@ class Window(MainWindow):
         if not len(self.viewer.components):
             self.print_to_console('Error: no components loaded.')
             return
-        self.print_to_console('Checking {} for overlaps...'.format(self.viewer.components[0]['name']))
-        self.worker = Worker(self.viewer.find_overlaps, self.progress_bar, tolerance=tolerance, n_samples=samples)
+        selected = [self.checkbox_mapping[comp['id']].isChecked() for comp in self.viewer.components]
+        if sum(selected) > 1:
+            self.print_to_console('Warning: multiple top-level components are selected. Only checking the first one.')
+            index = 0
+        else:
+            index = selected.index(True)
+        self.print_to_console('Checking {} for overlaps...'.format(self.viewer.components[index]['name']))
+        self.worker = Worker(self.viewer.find_overlaps, self.progress_bar, index=index, tolerance=tolerance, n_samples=samples)
         self.worker.on_finished(self.show_overlaps)
         self.worker.error_signal.connect(self.global_exception_hook)
         self.worker_running = True
@@ -1245,12 +1252,12 @@ class Window(MainWindow):
             else:
                 for checkbox in self.checkbox_mapping.values():
                     checkbox.setCheckState(Qt.CheckState.Unchecked)
-                for mesh_id in overlapping_meshes:
+                for mesh_id in list(set(overlapping_meshes)):
                     self.checkbox_mapping[mesh_id].setCheckState(Qt.CheckState.Checked)
                 if not self.viewer.transparent:
-                    self.viewer.toggle_transparent()
+                    self.toggle_transparent(print=False)
                 self.plotter.view_isometric()
-                self.print_to_console('Found {} potential overlaps.'.format(len(overlapping_meshes)))
+                self.print_to_console('Found {} potential overlaps.'.format(len(overlapping_meshes)//2))
         else:
             self.print_to_console('Error: overlap check failed.')
         self.success = True
