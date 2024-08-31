@@ -31,7 +31,7 @@ without the hassle of setting up OpenGL or installing outdated software.
 
 ## Setup
 ### Dependencies
-The following packages are required:
+The following packages are required, and will be installed automatically:
 
 * `PyQt6`
 
@@ -47,15 +47,15 @@ To ensure there are no conflicts with existing packages, it is recommended that 
 python -m venv geviewer-env
 source geviewer-env/bin/activate
 ```
-The GeViewer version 0.2.0 beta can then be installed using `pip` as follows:
+GeViewer can then be installed using `pip` as follows:
 ```bash
-pip install --pre geviewer
+pip install geviewer
 ```
 To avoid having to manually activate the environment each time you want to launch GeViewer, you can add the following line to your `.bashrc` file:
 ```bash
 alias geviewer='/path/to/geviewer-env/bin/python /path/to/geviewer-env/bin/geviewer'
 ```
-If you wish to uninstall GeViewer, you can use `pip uninstall geviewer`, or you can simply delete the environment containing the installation:
+To uninstall GeViewer, you can use `pip uninstall geviewer`, or you can simply delete the environment containing the installation:
 ```bash
 rm -rf geviewer-env
 ```
@@ -182,8 +182,6 @@ The Tools tab on the control panel contains the overlap inspector and a measurem
 * The overlap inspector checks for overlaps in the **meshes as produced by Geant4**, which may not reflect the **true geometry defined by the user**. When a mesh is exported from Geant4, smooth surfaces are approximated with many discrete faces. This may introduce spurious overlaps, as demonstrated in the figure below.
 
 ![Spurious overlaps resulting from mesh approximation](https://github.com/clarkehardy/geviewer/blob/v0.2.0b1/docs/source/_static/overlaps.png?raw=true)
-
-* Only components from the first file loaded that are visible will be checked for overlaps.
 
 The overlap inspector works by iterating through all possible pairs of components and checking each pair for overlaps. The overlap checking is done first by determining if the bounding boxes overlap. If they do, a set of sample points is generated within one of the bounding boxes. The number of points is set by the text field in the Tools tab of the control panel. The subset of these points that falls inside the mesh are then kept, while the others are thrown out. The surviving points, which approximate the solid body of one of the meshes, are then checked to determine if any fall inside the other mesh. If they do, the overlap will be reported and the points in the overlapping region will be shown in red, with all but the overlapping components hidden to highlight the location of the overlap.
 

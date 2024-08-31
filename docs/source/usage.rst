@@ -29,13 +29,13 @@ Geant4 to save the visualization either as a `HepRep
 file <https://www.slac.stanford.edu/~perl/heprep/index.html>`__ or a
 `VRML file <https://en.wikipedia.org/wiki/VRML>`__. HepRep files are
 preferred, as they allow you to turn on or off components or events
-individually. You can do this by putting the following in your Macro
+individually. You can do this by putting the following in your macro
 file:
 
 ::
 
    # this line should come BEFORE the /run/beamOn command
-   /vis/open HEPREPFILE
+   /vis/open HepRepFile
    # you can also use /vis/open VRML2FILE
 
 Following this, you can add the geometry, trajectories, and step
@@ -250,9 +250,6 @@ overlaps between detector components, will a few essential caveats:
    :alt: Spurious overlaps resulting from mesh approximation
 
    Spurious overlaps resulting from mesh approximation
-
--  Only components from the first file loaded that are visible will be
-   checked for overlaps.
 
 The overlap inspector works by iterating through all possible pairs of
 components and checking each pair for overlaps. The overlap checking is
