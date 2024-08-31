@@ -1565,8 +1565,8 @@ class Window(MainWindow):
         This method shows the license by reading the license file and
         printing it to the console.
         """
-        with open('LICENSE') as f:
-            license_text = f.read().replace('\n\n', '<>').replace('\n', ' ').replace('<>', '\n\n')
+        license_raw = utils.get_license()
+        license_text = license_raw.replace('\n\n', '<>').replace('\n', ' ').replace('<>', '\n\n')
         self.print_to_console('\n' + license_text)
 
 

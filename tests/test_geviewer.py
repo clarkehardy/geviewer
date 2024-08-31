@@ -2,7 +2,7 @@ import unittest
 from unittest import mock
 import os
 import tempfile
-from geviewer import viewer
+from geviewer import viewer, utils
 
 class TestGeViewer(unittest.TestCase):
 
@@ -88,6 +88,14 @@ class TestGeViewer(unittest.TestCase):
         self.gev.create_plotter()
         self.gev.toggle_transparent()
         self.assertEqual(next(iter(self.gev.actors.values())).GetProperty().GetOpacity(), 0.3)
+
+class TestUtils(unittest.TestCase):
+
+    def test_get_license(self):
+        """Tests the get_license function.
+        """
+        license_raw = utils.get_license()
+        self.assertIn('MIT License', license_raw)
 
 if __name__ == '__main__':
     unittest.main()
