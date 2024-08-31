@@ -25,9 +25,9 @@ without the hassle of setting up OpenGL or installing outdated software.
 
 ### User Interface
 
-![The GeViewer UI in light mode with transparency enabled](https://github.com/clarkehardy/geviewer/blob/v0.2.0/docs/source/_static/sample1.png?raw=true)
+![The GeViewer UI in light mode with transparency enabled](https://github.com/clarkehardy/geviewer/blob/v0.2.1/docs/source/_static/sample1.png?raw=true)
 
-![The GeViewer UI in dark mode with wireframe rendering enabled](https://github.com/clarkehardy/geviewer/blob/v0.2.0/docs/source/_static/sample2.png?raw=true)
+![The GeViewer UI in dark mode with wireframe rendering enabled](https://github.com/clarkehardy/geviewer/blob/v0.2.1/docs/source/_static/sample2.png?raw=true)
 
 ## Setup
 ### Dependencies
@@ -181,7 +181,7 @@ The Tools tab on the control panel contains the overlap inspector and a measurem
 
 * The overlap inspector checks for overlaps in the **meshes as produced by Geant4**, which may not reflect the **true geometry defined by the user**. When a mesh is exported from Geant4, smooth surfaces are approximated with many discrete faces. This may introduce spurious overlaps, as demonstrated in the figure below.
 
-![Spurious overlaps resulting from mesh approximation](https://github.com/clarkehardy/geviewer/blob/v0.2.0/docs/source/_static/overlaps.png?raw=true)
+![Spurious overlaps resulting from mesh approximation](https://github.com/clarkehardy/geviewer/blob/v0.2.1/docs/source/_static/overlaps.png?raw=true)
 
 The overlap inspector works by iterating through all possible pairs of components and checking each pair for overlaps. The overlap checking is done first by determining if the bounding boxes overlap. If they do, a set of sample points is generated within one of the bounding boxes. The number of points is set by the text field in the Tools tab of the control panel. The subset of these points that falls inside the mesh are then kept, while the others are thrown out. The surviving points, which approximate the solid body of one of the meshes, are then checked to determine if any fall inside the other mesh. If they do, the overlap will be reported and the points in the overlapping region will be shown in red, with all but the overlapping components hidden to highlight the location of the overlap.
 
