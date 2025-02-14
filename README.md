@@ -35,7 +35,7 @@ The following packages are required, and will be installed automatically:
 
 * `PyQt6`
 
-* `pyvistaqt`
+* `PyVistaQt`
 
 * `lxml`
 
