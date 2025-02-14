@@ -22,9 +22,7 @@ date: 14 February 2025
 bibliography: paper.bib
 ---
 # Summary
-Summary section [@agostinelli_geant4a_2003,@allison_geant4_2006,@allison_recent_2016]
-
-[@sullivan_pyvista_2019]
+Summary section
 
 # Statement of Need
 Statement of need section
