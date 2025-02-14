@@ -30,9 +30,11 @@ class Parser:
         :return: The initialized template.
         :rtype: dict
         """
-        return  {'name': name, 'id': str(uuid.uuid4())[-12:], 'shape': '', 'points': [], 'mesh_points': [],\
-                 'mesh_inds': [], 'colors': [], 'visible': True, 'scalars': [], 'is_dot': False, \
-                 'is_event': False, 'mesh': None, 'has_actor': False, 'children': []}
+        return  {'name': name, 'id': str(uuid.uuid4())[-12:], \
+                 'shape': '', 'points': [], 'mesh_points': [], \
+                 'mesh_inds': [], 'colors': [], 'visible': True, \
+                 'scalars': [], 'is_dot': False, 'is_event': False, \
+                 'mesh': None, 'has_actor': False, 'children': []}
     
     
     def combine_mesh_arrays(self, points, cells, colors):
