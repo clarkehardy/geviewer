@@ -4,7 +4,6 @@ from lxml import etree
 import re
 import uuid
 import time
-import threading
 
 from geviewer import geometry
 
