@@ -21,7 +21,7 @@ without the hassle of setting up OpenGL or installing outdated software.
 
 * **Geometry inspection:** Check for overlaps, measure distances, and toggle visibility component-by-component
 
-* **Fast performance:** Enjoy smooth, responsive rendering even with large and complex detector geometries
+* **Fast performance:** See smooth, responsive rendering even with large and complex detector geometries
 
 ### User Interface
 

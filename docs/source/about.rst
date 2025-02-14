@@ -27,7 +27,7 @@ Features
 -  **Geometry inspection:** Check for overlaps, measure distances, and
    toggle visibility component-by-component
 
--  **Fast performance:** Enjoy smooth, responsive rendering even with
+-  **Fast performance:** See smooth, responsive rendering even with
    large and complex detector geometries
 
 User Interface
