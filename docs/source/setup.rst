@@ -9,7 +9,7 @@ automatically:
 
 -  ``PyQt6``
 
--  ``pyvistaqt``
+-  ``PyVistaQt``
 
 -  ``lxml``
 

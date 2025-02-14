@@ -4,10 +4,10 @@ About
 |PyPI - Version| |GitHub Actions Workflow Status| |Read the Docs|
 |GitHub last commit| |GitHub License|
 
-GeViewer is a lightweight, Python-based visualization tool for Geant4.
-It provides a convenient way to check detector geometries, view events,
-and produce publication-quality visuals, without the hassle of setting
-up OpenGL or installing outdated software.
+GeViewer is a convenient, Python-based visualization tool for Geant4. It
+provides an easy way to check detector geometries, view events, and
+produce publication-quality visuals, without the hassle of setting up
+OpenGL or installing outdated software.
 
 Features
 ~~~~~~~~
@@ -27,7 +27,7 @@ Features
 -  **Geometry inspection:** Check for overlaps, measure distances, and
    toggle visibility component-by-component
 
--  **Fast performance:** Enjoy smooth, responsive rendering even with
+-  **Fast performance:** See smooth, responsive rendering even with
    large and complex detector geometries
 
 User Interface

@@ -5,7 +5,7 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/clarkehardy/geviewer?logo=GitHub)
 ![GitHub License](https://img.shields.io/github/license/clarkehardy/geviewer)
 
-GeViewer is a lightweight, Python-based visualization tool for Geant4. It provides a convenient way to
+GeViewer is a convenient, Python-based visualization tool for Geant4. It provides an easy way to
 check detector geometries, view events, and produce publication-quality visuals,
 without the hassle of setting up OpenGL or installing outdated software.
 
@@ -21,7 +21,7 @@ without the hassle of setting up OpenGL or installing outdated software.
 
 * **Geometry inspection:** Check for overlaps, measure distances, and toggle visibility component-by-component
 
-* **Fast performance:** Enjoy smooth, responsive rendering even with large and complex detector geometries
+* **Fast performance:** See smooth, responsive rendering even with large and complex detector geometries
 
 ### User Interface
 
@@ -35,7 +35,7 @@ The following packages are required, and will be installed automatically:
 
 * `PyQt6`
 
-* `pyvistaqt`
+* `PyVistaQt`
 
 * `lxml`
 
@@ -169,11 +169,11 @@ These text fields will be continually updated as the view is manipulated, allowi
 When a file is loaded, all events are shown simultaneously. To view an individual event, the spin box on the Options tab of the control panel can be used. This will turn off all other trajectories and trajectory step points, leaving only the selected event visible. Clicking the arrow buttons on the spin box, or using the arrow keys on your keyboard with the spin box selected, will cycle through the events.
 
 #### Exporting figures
-At any time, the current view can be exported by clicking the Export Figure button on the Options tab of the control panel. Any of the following file formats are supported: `.png`, `.jpeg`, `.jpg`, `.bmp`, `.tif`, `.tiff`, `.svg`, `.eps`, `.ps`, `.pdf`, `.tex`. When exporting a figure, the figure size in pixels can be set by providing the width and height in the Figure size text field. The default figure size is 1920x1440 pixels, which corresponds to a 6.4 inch by 4.8 inch figure at 300 dpi.
+At any time, the current view can be exported by clicking the **Export Figure** button on the Options tab of the control panel. Any of the following file formats are supported: `.png`, `.jpeg`, `.jpg`, `.bmp`, `.tif`, `.tiff`, `.svg`, `.eps`, `.ps`, `.pdf`, `.tex`. When exporting a figure, the figure size in pixels can be set by providing the width and height in the Figure size text field. The default figure size is 1920x1440 pixels, which corresponds to a 6.4 inch by 4.8 inch figure at 300 dpi.
 
 ### Geometry Tools
 #### Overlap inspector
-The Tools tab on the control panel contains the overlap inspector and a measurement tool. The overlap inspector can be used to check for overlaps between detector components, will a few essential caveats:
+The Inspect tab on the control panel contains the overlap inspector and a measurement tool. The overlap inspector can be used to check for overlaps between detector components, will a few essential caveats:
 
 * If a component is contained entirely within another, the overlap will not be reported.
 
@@ -183,12 +183,18 @@ The Tools tab on the control panel contains the overlap inspector and a measurem
 
 ![Spurious overlaps resulting from mesh approximation](https://github.com/clarkehardy/geviewer/blob/v0.2.1/docs/source/_static/overlaps.png?raw=true)
 
-The overlap inspector works by iterating through all possible pairs of components and checking each pair for overlaps. The overlap checking is done first by determining if the bounding boxes overlap. If they do, a set of sample points is generated within one of the bounding boxes. The number of points is set by the text field in the Tools tab of the control panel. The subset of these points that falls inside the mesh are then kept, while the others are thrown out. The surviving points, which approximate the solid body of one of the meshes, are then checked to determine if any fall inside the other mesh. If they do, the overlap will be reported and the points in the overlapping region will be shown in red, with all but the overlapping components hidden to highlight the location of the overlap.
+The overlap inspector works by iterating through all possible pairs of components and checking each pair for overlaps. The overlap checking is done first by determining if the bounding boxes overlap. If they do, a set of sample points is generated within one of the bounding boxes. The number of points is set by the text field in the Inspect tab of the control panel. The subset of these points that falls inside the mesh are then kept, while the others are thrown out. The surviving points, which approximate the solid body of one of the meshes, are then checked to determine if any fall inside the other mesh. If they do, the overlap will be reported and the points in the overlapping region will be shown in red, with all but the overlapping components hidden to highlight the location of the overlap.
 
 If the file includes many identical components which have been grouped together during loading, these will have to be individually checked for overlaps with all other components. This has the potential to be a very time-consuming operation for large arrays of identical components (e.g. thousands of SiPMs), so use good judgement when selecting which components to include in overlap checking.
 
 #### Measurement tool
-The Measurement Tool, on the Tools tab of the control panel, can be used to measure the distance between any two points. To use the tool, click Add measurement, then click two points in the viewer to measure the distance between them. The measurement will be shown on the viewer and will also be reported in the text field in the Tools tab. Up to three distance measurements will be shown in the Tools tab at a time. As new measurements are added, the oldest will be removed to keep the total number of measurements displayed at three.
+The Measurement Tool, on the Inspect tab of the control panel, can be used to measure the distance between any two points. To use the tool, click **Add Measurement**, then click two points in the viewer to measure the distance between them. The measurement will be shown on the viewer and will also be reported in the text field in the Inspect tab. Up to three distance measurements will be shown in the Inspect tab at a time. As new measurements are added, the oldest will be removed to keep the total number of measurements displayed at three.
+
+### Clipping Tool
+
+The Clipping Tool is on the Clip tab of the control panel, and enables the user to make cutaway views of a geometry. Clipping is done by defining a rectangular prism to be cut away from the geometry. The coordinates of the center of the prism, the length, width, and height of the prism, and the rotation about all three axes must be specified. Note that rotations are defined about the axes going through the central point of the clipping prism, and not the axes going through the origin.
+
+Clipping is only applied to the detector geometry, not to events or overlaps that have been identified. After updating any of the clipping prism parameters, clicking **Update Clipping** will update the view. Clicking **Clear** restores the original geometry.
 
 ### Additional Options
 #### Saving files

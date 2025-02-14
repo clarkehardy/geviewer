@@ -1,4 +1,4 @@
-GeViewer package
+GeViewer Package
 ================
 
 Interactive viewer
