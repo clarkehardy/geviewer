@@ -212,8 +212,8 @@ the spin box selected, will cycle through the events.
 Exporting figures
 ^^^^^^^^^^^^^^^^^
 
-At any time, the current view can be exported by clicking the Export
-Figure button on the Options tab of the control panel. Any of the
+At any time, the current view can be exported by clicking the **Export
+Figure** button on the Options tab of the control panel. Any of the
 following file formats are supported: ``.png``, ``.jpeg``, ``.jpg``,
 ``.bmp``, ``.tif``, ``.tiff``, ``.svg``, ``.eps``, ``.ps``, ``.pdf``,
 ``.tex``. When exporting a figure, the figure size in pixels can be set
@@ -227,8 +227,8 @@ Geometry Tools
 Overlap inspector
 ^^^^^^^^^^^^^^^^^
 
-The Tools tab on the control panel contains the overlap inspector and a
-measurement tool. The overlap inspector can be used to check for
+The Inspect tab on the control panel contains the overlap inspector and
+a measurement tool. The overlap inspector can be used to check for
 overlaps between detector components, will a few essential caveats:
 
 -  If a component is contained entirely within another, the overlap will
@@ -255,7 +255,7 @@ The overlap inspector works by iterating through all possible pairs of
 components and checking each pair for overlaps. The overlap checking is
 done first by determining if the bounding boxes overlap. If they do, a
 set of sample points is generated within one of the bounding boxes. The
-number of points is set by the text field in the Tools tab of the
+number of points is set by the text field in the Inspect tab of the
 control panel. The subset of these points that falls inside the mesh are
 then kept, while the others are thrown out. The surviving points, which
 approximate the solid body of one of the meshes, are then checked to
@@ -274,14 +274,30 @@ components to include in overlap checking.
 Measurement tool
 ^^^^^^^^^^^^^^^^
 
-The Measurement Tool, on the Tools tab of the control panel, can be used
-to measure the distance between any two points. To use the tool, click
-Add measurement, then click two points in the viewer to measure the
-distance between them. The measurement will be shown on the viewer and
-will also be reported in the text field in the Tools tab. Up to three
-distance measurements will be shown in the Tools tab at a time. As new
-measurements are added, the oldest will be removed to keep the total
-number of measurements displayed at three.
+The Measurement Tool, on the Inspect tab of the control panel, can be
+used to measure the distance between any two points. To use the tool,
+click **Add Measurement**, then click two points in the viewer to
+measure the distance between them. The measurement will be shown on the
+viewer and will also be reported in the text field in the Inspect tab.
+Up to three distance measurements will be shown in the Inspect tab at a
+time. As new measurements are added, the oldest will be removed to keep
+the total number of measurements displayed at three.
+
+Clipping Tool
+~~~~~~~~~~~~~
+
+The Clipping Tool is on the Clip tab of the control panel, and enables
+the user to make cutaway views of a geometry. Clipping is done by
+defining a rectangular prism to be cut away from the geometry. The
+coordinates of the center of the prism, the length, width, and height of
+the prism, and the rotation about all three axes must be specified. Note
+that rotations are defined about the axes going through the central
+point of the clipping prism, and not the axes going through the origin.
+
+Clipping is only applied to the detector geometry, not to events or
+overlaps that have been identified. After updating any of the clipping
+prism parameters, clicking **Update Clipping** will update the view.
+Clicking **Clear** restores the original geometry.
 
 Additional Options
 ~~~~~~~~~~~~~~~~~~
