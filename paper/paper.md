@@ -9,7 +9,7 @@ tags:
   - simulation
 authors:
   - name: Clarke A. Hardy
-  - affiliation: '1'
+  - affiliation: 1
   - orcid: 0000-0002-4989-1700
   - corresponding: true
   - given-names: Clarke A.
