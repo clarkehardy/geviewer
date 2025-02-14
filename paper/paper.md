@@ -9,20 +9,21 @@ tags:
   - simulation
 authors:
   - name: Clarke A. Hardy
-  - affiliation: 1
-  - orcid: 0000-0002-4989-1700
-  - corresponding: true
-  - given-names: Clarke A.
-  - surname: Hardy
+    affiliation: 1
+    orcid: 0000-0002-4989-1700
+    corresponding: true
+    given-names: Clarke A.
+    surname: Hardy
 affiliations:
   - name: Physics Department, Stanford University, USA
-  - index: 1
-  - ror: 00f54p054
+    index: 1
+    ror: 00f54p054
 date: 14 February 2025
 bibliography: paper.bib
 ---
 # Summary
-Summary section
+Summary section [@agostinelli_geant4a_2003,@allison_geant4_2006,@allison_recent_2016]
+[@sullivan_pyvista_2019]
 
 # Statement of Need
 Statement of need section
