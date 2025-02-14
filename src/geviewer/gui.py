@@ -244,16 +244,20 @@ class Window(MainWindow):
 
         # create tabs
         options_tab = QWidget()
-        tools_tab = QWidget()
+        inspect_tab = QWidget()
+        clipping_tab = QWidget()
         self.options_layout = QVBoxLayout(options_tab)
-        self.tools_layout = QVBoxLayout(tools_tab)
+        self.inspect_layout = QVBoxLayout(inspect_tab)
+        self.clipping_layout = QVBoxLayout(clipping_tab)
         self.tab_widget.addTab(options_tab, 'Options')
-        self.tab_widget.addTab(tools_tab, 'Tools')
+        self.tab_widget.addTab(inspect_tab, 'Inspect')
+        self.tab_widget.addTab(clipping_tab, 'Clip')
         control_layout.addWidget(self.tab_widget)
 
         # add components to tabs
         self.add_options_tab()
-        self.add_tools_tab()
+        self.add_inspect_tab()
+        self.add_clipping_tab()
 
         # create the console
         console_layout = QVBoxLayout()
@@ -273,7 +277,8 @@ class Window(MainWindow):
 
 
     def add_options_tab(self):
-        """Adds camera and figure options to the first tab."""
+        """Adds camera and figure options to the first tab.
+        """
         grid_layout = QGridLayout()
 
         # camera options section
@@ -349,8 +354,9 @@ class Window(MainWindow):
         self.options_layout.addLayout(grid_layout)
 
 
-    def add_tools_tab(self):
-        """Adds view and geometry options to the second tab."""
+    def add_inspect_tab(self):
+        """Adds view and geometry options to the second tab.
+        """
         grid_layout = QGridLayout()
 
         # overlap inspector section
@@ -430,7 +436,84 @@ class Window(MainWindow):
         self.last_figure_size = None
         self.monitor_camera_position()
 
-        self.tools_layout.addLayout(grid_layout)
+        self.inspect_layout.addLayout(grid_layout)
+
+
+    def add_clipping_tab(self):
+        """Adds clipping options to the third tab.
+        """
+        grid_layout = QGridLayout()
+
+        heading = QLabel('Clipping Box')
+        heading_font = QFont()
+        heading_font.setPointSize(14)
+        heading_font.setBold(True)
+        heading.setFont(heading_font)
+        grid_layout.addWidget(heading, 0, 0, 1, 2)
+
+        self.clip_x_label = QLabel('X position:')
+        self.clip_x_text = QLineEdit('0.0')
+        self.clip_x_text.setValidator(QDoubleValidator())
+        grid_layout.addWidget(self.clip_x_label, 2, 0)
+        grid_layout.addWidget(self.clip_x_text, 2, 1)
+
+        self.clip_y_label = QLabel('Y position:')
+        self.clip_y_text = QLineEdit('0.0')
+        self.clip_y_text.setValidator(QDoubleValidator())
+        grid_layout.addWidget(self.clip_y_label, 3, 0)
+        grid_layout.addWidget(self.clip_y_text, 3, 1)
+
+        self.clip_z_label = QLabel('Z position:')
+        self.clip_z_text = QLineEdit('0.0')
+        self.clip_z_text.setValidator(QDoubleValidator())
+        grid_layout.addWidget(self.clip_z_label, 4, 0)
+        grid_layout.addWidget(self.clip_z_text, 4, 1)
+
+        self.clip_length_label = QLabel('X length:')
+        self.clip_x_length_text = QLineEdit('1000.0')
+        self.clip_x_length_text.setValidator(QDoubleValidator())
+        grid_layout.addWidget(self.clip_length_label, 6, 0)
+        grid_layout.addWidget(self.clip_x_length_text, 6, 1)
+
+        self.clip_width_label = QLabel('Y length:')
+        self.clip_y_length_text = QLineEdit('1000.0')
+        self.clip_y_length_text.setValidator(QDoubleValidator())
+        grid_layout.addWidget(self.clip_width_label, 7, 0)
+        grid_layout.addWidget(self.clip_y_length_text, 7, 1)
+
+        self.clip_height_label = QLabel('Z length:')
+        self.clip_z_length_text = QLineEdit('1000.0')
+        self.clip_z_length_text.setValidator(QDoubleValidator())
+        grid_layout.addWidget(self.clip_height_label, 8, 0)
+        grid_layout.addWidget(self.clip_z_length_text, 8, 1)
+
+        self.clip_rot_x_label = QLabel('X rotation:')
+        self.clip_rot_x_text = QLineEdit('0.0')
+        self.clip_rot_x_text.setValidator(QDoubleValidator())
+        grid_layout.addWidget(self.clip_rot_x_label, 10, 0)
+        grid_layout.addWidget(self.clip_rot_x_text, 10, 1)
+
+        self.clip_rot_y_label = QLabel('Y rotation:')
+        self.clip_rot_y_text = QLineEdit('0.0')
+        self.clip_rot_y_text.setValidator(QDoubleValidator())
+        grid_layout.addWidget(self.clip_rot_y_label, 11, 0)
+        grid_layout.addWidget(self.clip_rot_y_text, 11, 1)
+
+        self.clip_rot_z_label = QLabel('Z rotation:')
+        self.clip_rot_z_text = QLineEdit('0.0')
+        self.clip_rot_z_text.setValidator(QDoubleValidator())
+        grid_layout.addWidget(self.clip_rot_z_label, 12, 0)
+        grid_layout.addWidget(self.clip_rot_z_text, 12, 1)
+
+        # add update and clear buttons
+        update_button = QPushButton('Update Clipping')
+        update_button.clicked.connect(self.update_clipping)
+        clear_button = QPushButton('Clear')
+        clear_button.clicked.connect(self.clear_clipping)
+        grid_layout.addWidget(update_button, 13, 0)
+        grid_layout.addWidget(clear_button, 13, 1)
+
+        self.clipping_layout.addLayout(grid_layout)
 
 
     def add_toolbar(self):
@@ -1200,7 +1283,7 @@ class Window(MainWindow):
         self.success = True
 
     ##############################################################
-    # Methods for the tools tab
+    # Methods for the inspect tab
     ##############################################################
 
     def check_geometry(self, tolerance, samples):
@@ -1315,6 +1398,58 @@ class Window(MainWindow):
         self.measurement_box_3.setText('')
         if print_to_console:
             self.print_to_console('Measurements cleared.')
+
+    ##############################################################
+    # Methods for the clipping tab
+    ##############################################################
+
+    def update_clipping(self):
+        """Updates the clipping box based on the current input values.
+        This is called whenever any of the clipping parameters are changed.
+        """
+        self.print_to_console('Updating clipping box...')
+        try:
+            center = [
+                float(self.clip_x_text.text()),
+                float(self.clip_y_text.text()),
+                float(self.clip_z_text.text())
+            ]
+            size = [
+                float(self.clip_x_length_text.text()),
+                float(self.clip_y_length_text.text()),
+                float(self.clip_z_length_text.text())
+            ]
+            rotation = [
+                float(self.clip_rot_x_text.text()),
+                float(self.clip_rot_y_text.text()),
+                float(self.clip_rot_z_text.text())
+            ]
+
+            clipping_params = center + size + rotation
+
+            self.viewer.clip_geometry(clipping_params)
+            self.print_to_console('Clipping box updated.')
+            
+        except ValueError:
+            self.print_to_console('Error: Invalid input values for clipping box.')
+
+
+    def clear_clipping(self):
+        """Removes any active clipping and resets the input fields.
+        """
+        self.print_to_console('Removing clipping box...')
+        clipping_params = [0, 0, 0, 1e12, 1e12, 1e12, 0, 0, 0]
+        self.viewer.clip_geometry(clipping_params, invert=False)
+        self.clip_x_text.setText('0.0')
+        self.clip_y_text.setText('0.0')
+        self.clip_z_text.setText('0.0')
+        self.clip_x_length_text.setText('100.0')
+        self.clip_y_length_text.setText('100.0')
+        self.clip_z_length_text.setText('100.0')
+        self.clip_rot_x_text.setText('0.0')
+        self.clip_rot_y_text.setText('0.0')
+        self.clip_rot_z_text.setText('0.0')
+        self.print_to_console('Clipping cleared.')
 
     ##############################################################
     # Methods for the console
@@ -1441,6 +1576,9 @@ class Window(MainWindow):
         This method clears the meshes by removing all actors from the plotter
         and clearing the checkbox mapping.
         """
+        if len(self.checkbox_mapping) == 0:
+            self.print_to_console('No meshes to clear.')
+            return
         self.viewer.clear_meshes()
         self.plotter.reset_camera()
         for checkbox in self.checkbox_mapping.values():

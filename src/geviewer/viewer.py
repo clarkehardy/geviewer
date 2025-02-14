@@ -569,6 +569,55 @@ class GeViewer:
         return overlapping_meshes
 
 
+    def clip_geometry(self, clipping_params, invert=True):
+        """Clips the geometry using a cube. The cube is defined by a sequence of nine numbers:
+        the x, y, and z locations of the cube center, the x length, y length, and z length of
+        the cube, and the rotation of the cube about its x, y, and z axes in degrees.
+
+        :param clipping_params: a list containing the clipping parameters in the following order
+        :type clipping_params: list
+        :param invert: whether to exclude the volume inside the clipping box, defaults to True
+        :type invert: bool, optional
+        """
+        x_loc, y_loc, z_loc, x_length, y_length, z_length, x_rot, y_rot, z_rot = clipping_params
+        clipping_box = pv.Cube(center=(x_loc, y_loc, z_loc), \
+                               x_length=x_length, y_length=y_length, z_length=z_length)
+        clipping_box.rotate_x(x_rot, point=(x_loc, y_loc, z_loc), inplace=True)
+        clipping_box.rotate_y(y_rot, point=(x_loc, y_loc, z_loc), inplace=True)
+        clipping_box.rotate_z(z_rot, point=(x_loc, y_loc, z_loc), inplace=True)
+
+        def clip_component(components):
+            """Clips the components recursively.
+
+            :param components: list of components to be clipped
+            :type components: list
+            """
+            for comp in components:
+                if comp['mesh'] is not None and comp['has_actor'] and not comp['is_event']:
+                    if self.actors[comp['id']].visibility:
+                        orig_actor = self.actors[comp['id']]
+                        opacity = orig_actor.GetProperty().GetOpacity()
+                        style = 'wireframe' if self.wireframe else 'surface'
+                        point_size = orig_actor.GetProperty().GetPointSize()
+                        
+                        # create the clipped mesh
+                        extracted = comp['mesh'].clip_box(clipping_box, invert=invert)
+                        
+                        # remove the old actor and add the new, clipped one in its place
+                        self.plotter.remove_actor(self.actors[comp['id']])
+                        actor = self.plotter.add_mesh(extracted, scalars='color', rgb=True, \
+                                                      render_points_as_spheres=comp['is_dot'], \
+                                                      point_size=point_size, style=style, \
+                                                      opacity=opacity, name=comp['id'])
+                        self.actors[comp['id']] = actor
+
+                if len(comp['children']) > 0:
+                    clip_component(comp['children'])
+
+        # call the function on all components
+        clip_component(self.components)
+
+
     def clear_component_meshes(self, components):
         """Clears the meshes in the components.
 
