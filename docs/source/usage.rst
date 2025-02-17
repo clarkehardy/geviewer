@@ -291,13 +291,13 @@ the user to make cutaway views of a geometry. Clipping is done by
 defining a box to be cut away from the geometry. The coordinates of the
 center of the box, the length, width, and height of the box, and the
 rotation angle about any vector must be specified. Clipping will only be
-applied if **Enable Clipping** is checked. When **Show Clipping Box** is
-checked, the edges of the clipping box will be shown in red.
+applied if **Enable Clipping** is checked. When **Show Box** is checked,
+the edges of the clipping box will be shown in red.
 
 Clipping is only applied to the detector geometry, not to events or
 overlaps that have been identified. After updating any of the clipping
-box parameters or checking/unchecking the checkboxes, clicking **Apply
-Changes** will update the view. Clicking **Clear** restores the original
+box parameters or checking/unchecking the checkboxes, clicking **Apply**
+will apply the changes. Clicking **Clear** restores the original
 geometry and resets the clipping parameters.
 
 Additional Options

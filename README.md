@@ -25,9 +25,9 @@ without the hassle of setting up OpenGL or installing outdated software.
 
 ### User Interface
 
-![The GeViewer UI in light mode with transparency enabled](https://github.com/clarkehardy/geviewer/blob/v0.2.1/docs/source/_static/sample1.png?raw=true)
+![The GeViewer UI in light mode with transparency enabled](https://github.com/clarkehardy/geviewer/blob/v0.2.2b1/docs/source/_static/sample1.png?raw=true)
 
-![The GeViewer UI in dark mode with wireframe rendering enabled](https://github.com/clarkehardy/geviewer/blob/v0.2.1/docs/source/_static/sample2.png?raw=true)
+![The GeViewer UI in dark mode with wireframe rendering enabled](https://github.com/clarkehardy/geviewer/blob/v0.2.2b1/docs/source/_static/sample2.png?raw=true)
 
 ## Setup
 ### Dependencies
