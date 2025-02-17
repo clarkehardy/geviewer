@@ -40,6 +40,7 @@ class GeViewer:
         self.overlaps = []
         self.event_ids = []
         self.actors = {}
+        self.clipping_box = None
 
 
     def load_file(self, filename, off_screen=False, progress_obj=None):
@@ -569,7 +570,8 @@ class GeViewer:
         return overlapping_meshes
 
 
-    def clip_geometry(self, clipping_params, invert=True):
+    def clip_geometry(self, clipping_params, show=True, update=True, enabled=True, \
+                      progress_obj=None):
         """Clips the geometry using a cube. The cube is defined by a sequence of nine numbers:
         the x, y, and z locations of the cube center, the x length, y length, and z length of
         the cube, and the rotation of the cube about its x, y, and z axes in degrees.
@@ -579,14 +581,21 @@ class GeViewer:
         :param invert: whether to exclude the volume inside the clipping box, defaults to True
         :type invert: bool, optional
         """
-        x_loc, y_loc, z_loc, x_length, y_length, z_length, x_rot, y_rot, z_rot = clipping_params
+        camera_pos = self.plotter.camera_position
+        x_loc, y_loc, z_loc, x_length, y_length, z_length, x_rot, y_rot, z_rot, angle = clipping_params
         clipping_box = pv.Cube(center=(x_loc, y_loc, z_loc), \
                                x_length=x_length, y_length=y_length, z_length=z_length)
-        clipping_box.rotate_x(x_rot, point=(x_loc, y_loc, z_loc), inplace=True)
-        clipping_box.rotate_y(y_rot, point=(x_loc, y_loc, z_loc), inplace=True)
-        clipping_box.rotate_z(z_rot, point=(x_loc, y_loc, z_loc), inplace=True)
+        clipping_box.rotate_vector(vector=(x_rot, y_rot, z_rot), angle=angle, \
+                                   point=(x_loc, y_loc, z_loc), inplace=True)
+        clipping_edges = clipping_box.extract_feature_edges()
 
-        def clip_component(components):
+        if self.clipping_box:
+            self.plotter.remove_actor(self.clipping_box)
+        self.clipping_box = self.plotter.add_mesh(clipping_edges, color='red', line_width=5)
+        if not show:
+            self.clipping_box.visibility = False
+
+        def clip_component(components, progress_obj=None):
             """Clips the components recursively.
 
             :param components: list of components to be clipped
@@ -594,28 +603,26 @@ class GeViewer:
             """
             for comp in components:
                 if comp['mesh'] is not None and comp['has_actor'] and not comp['is_event']:
-                    if self.actors[comp['id']].visibility:
-                        orig_actor = self.actors[comp['id']]
-                        opacity = orig_actor.GetProperty().GetOpacity()
-                        style = 'wireframe' if self.wireframe else 'surface'
-                        point_size = orig_actor.GetProperty().GetPointSize()
-                        
-                        # create the clipped mesh
-                        extracted = comp['mesh'].clip_box(clipping_box, invert=invert)
-                        
-                        # remove the old actor and add the new, clipped one in its place
-                        self.plotter.remove_actor(self.actors[comp['id']])
-                        actor = self.plotter.add_mesh(extracted, scalars='color', rgb=True, \
-                                                      render_points_as_spheres=comp['is_dot'], \
-                                                      point_size=point_size, style=style, \
-                                                      opacity=opacity, name=comp['id'])
-                        self.actors[comp['id']] = actor
+                    if progress_obj:
+                        if progress_obj.sync_status(increment=True): return
+                    if enabled:
+                        self.actors[comp['id']].GetMapper().SetInputData(comp['mesh'].clip_box(clipping_box, invert=True))
+                    else:
+                        self.actors[comp['id']].GetMapper().SetInputData(comp['mesh'])
 
                 if len(comp['children']) > 0:
                     clip_component(comp['children'])
 
-        # call the function on all components
-        clip_component(self.components)
+        if update:
+            if progress_obj:
+                progress_obj.reset_progress()
+                num_components = self.count_components(self.components, exclude_events=True, \
+                                                       exclude_invisible=True)
+                progress_obj.set_maximum_value(num_components)
+            clip_component(self.components, progress_obj=progress_obj)
+            if progress_obj:
+                progress_obj.signal_finished()
+        self.plotter.camera_position = camera_pos
 
 
     def clear_component_meshes(self, components):
