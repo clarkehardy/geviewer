@@ -192,9 +192,9 @@ The Measurement Tool, on the Inspect tab of the control panel, can be used to me
 
 ### Clipping Tool
 
-The Clipping Tool is on the Clip tab of the control panel, and enables the user to make cutaway views of a geometry. Clipping is done by defining a rectangular prism to be cut away from the geometry. The coordinates of the center of the prism, the length, width, and height of the prism, and the rotation about all three axes must be specified. Note that rotations are defined about the axes going through the central point of the clipping prism, and not the axes going through the origin.
+The Clipping Tool is on the Clip tab of the control panel, and enables the user to make cutaway views of a geometry. Clipping is done by defining a box to be cut away from the geometry. The coordinates of the center of the box, the length, width, and height of the box, and the rotation angle about any vector must be specified. Clipping will only be applied if **Enable Clipping** is checked. When **Show Clipping Box** is checked, the edges of the clipping box will be shown in red.
 
-Clipping is only applied to the detector geometry, not to events or overlaps that have been identified. After updating any of the clipping prism parameters, clicking **Update Clipping** will update the view. Clicking **Clear** restores the original geometry.
+Clipping is only applied to the detector geometry, not to events or overlaps that have been identified. After updating any of the clipping box parameters or checking/unchecking the checkboxes, clicking **Apply** will apply the changes. Clicking **Clear** restores the original geometry and resets the clipping parameters.
 
 ### Additional Options
 #### Saving files

@@ -444,7 +444,7 @@ class Window(MainWindow):
         """
         grid_layout = QGridLayout()
 
-        heading = QLabel('Clipping Box')
+        heading = QLabel('Clipping Box Setup')
         heading_font = QFont()
         heading_font.setPointSize(14)
         heading_font.setBold(True)
@@ -454,64 +454,81 @@ class Window(MainWindow):
         self.clip_x_label = QLabel('X position:')
         self.clip_x_text = QLineEdit('0.0')
         self.clip_x_text.setValidator(QDoubleValidator())
+        self.clip_x_text.editingFinished.connect(lambda: self.update_clipping(apply=False))
         grid_layout.addWidget(self.clip_x_label, 2, 0)
         grid_layout.addWidget(self.clip_x_text, 2, 1)
 
         self.clip_y_label = QLabel('Y position:')
         self.clip_y_text = QLineEdit('0.0')
         self.clip_y_text.setValidator(QDoubleValidator())
+        self.clip_y_text.editingFinished.connect(lambda: self.update_clipping(apply=False))
         grid_layout.addWidget(self.clip_y_label, 3, 0)
         grid_layout.addWidget(self.clip_y_text, 3, 1)
 
         self.clip_z_label = QLabel('Z position:')
         self.clip_z_text = QLineEdit('0.0')
         self.clip_z_text.setValidator(QDoubleValidator())
+        self.clip_z_text.editingFinished.connect(lambda: self.update_clipping(apply=False))
         grid_layout.addWidget(self.clip_z_label, 4, 0)
         grid_layout.addWidget(self.clip_z_text, 4, 1)
 
         self.clip_length_label = QLabel('X length:')
         self.clip_x_length_text = QLineEdit('1000.0')
         self.clip_x_length_text.setValidator(QDoubleValidator())
+        self.clip_x_length_text.editingFinished.connect(lambda: self.update_clipping(apply=False))
         grid_layout.addWidget(self.clip_length_label, 6, 0)
         grid_layout.addWidget(self.clip_x_length_text, 6, 1)
 
         self.clip_width_label = QLabel('Y length:')
         self.clip_y_length_text = QLineEdit('1000.0')
         self.clip_y_length_text.setValidator(QDoubleValidator())
+        self.clip_y_length_text.editingFinished.connect(lambda: self.update_clipping(apply=False))
         grid_layout.addWidget(self.clip_width_label, 7, 0)
         grid_layout.addWidget(self.clip_y_length_text, 7, 1)
 
         self.clip_height_label = QLabel('Z length:')
         self.clip_z_length_text = QLineEdit('1000.0')
         self.clip_z_length_text.setValidator(QDoubleValidator())
+        self.clip_z_length_text.editingFinished.connect(lambda: self.update_clipping(apply=False))
         grid_layout.addWidget(self.clip_height_label, 8, 0)
         grid_layout.addWidget(self.clip_z_length_text, 8, 1)
 
-        self.clip_rot_x_label = QLabel('X rotation:')
-        self.clip_rot_x_text = QLineEdit('0.0')
-        self.clip_rot_x_text.setValidator(QDoubleValidator())
-        grid_layout.addWidget(self.clip_rot_x_label, 10, 0)
-        grid_layout.addWidget(self.clip_rot_x_text, 10, 1)
+        self.clip_rot_label = QLabel('Rotation axis:')
+        self.clip_rot_text = QLineEdit('0.0, 0.0, 1.0')
+        self.clip_rot_text.editingFinished.connect(lambda: self.validate_rotation_axis())
+        self.clip_rot_text.setToolTip('Enter the rotation vector components as three comma-separated numbers')
+        self.clip_rot_text.editingFinished.connect(lambda: self.update_clipping(apply=False))
+        grid_layout.addWidget(self.clip_rot_label, 9, 0)
+        grid_layout.addWidget(self.clip_rot_text, 9, 1)
 
-        self.clip_rot_y_label = QLabel('Y rotation:')
-        self.clip_rot_y_text = QLineEdit('0.0')
-        self.clip_rot_y_text.setValidator(QDoubleValidator())
-        grid_layout.addWidget(self.clip_rot_y_label, 11, 0)
-        grid_layout.addWidget(self.clip_rot_y_text, 11, 1)
+        self.clip_angle_label = QLabel('Rotation angle:')
+        self.clip_angle_text = QLineEdit('0.0')
+        self.clip_angle_text.setValidator(QDoubleValidator())
+        self.clip_angle_text.setToolTip('Enter the rotation angle in degrees')
+        self.clip_angle_text.editingFinished.connect(lambda: self.update_clipping(apply=False))
+        grid_layout.addWidget(self.clip_angle_label, 10, 0)
+        grid_layout.addWidget(self.clip_angle_text, 10, 1)
 
-        self.clip_rot_z_label = QLabel('Z rotation:')
-        self.clip_rot_z_text = QLineEdit('0.0')
-        self.clip_rot_z_text.setValidator(QDoubleValidator())
-        grid_layout.addWidget(self.clip_rot_z_label, 12, 0)
-        grid_layout.addWidget(self.clip_rot_z_text, 12, 1)
+        self.show_clip_box = QCheckBox('Show Box')
+        self.show_clip_box.setChecked(False)
+        self.show_clip_box.stateChanged.connect(lambda: self.update_clipping(apply=False, task='show'))
 
-        # add update and clear buttons
-        update_button = QPushButton('Update Clipping')
-        update_button.clicked.connect(self.update_clipping)
+        self.enable_clipping = QCheckBox('Enable Clipping')
+        self.enable_clipping.setChecked(False)
+        self.enable_clipping.stateChanged.connect(lambda: self.update_clipping(apply=False, task='enable'))
+
+        checkbox_layout = QHBoxLayout()
+        checkbox_layout.addWidget(self.enable_clipping)
+        checkbox_layout.addWidget(self.show_clip_box)
+        checkbox_layout.addStretch()
+        grid_layout.addLayout(checkbox_layout, 11, 0, 1, 2)
+
+        update_button = QPushButton('Apply')
+        update_button.clicked.connect(lambda: self.update_clipping(apply=True))
         clear_button = QPushButton('Clear')
         clear_button.clicked.connect(self.clear_clipping)
-        grid_layout.addWidget(update_button, 13, 0)
-        grid_layout.addWidget(clear_button, 13, 1)
+        grid_layout.addWidget(update_button, 12, 0)
+        grid_layout.addWidget(clear_button, 12, 1)
 
         self.clipping_layout.addLayout(grid_layout)
 
@@ -1403,53 +1420,112 @@ class Window(MainWindow):
     # Methods for the clipping tab
     ##############################################################
 
-    def update_clipping(self):
+    def validate_rotation_axis(self):
+        """Validates the rotation axis.
+
+        This method validates the rotation axis by checking if it is a
+        comma-separated list of three floats and has non-zero norm. If not, 
+        it will reset it to the default value and print an error message.
+
+        :param axis: The rotation axis to validate.
+        :type axis: str
+        :return: True if the rotation axis is valid, False otherwise.
+        :rtype: bool
+        """
+        axis = self.clip_rot_text.text()
+        try:
+            axis = [float(x) for x in axis.split(',')]
+            if len(axis) != 3:
+                raise ValueError('Invalid rotation axis')
+            norm = sum(x*x for x in axis) ** 0.5
+            if norm == 0:
+                raise ValueError('Vector cannot have zero norm')
+            return True
+        except ValueError:
+            self.print_to_console('Error: invalid rotation axis. Please enter three comma-separated ' \
+                                  + 'floats and ensure the vector has a nonzero norm')
+            self.clip_rot_text.setText('0.0, 0.0, 1.0')
+            return False
+
+
+    def update_clipping(self, apply=True, task=None):
         """Updates the clipping box based on the current input values.
         This is called whenever any of the clipping parameters are changed.
         """
-        self.print_to_console('Updating clipping box...')
-        try:
-            center = [
-                float(self.clip_x_text.text()),
-                float(self.clip_y_text.text()),
-                float(self.clip_z_text.text())
-            ]
-            size = [
-                float(self.clip_x_length_text.text()),
-                float(self.clip_y_length_text.text()),
-                float(self.clip_z_length_text.text())
-            ]
-            rotation = [
-                float(self.clip_rot_x_text.text()),
-                float(self.clip_rot_y_text.text()),
-                float(self.clip_rot_z_text.text())
-            ]
+        center = [
+            float(self.clip_x_text.text()),
+            float(self.clip_y_text.text()),
+            float(self.clip_z_text.text())
+        ]
+        size = [
+            float(self.clip_x_length_text.text()),
+            float(self.clip_y_length_text.text()),
+            float(self.clip_z_length_text.text())
+        ]
+        rotation = [
+            float(self.clip_rot_text.text().split(',')[0]),
+            float(self.clip_rot_text.text().split(',')[1]),
+            float(self.clip_rot_text.text().split(',')[2])
+        ]
+        angle = [float(self.clip_angle_text.text())]
+        clipping_params = center + size + rotation + angle
+        
+        if task=='enable':
+            self.print_to_console('Clipping ' + ['disabled.', 'enabled.'][int(self.enable_clipping.isChecked())])
+        elif task=='show':
+            self.print_to_console('Clipping box ' + ['hidden.', 'visible.'][int(self.show_clip_box.isChecked())])
 
-            clipping_params = center + size + rotation
+        kwargs = {'clipping_params':clipping_params, 'show':self.show_clip_box.isChecked(), \
+                    'enabled':self.enable_clipping.isChecked(), 'apply':apply}
 
-            self.viewer.clip_geometry(clipping_params)
-            self.print_to_console('Clipping box updated.')
-            
-        except ValueError:
-            self.print_to_console('Error: Invalid input values for clipping box.')
+        if apply and self.enable_clipping.isChecked():
+            self.print_to_console('Applying changes...')
+            self.worker = Worker(self.viewer.clip_geometry, self.progress_bar, **kwargs)
+            self.worker.on_finished(lambda: self.on_clipping_finished(apply))
+            self.worker.error_signal.connect(self.global_exception_hook)
+            self.worker_running = True
+            self.worker.start()
+        else:
+            self.viewer.clip_geometry(**kwargs)
 
 
     def clear_clipping(self):
         """Removes any active clipping and resets the input fields.
         """
-        self.print_to_console('Removing clipping box...')
-        clipping_params = [0, 0, 0, 1e12, 1e12, 1e12, 0, 0, 0]
-        self.viewer.clip_geometry(clipping_params, invert=False)
+        self.print_to_console('Clearing clipping box...')
+        clipping_params = [0, 0, 0, 1e3, 1e3, 1e3, 0, 0, 1, 0]
+        self.worker = Worker(self.viewer.clip_geometry, self.progress_bar, \
+                             clipping_params=clipping_params)
+        self.worker.on_finished(lambda: self.on_clipping_finished(False))
+        self.worker.error_signal.connect(self.global_exception_hook)
+        self.worker_running = True
+        self.worker.start()
         self.clip_x_text.setText('0.0')
         self.clip_y_text.setText('0.0')
         self.clip_z_text.setText('0.0')
-        self.clip_x_length_text.setText('100.0')
-        self.clip_y_length_text.setText('100.0')
-        self.clip_z_length_text.setText('100.0')
-        self.clip_rot_x_text.setText('0.0')
-        self.clip_rot_y_text.setText('0.0')
-        self.clip_rot_z_text.setText('0.0')
-        self.print_to_console('Clipping cleared.')
+        self.clip_x_length_text.setText('1000.0')
+        self.clip_y_length_text.setText('1000.0')
+        self.clip_z_length_text.setText('1000.0')
+        self.clip_rot_text.setText('0.0, 0.0, 1.0')
+        self.clip_angle_text.setText('0.0')
+        self.show_clip_box.setChecked(False)
+        self.enable_clipping.setChecked(False)
+        self.print_to_console('Clipping parameters reset.')
+
+
+    def on_clipping_finished(self, updated=False):
+        """Handles the worker when clipping is finished.
+        """
+        self.worker.deleteLater()
+        self.worker_running = False
+        if updated:
+            if self.success:
+                self.print_to_console('Clipping box updated.')
+            else:
+                self.print_to_console('Error: clipping failed.')
+        self.success = True
+        self.progress_bar.signal_finished()
+        self.progress_bar.interrupt = False
 
     ##############################################################
     # Methods for the console
