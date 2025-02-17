@@ -444,7 +444,7 @@ class Window(MainWindow):
         """
         grid_layout = QGridLayout()
 
-        heading = QLabel('Clipping Box Position')
+        heading = QLabel('Clipping Box Setup')
         heading_font = QFont()
         heading_font.setPointSize(14)
         heading_font.setBold(True)
@@ -493,45 +493,42 @@ class Window(MainWindow):
         grid_layout.addWidget(self.clip_height_label, 8, 0)
         grid_layout.addWidget(self.clip_z_length_text, 8, 1)
 
-        rot_heading = QLabel('Clipping Box Rotation')
-        rot_heading_font = QFont()
-        rot_heading_font.setPointSize(14)
-        rot_heading_font.setBold(True)
-        rot_heading.setFont(rot_heading_font)
-        grid_layout.addWidget(rot_heading, 9, 0, 1, 2)
-
         self.clip_rot_label = QLabel('Rotation axis:')
         self.clip_rot_text = QLineEdit('0.0, 0.0, 1.0')
         self.clip_rot_text.editingFinished.connect(lambda: self.validate_rotation_axis())
         self.clip_rot_text.setToolTip('Enter the rotation vector components as three comma-separated numbers')
         self.clip_rot_text.editingFinished.connect(lambda: self.update_clipping(apply=False))
-        grid_layout.addWidget(self.clip_rot_label, 10, 0)
-        grid_layout.addWidget(self.clip_rot_text, 10, 1)
+        grid_layout.addWidget(self.clip_rot_label, 9, 0)
+        grid_layout.addWidget(self.clip_rot_text, 9, 1)
 
         self.clip_angle_label = QLabel('Rotation angle:')
         self.clip_angle_text = QLineEdit('0.0')
         self.clip_angle_text.setValidator(QDoubleValidator())
         self.clip_angle_text.setToolTip('Enter the rotation angle in degrees')
         self.clip_angle_text.editingFinished.connect(lambda: self.update_clipping(apply=False))
-        grid_layout.addWidget(self.clip_angle_label, 11, 0)
-        grid_layout.addWidget(self.clip_angle_text, 11, 1)
+        grid_layout.addWidget(self.clip_angle_label, 10, 0)
+        grid_layout.addWidget(self.clip_angle_text, 10, 1)
 
-        self.show_clip_box = QCheckBox('Show Clipping Box')
+        self.show_clip_box = QCheckBox('Show Box')
         self.show_clip_box.setChecked(False)
         self.show_clip_box.stateChanged.connect(lambda: self.update_clipping(apply=False, task='show'))
-        grid_layout.addWidget(self.show_clip_box, 12, 0, 1, 2)
 
         self.enable_clipping = QCheckBox('Enable Clipping')
         self.enable_clipping.setChecked(False)
         self.enable_clipping.stateChanged.connect(lambda: self.update_clipping(apply=False, task='enable'))
-        grid_layout.addWidget(self.enable_clipping, 13, 0, 1, 2)
 
-        update_button = QPushButton('Apply Changes')
+        checkbox_layout = QHBoxLayout()
+        checkbox_layout.addWidget(self.enable_clipping)
+        checkbox_layout.addWidget(self.show_clip_box)
+        checkbox_layout.addStretch()
+        grid_layout.addLayout(checkbox_layout, 11, 0, 1, 2)
+
+        update_button = QPushButton('Apply')
         update_button.clicked.connect(lambda: self.update_clipping(apply=True))
         clear_button = QPushButton('Clear')
         clear_button.clicked.connect(self.clear_clipping)
-        grid_layout.addWidget(update_button, 14, 0)
-        grid_layout.addWidget(clear_button, 14, 1)
+        grid_layout.addWidget(update_button, 12, 0)
+        grid_layout.addWidget(clear_button, 12, 1)
 
         self.clipping_layout.addLayout(grid_layout)
 
