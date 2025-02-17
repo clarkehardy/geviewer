@@ -454,42 +454,42 @@ class Window(MainWindow):
         self.clip_x_label = QLabel('X position:')
         self.clip_x_text = QLineEdit('0.0')
         self.clip_x_text.setValidator(QDoubleValidator())
-        self.clip_x_text.editingFinished.connect(lambda: self.update_clipping(update=False))
+        self.clip_x_text.editingFinished.connect(lambda: self.update_clipping(apply=False))
         grid_layout.addWidget(self.clip_x_label, 2, 0)
         grid_layout.addWidget(self.clip_x_text, 2, 1)
 
         self.clip_y_label = QLabel('Y position:')
         self.clip_y_text = QLineEdit('0.0')
         self.clip_y_text.setValidator(QDoubleValidator())
-        self.clip_y_text.editingFinished.connect(lambda: self.update_clipping(update=False))
+        self.clip_y_text.editingFinished.connect(lambda: self.update_clipping(apply=False))
         grid_layout.addWidget(self.clip_y_label, 3, 0)
         grid_layout.addWidget(self.clip_y_text, 3, 1)
 
         self.clip_z_label = QLabel('Z position:')
         self.clip_z_text = QLineEdit('0.0')
         self.clip_z_text.setValidator(QDoubleValidator())
-        self.clip_z_text.editingFinished.connect(lambda: self.update_clipping(update=False))
+        self.clip_z_text.editingFinished.connect(lambda: self.update_clipping(apply=False))
         grid_layout.addWidget(self.clip_z_label, 4, 0)
         grid_layout.addWidget(self.clip_z_text, 4, 1)
 
         self.clip_length_label = QLabel('X length:')
         self.clip_x_length_text = QLineEdit('1000.0')
         self.clip_x_length_text.setValidator(QDoubleValidator())
-        self.clip_x_length_text.editingFinished.connect(lambda: self.update_clipping(update=False))
+        self.clip_x_length_text.editingFinished.connect(lambda: self.update_clipping(apply=False))
         grid_layout.addWidget(self.clip_length_label, 6, 0)
         grid_layout.addWidget(self.clip_x_length_text, 6, 1)
 
         self.clip_width_label = QLabel('Y length:')
         self.clip_y_length_text = QLineEdit('1000.0')
         self.clip_y_length_text.setValidator(QDoubleValidator())
-        self.clip_y_length_text.editingFinished.connect(lambda: self.update_clipping(update=False))
+        self.clip_y_length_text.editingFinished.connect(lambda: self.update_clipping(apply=False))
         grid_layout.addWidget(self.clip_width_label, 7, 0)
         grid_layout.addWidget(self.clip_y_length_text, 7, 1)
 
         self.clip_height_label = QLabel('Z length:')
         self.clip_z_length_text = QLineEdit('1000.0')
         self.clip_z_length_text.setValidator(QDoubleValidator())
-        self.clip_z_length_text.editingFinished.connect(lambda: self.update_clipping(update=False))
+        self.clip_z_length_text.editingFinished.connect(lambda: self.update_clipping(apply=False))
         grid_layout.addWidget(self.clip_height_label, 8, 0)
         grid_layout.addWidget(self.clip_z_length_text, 8, 1)
 
@@ -504,7 +504,7 @@ class Window(MainWindow):
         self.clip_rot_text = QLineEdit('0.0, 0.0, 1.0')
         self.clip_rot_text.editingFinished.connect(lambda: self.validate_rotation_axis())
         self.clip_rot_text.setToolTip('Enter the rotation vector components as three comma-separated numbers')
-        self.clip_rot_text.editingFinished.connect(lambda: self.update_clipping(update=False))
+        self.clip_rot_text.editingFinished.connect(lambda: self.update_clipping(apply=False))
         grid_layout.addWidget(self.clip_rot_label, 10, 0)
         grid_layout.addWidget(self.clip_rot_text, 10, 1)
 
@@ -512,22 +512,22 @@ class Window(MainWindow):
         self.clip_angle_text = QLineEdit('0.0')
         self.clip_angle_text.setValidator(QDoubleValidator())
         self.clip_angle_text.setToolTip('Enter the rotation angle in degrees')
-        self.clip_angle_text.editingFinished.connect(lambda: self.update_clipping(update=False))
+        self.clip_angle_text.editingFinished.connect(lambda: self.update_clipping(apply=False))
         grid_layout.addWidget(self.clip_angle_label, 11, 0)
         grid_layout.addWidget(self.clip_angle_text, 11, 1)
 
         self.show_clip_box = QCheckBox('Show Clipping Box')
         self.show_clip_box.setChecked(False)
-        self.show_clip_box.stateChanged.connect(lambda: self.update_clipping(update=False, task='show'))
+        self.show_clip_box.stateChanged.connect(lambda: self.update_clipping(apply=False, task='show'))
         grid_layout.addWidget(self.show_clip_box, 12, 0, 1, 2)
 
         self.enable_clipping = QCheckBox('Enable Clipping')
         self.enable_clipping.setChecked(False)
-        self.enable_clipping.stateChanged.connect(lambda: self.update_clipping(update=False, task='enable'))
+        self.enable_clipping.stateChanged.connect(lambda: self.update_clipping(apply=False, task='enable'))
         grid_layout.addWidget(self.enable_clipping, 13, 0, 1, 2)
 
-        update_button = QPushButton('Update Clipping')
-        update_button.clicked.connect(lambda: self.update_clipping(update=True, task='Updating clipping box...'))
+        update_button = QPushButton('Apply Changes')
+        update_button.clicked.connect(lambda: self.update_clipping(apply=True))
         clear_button = QPushButton('Clear')
         clear_button.clicked.connect(self.clear_clipping)
         grid_layout.addWidget(update_button, 14, 0)
@@ -1451,7 +1451,7 @@ class Window(MainWindow):
             return False
 
 
-    def update_clipping(self, update=True, task=None):
+    def update_clipping(self, apply=True, task=None):
         """Updates the clipping box based on the current input values.
         This is called whenever any of the clipping parameters are changed.
         """
@@ -1479,12 +1479,12 @@ class Window(MainWindow):
             self.print_to_console('Clipping box ' + ['hidden.', 'visible.'][int(self.show_clip_box.isChecked())])
 
         kwargs = {'clipping_params':clipping_params, 'show':self.show_clip_box.isChecked(), \
-                    'enabled':self.enable_clipping.isChecked(), 'update':update}
+                    'enabled':self.enable_clipping.isChecked(), 'apply':apply}
 
-        if update and self.enable_clipping.isChecked():
+        if apply and self.enable_clipping.isChecked():
             self.print_to_console('Applying changes...')
             self.worker = Worker(self.viewer.clip_geometry, self.progress_bar, **kwargs)
-            self.worker.on_finished(lambda: self.on_clipping_finished(update))
+            self.worker.on_finished(lambda: self.on_clipping_finished(apply))
             self.worker.error_signal.connect(self.global_exception_hook)
             self.worker_running = True
             self.worker.start()

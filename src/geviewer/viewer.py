@@ -570,7 +570,7 @@ class GeViewer:
         return overlapping_meshes
 
 
-    def clip_geometry(self, clipping_params, show=True, update=True, enabled=True, \
+    def clip_geometry(self, clipping_params, show=True, apply=True, enabled=True, \
                       progress_obj=None):
         """Clips the geometry using a cube. The cube is defined by a sequence of nine numbers:
         the x, y, and z locations of the cube center, the x length, y length, and z length of
@@ -613,7 +613,7 @@ class GeViewer:
                 if len(comp['children']) > 0:
                     clip_component(comp['children'])
 
-        if update:
+        if apply:
             if progress_obj:
                 progress_obj.reset_progress()
                 num_components = self.count_components(self.components, exclude_events=True, \
