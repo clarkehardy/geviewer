@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import (
     QAction, QFont, QColor, QPalette, QDoubleValidator, QIntValidator,
-    QKeySequence, QIcon, QTextCharFormat, QTextCursor, QFontDatabase
+    QKeySequence, QIcon, QTextCharFormat, QTextCursor, QFontDatabase, QValidator
 )
 from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot, QTimer, QSize, QObject
 
@@ -1452,6 +1452,13 @@ class Window(MainWindow):
         """Updates the clipping box based on the current input values.
         This is called whenever any of the clipping parameters are changed.
         """
+
+        text_fields = [self.clip_x_text, self.clip_y_text, self.clip_z_text, \
+                       self.clip_x_length_text, self.clip_y_length_text, self.clip_z_length_text]
+        for tf in text_fields:
+            if tf.text() in ['', '.']:
+                self.print_to_console('Error: clipping text fields must not be left blank!')
+                return
         center = [
             float(self.clip_x_text.text()),
             float(self.clip_y_text.text()),
@@ -1468,6 +1475,9 @@ class Window(MainWindow):
             float(self.clip_rot_text.text().split(',')[2])
         ]
         angle = [float(self.clip_angle_text.text())]
+        if any([s==0 for s in size]):
+            self.print_to_console('Error: clipping box lengths must be greater than 0!')
+            return
         clipping_params = center + size + rotation + angle
         
         if task=='enable':
@@ -1495,7 +1505,7 @@ class Window(MainWindow):
         self.print_to_console('Clearing clipping box...')
         clipping_params = [0, 0, 0, 1e3, 1e3, 1e3, 0, 0, 1, 0]
         self.worker = Worker(self.viewer.clip_geometry, self.progress_bar, \
-                             clipping_params=clipping_params)
+                             clipping_params=clipping_params, show=False)
         self.worker.on_finished(lambda: self.on_clipping_finished(False))
         self.worker.error_signal.connect(self.global_exception_hook)
         self.worker_running = True
@@ -1673,6 +1683,7 @@ class Window(MainWindow):
         self.event_selection_box.setRange(1, 1)
         self.event_selection_box.setValue(1)
         self.clear_measurement(print_to_console=False)
+        self.clear_clipping()
         gc.collect()
         self.print_to_console('Viewer cleared.')
 
@@ -1950,6 +1961,8 @@ class ProgressBar(QProgressBar):
         """
         self.send_updates()
         self.run_timer.emit(False)
+        if self.maximum_value <= 0:
+            self.set_maximum_value(1)
         self.finished.emit()
 
 
