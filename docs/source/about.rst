@@ -2,7 +2,7 @@ About
 -----
 
 |PyPI - Version| |GitHub Actions Workflow Status| |Read the Docs|
-|GitHub last commit| |GitHub License|
+|GitHub last commit| |GitHub License| |DOI|
 
 GeViewer is a convenient, Python-based visualization tool for Geant4. It
 provides an easy way to check detector geometries, view events, and
@@ -48,3 +48,5 @@ User Interface
 .. |Read the Docs| image:: https://img.shields.io/readthedocs/geviewer?logo=readthedocs
 .. |GitHub last commit| image:: https://img.shields.io/github/last-commit/clarkehardy/geviewer?logo=GitHub
 .. |GitHub License| image:: https://img.shields.io/github/license/clarkehardy/geviewer
+.. |DOI| image:: https://zenodo.org/badge/831847560.svg
+   :target: https://zenodo.org/badge/latestdoi/831847560
