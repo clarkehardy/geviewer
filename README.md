@@ -130,8 +130,8 @@ auto* runManager = new G4RunManager();
 
 Next, check that a custom event action has been implemented, and that it draws the trajectories and updates the visualization manager after each event. Here is a sample header file:
 ```cpp
-#ifndef CUSTOMVENTACTION_HH
-#define CUSTOMVENTACTION_HH
+#ifndef CUSTOMEVENTACTION_HH
+#define CUSTOMEVENTACTION_HH
 
 #include "G4UserEventAction.hh"
 #include "G4TrajectoryContainer.hh"

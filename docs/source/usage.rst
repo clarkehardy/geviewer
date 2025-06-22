@@ -129,8 +129,8 @@ event. Here is a sample header file:
 
 .. code:: cpp
 
-   #ifndef CUSTOMVENTACTION_HH
-   #define CUSTOMVENTACTION_HH
+   #ifndef CUSTOMEVENTACTION_HH
+   #define CUSTOMEVENTACTION_HH
 
    #include "G4UserEventAction.hh"
    #include "G4TrajectoryContainer.hh"
