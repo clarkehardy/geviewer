@@ -1505,7 +1505,7 @@ class Window(MainWindow):
         self.print_to_console('Clearing clipping box...')
         clipping_params = [0, 0, 0, 1e3, 1e3, 1e3, 0, 0, 1, 0]
         self.worker = Worker(self.viewer.clip_geometry, self.progress_bar, \
-                             clipping_params=clipping_params, show=False)
+                             clipping_params=clipping_params, show=False, enabled=False)
         self.worker.on_finished(lambda: self.on_clipping_finished(False))
         self.worker.error_signal.connect(self.global_exception_hook)
         self.worker_running = True
