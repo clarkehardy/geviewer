@@ -218,6 +218,72 @@ The `gev-converter` utility does not have an interactive component and can there
 
 * Operations can be aborted by clicking **Edit > Abort Process**. This can be useful if, for example, you start checking for overlaps without unselecting a component with many subcomponents. Needless to say, this should be done sparingly.
 
+### Troubleshooting
+#### Problems viewing multiple events
+If multiple events were simulated but only one is visible in GeViewer, it is likely that Geant4 combined the events when writing to the HepRep file. This behavior can be changed with some simple modifications to the Geant4 code.
+
+First, check that multithreading is not enabled when running simulations for the purpose of visualization. In the `main()` function, check that a sequential run manager is being used:
+
+```cpp
+// do not use this
+auto* RunManager = G4RunManagerFactory::CreateRunManager();
+G4int nThreads = 4;
+RunManager->SetNumberOfThreads(nThreads);
+
+// use this instead
+auto* runManager = new G4RunManager();
+```
+
+Next, check that a custom event action has been implemented, and that it draws the trajectories and updates the visualization manager after each event. Here is a sample header file:
+```cpp
+#ifndef CUSTOMEVENTACTION_HH
+#define CUSTOMEVENTACTION_HH
+
+#include "G4UserEventAction.hh"
+#include "G4TrajectoryContainer.hh"
+#include "G4VTrajectory.hh"
+
+class CustomEventAction : public G4UserEventAction {
+public:
+    CustomEventAction() = default;
+    ~CustomEventAction() override = default;
+
+    void EndOfEventAction(const G4Event* event) override;
+};
+
+#endif
+```
+And here is a sample source file:
+```cpp
+#include "CustomEventAction.hh"
+#include "G4VisManager.hh"
+#include "G4VVisManager.hh"
+#include "G4UImanager.hh"
+#include "G4Event.hh"
+
+void CustomEventAction::EndOfEventAction(const G4Event* event) {
+    auto* visManager = G4VVisManager::GetConcreteInstance();
+    if (!visManager) return;
+
+    auto* trajContainer = event->GetTrajectoryContainer();
+    if (!trajContainer) return;
+
+    for (int i = 0; i < trajContainer->entries(); ++i)
+        (*trajContainer)[i]->DrawTrajectory();
+
+    visManager->NotifyHandlers();
+}
+```
+
+Finally, check that the custom event action is registered in the action initialization's build method:
+```cpp
+void CustomActionInitialization::Build() const override {
+    ...
+    SetUserAction(new CustomEventAction());
+}
+```
+If you are still having trouble after verifying that your Geant4 code is set up correctly, please create a GitHub issue to explain the problem.
+
 ## Additional Info
 ### Contributing
 GeViewer has been developed and tested using a limited number of Geant4 detector geometries, so the HepRep and VRML parsing functionalities are not yet exhaustive. If you find that a particular geometry or component is not being parsed correctly, please [open an issue](https://github.com/clarkehardy/geviewer/issues) on the GitHub repository and provide the file snippet in question, or fix the issue yourself and submit a pull request. Other suggestions, feature requests, or improvements are also welcome.
