@@ -108,13 +108,16 @@ class TestGeViewer(unittest.TestCase):
         self.gev.clear_meshes()
         self.gev.load_file('tests/sample.heprep', off_screen=True)
         self.gev.create_plotter()
+        cam_pos = self.gev.plotter.camera_position
         image_before = self.gev.export_figure(None, 100, 100)
         clipping_params = [0, 0, 0, 1e5, 1e5, 1e5, 0, 0, 1, 0]
         self.gev.clip_geometry(clipping_params, show=False)
+        self.gev.plotter.camera_position = cam_pos
         image_after = self.gev.export_figure(None, 100, 100)
         # check that the red geometry has been clipped away
         self.assertLess(image_after[:,:,0].sum(), image_before[:,:,0].sum())
         self.gev.clip_geometry(clipping_params, show=False, enabled=False)
+        self.gev.plotter.camera_position = cam_pos
         image_final = self.gev.export_figure(None, 100, 100)
         # check that the red geometry has been restored
         self.assertEqual(image_before[:,:,0].sum(), image_final[:,:,0].sum())
