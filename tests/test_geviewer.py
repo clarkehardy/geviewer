@@ -24,10 +24,10 @@ class TestGeViewer(unittest.TestCase):
 
     def test_save_file(self):
         """Tests the save and load methods."""
+        self.gev.off_screen = True
+        self.gev.clear_meshes()
+        self.gev.load_file('tests/sample.wrl', off_screen=True)
         with tempfile.TemporaryDirectory() as temp_dir:
-            self.gev.off_screen = True
-            self.gev.clear_meshes()
-            self.gev.load_file('tests/sample.wrl', off_screen=True)
             self.gev.save_session(os.path.join(temp_dir, 'sample.gev'))
             self.assertTrue(os.path.exists(os.path.join(temp_dir, 'sample.gev')))
             self.gev.load_session(os.path.join(temp_dir, 'sample.gev'))
@@ -88,6 +88,36 @@ class TestGeViewer(unittest.TestCase):
         self.gev.create_plotter()
         self.gev.toggle_transparent()
         self.assertEqual(next(iter(self.gev.actors.values())).GetProperty().GetOpacity(), 0.3)
+
+    def test_export_figure(self):
+        """Tests the export figure method."""
+        self.gev.off_screen = True
+        self.gev.clear_meshes()
+        self.gev.load_file('tests/sample.heprep', off_screen=True)
+        self.gev.create_plotter()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            exts = ['.png', '.jpeg', '.jpg', '.bmp', '.tif', '.tiff', '.svg', '.eps', '.ps', '.pdf', '.tex']
+            for ext in exts:
+                self.gev.export_figure(os.path.join(temp_dir, 'test_fig' + ext), \
+                                        *self.gev.plotter.window_size)
+            self.assertTrue(os.path.exists(os.path.join(temp_dir, 'test_fig' + ext)))
+
+    def test_clipping(self):
+        """Tests clipping."""
+        self.gev.off_screen = True
+        self.gev.clear_meshes()
+        self.gev.load_file('tests/sample.heprep', off_screen=True)
+        self.gev.create_plotter()
+        image_before = self.gev.export_figure(None, 100, 100)
+        clipping_params = [0, 0, 0, 1e5, 1e5, 1e5, 0, 0, 1, 0]
+        self.gev.clip_geometry(clipping_params, show=False)
+        image_after = self.gev.export_figure(None, 100, 100)
+        # check that the red geometry has been clipped away
+        self.assertLess(image_after[:,:,0].sum(), image_before[:,:,0].sum())
+        self.gev.clip_geometry(clipping_params, show=False, enabled=False)
+        image_final = self.gev.export_figure(None, 100, 100)
+        # check that the red geometry has been restored
+        self.assertEqual(image_before[:,:,0].sum(), image_final[:,:,0].sum())
 
 class TestUtils(unittest.TestCase):
 
