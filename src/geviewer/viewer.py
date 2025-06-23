@@ -316,6 +316,54 @@ class GeViewer:
             return components
         
         
+    def export_figure(self, file_name, width=1280, height=720):
+        """Captures the current view and saves it.
+
+        This method saves the figure by creating an off-screen plotter with the
+        desired size and copying the mesh and camera settings to the off-screen
+        plotter.
+
+        :param file_name: The file name to save the figure to.
+        :type file_name: str
+        :param width: The width of the figure.
+        :type width: int
+        :param height: The height of the figure.
+        :type height: int
+        """
+        # create an off-screen plotter with the given size
+        off_screen_plotter = pv.Plotter(off_screen=True, window_size=[width, height])
+
+        if self.bkg_on:
+            if self.gradient:
+                off_screen_plotter.set_background(*self.bkg_colors)
+            else:
+                off_screen_plotter.set_background(self.bkg_colors[0])
+        else:
+            off_screen_plotter.set_background('white')
+
+        if self.plotter.renderer.GetUseDepthPeeling():
+            off_screen_plotter.enable_depth_peeling()
+        
+        # copy the mesh and camera settings to the off-screen plotter
+        for actor in self.plotter.renderer.actors.values():
+            off_screen_plotter.add_actor(actor)
+        
+        off_screen_plotter.camera_position = self.plotter.camera_position
+        off_screen_plotter.enable_anti_aliasing('msaa', multi_samples=16)
+
+        screenshot_extensions = ['png', 'jpeg', 'jpg', 'bmp', 'tif', 'tiff']
+        if file_name is None:
+            image = off_screen_plotter.screenshot(filename=None, return_img=True)
+            del off_screen_plotter
+            return image
+        elif file_name.split('.')[-1] in screenshot_extensions:
+            off_screen_plotter.screenshot(file_name)
+        else:
+            off_screen_plotter.save_graphic(file_name, title='GeViewer Figure')
+
+        del off_screen_plotter
+        
+        
     def is_mesh_inside(self, mesh1, mesh2):
         """Checks if one mesh is inside another.
 
@@ -576,7 +624,7 @@ class GeViewer:
         the x, y, and z locations of the cube center, the x length, y length, and z length of
         the cube, and the rotation of the cube about its x, y, and z axes in degrees.
 
-        :param clipping_params: a list containing the clipping parameters in the following order
+        :param clipping_params: a list containing the clipping parameters,
         :type clipping_params: list
         :param invert: whether to exclude the volume inside the clipping box, defaults to True
         :type invert: bool, optional
