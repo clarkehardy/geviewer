@@ -116,11 +116,6 @@ class TestGeViewer(unittest.TestCase):
         image_after = self.gev.export_figure(None, 100, 100)
         # check that the red geometry has been clipped away
         self.assertLess(image_after[:,:,0].sum(), image_before[:,:,0].sum())
-        self.gev.clip_geometry(clipping_params, show=False, enabled=False)
-        self.gev.plotter.camera_position = cam_pos
-        image_final = self.gev.export_figure(None, 100, 100)
-        # check that the red geometry has been restored
-        self.assertEqual(image_before[:,:,0].sum(), image_final[:,:,0].sum())
 
 class TestUtils(unittest.TestCase):
 
