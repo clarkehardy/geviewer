@@ -447,6 +447,11 @@ class GeViewer:
         current_check = 0
         for mesh1 in separated_meshes_1:
             for mesh2 in separated_meshes_2:
+                mesh1 = mesh1.extract_surface()
+                mesh2 = mesh2.extract_surface()
+
+                if not self.do_bounds_overlap(mesh1, mesh2):
+                    continue
 
                 if total_checks > 200 and current_check % 100 == 0:
                     update = 'Starting check {}/{}...{}'.format(current_check + 1, total_checks, \
@@ -455,12 +460,6 @@ class GeViewer:
                         if progress_obj.sync_status(update=update): return
                     else:
                         print(update)
-
-                mesh1 = mesh1.extract_surface()
-                mesh2 = mesh2.extract_surface()
-
-                if not self.do_bounds_overlap(mesh1, mesh2):
-                    continue
 
                 mc_points = np.random.uniform(low=mesh1.bounds[::2], \
                                               high=mesh1.bounds[1::2], \
